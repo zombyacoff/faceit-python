@@ -1,0 +1,1 @@
+# FACEIT Python API library

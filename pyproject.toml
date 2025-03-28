@@ -1,0 +1,88 @@
+[tool.poetry]
+name = "faceit-api"
+version = "0.1.0"
+description = "The Python wrapper for the Faceit API"
+authors = ["zombyacoff <zombyacoff@gmail.com>"]
+readme = "README.md"
+license = "MIT"
+repository = "https://github.com/zombyacoff/faceit-python"
+keywords = ["faceit", "api", "wrapper", "esports", "gaming"]
+packages = [{include = "faceit", from = "src"}]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Games/Entertainment"
+]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+
+[tool.poetry.dev-dependencies]
+ruff = "^0.4.8"
+
+[tool.pytest.ini_options]
+pythonpath = "."
+
+[tool.mypy]
+python_version = "3.8"
+exclude = [
+    "_.py",
+    "_async.py"
+]
+
+[tool.ruff]
+line-length = 120
+exclude = [
+    "_.py",
+    "_async.py"
+]
+
+[tool.ruff.lint]
+preview = true
+select = [
+    "F",
+    "G",
+    "PERF",
+    "RUF",
+    "W6",
+    "I",
+    "E71",
+    "E72",
+    "E112",
+    "E113",
+    "E272",
+    "E203",
+    "E702",
+    "E703",
+    "E731",
+    "W191",
+    "W291",
+    "W293",
+    "UP039",
+]
+ignore = [
+    "ANN",
+    "E722",
+    "RUF001",
+    "RUF003",
+    "RUF006",
+    "RUF012",
+    "RUF029",
+    "PERF203",
+    "F811",
+]
+
+[tool.ruff.format]
+quote-style = "double"
+line-ending = "auto"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
