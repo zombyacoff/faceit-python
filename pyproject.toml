@@ -4,9 +4,9 @@ version = "0.1.0"
 description = "The Python wrapper for the Faceit API"
 authors = ["zombyacoff <zombyacoff@gmail.com>"]
 readme = "README.md"
-license = "MIT"
+license = "Apache-2.0"
 repository = "https://github.com/zombyacoff/faceit-python"
-keywords = ["faceit", "api", "wrapper", "esports", "gaming"]
+keywords = ["faceit", "api", "wrapper"]
 packages = [{include = "faceit", from = "src"}]
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -14,17 +14,17 @@ classifiers = [
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Intended Audience :: Developers",
-    "Topic :: Software Development :: Libraries :: Python Modules",
-    "Topic :: Games/Entertainment"
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
 ]
 
 [tool.poetry.dependencies]
 python = "^3.8"
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
 ruff = "^0.4.8"
 
 [tool.pytest.ini_options]
@@ -38,48 +38,51 @@ exclude = [
 ]
 
 [tool.ruff]
-line-length = 120
+line-length = 79
+preview = true
+target-version = "py38"
 exclude = [
     "_.py",
     "_async.py"
 ]
-
-[tool.ruff.lint]
-preview = true
-select = [
-    "F",
-    "G",
-    "PERF",
-    "RUF",
-    "W6",
-    "I",
-    "E71",
-    "E72",
-    "E112",
-    "E113",
-    "E272",
-    "E203",
-    "E702",
-    "E703",
-    "E731",
-    "W191",
-    "W291",
-    "W293",
-    "UP039",
-]
-ignore = [
-    "ANN",
-    "E722",
-    "RUF001",
-    "RUF003",
-    "RUF006",
+lint.select = ["ALL"]
+lint.ignore = [
+    "ANN401",
+    "PYI058",
+    "PYI059",
+    "B024",
+    "COM812",
+    "CPY001",
+    "D",
+    "EM101",
+    "EM102",
+    "E501",
+    "ERA001",
+    "FBT001",
+    "FBT003",
+    "FIX002",
+    "PLR0904",
+    "PLR0913",
+    "PLW3201",
+    "PT001",
+    "RUF001", 
+    "RUF003", 
+    "RUF006", 
     "RUF012",
-    "RUF029",
-    "PERF203",
-    "F811",
+    "SLF001",
+    "TD",
+    "TRY003",
 ]
+
+[tool.ruff.lint.pyupgrade]
+keep-runtime-typing = true
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
 
 [tool.ruff.format]
+docstring-code-format = true
+docstring-code-line-length = 100
 quote-style = "double"
 line-ending = "auto"
 

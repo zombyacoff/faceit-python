@@ -2,8 +2,8 @@ from abc import ABC
 from functools import cached_property
 from typing import Generic, final
 
+from faceit._types import ClientT, Model, Raw
 from faceit.http import AsyncClient, SyncClient
-from faceit.types import ClientT, Model, Raw
 
 from .players import AsyncPlayers, SyncPlayers
 

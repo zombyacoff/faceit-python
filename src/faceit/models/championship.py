@@ -2,7 +2,7 @@ from typing import List
 
 from pydantic import BaseModel
 
-from faceit.types import UrlOrEmpty, UUIDOrEmpty
+from faceit._types import UrlOrEmpty, UUIDOrEmpty
 
 from .custom_types import FaceitID, NullableList, ResponseContainer
 

@@ -1,25 +1,43 @@
 from __future__ import annotations
 
 import logging
+import sys
+import typing as t
 import warnings
 from dataclasses import dataclass
-from typing import ClassVar, Dict, Final, List, Literal, NamedTuple, Optional, Union, cast, final, overload
 
 from strenum import StrEnum
 
-from .types import TypeAlias
+if t.TYPE_CHECKING:
+    from ._types import TypeAlias
+
+    _EloThreshold: TypeAlias = t.Dict[int, "EloRange"]
 
 _logger = logging.getLogger(__name__)
 
-BASE_WIKI_URL: Final = "https://docs.faceit.com"
+BASE_WIKI_URL: t.Final = "https://docs.faceit.com"
 
-RAW_RESPONSE_ITEMS_KEY: Final = "items"
-"""Key used to access items collection in API response data."""
+RAW_RESPONSE_ITEMS_KEY: t.Final = "items"
+
+# Maybe it's worth creating a `ChallengerLevel` class that would determine ELO up to #1000
+# (by game->region, but region complicates this task; we can think about it,
+# but it seems to me that this is not possible, unfortunately...)
+CHALLENGER_LEVEL: t.Final = "challenger"
+"""Elite tier reserved for `top 1000` players per `game`/`region`.
+
+This rank represents a dynamic threshold based on leaderboard position rather than a fixed ELO value.
+Due to its relative nature, determining Challenger status requires additional processing (leaderboard
+position analysis by region) beyond standard ELO calculations. In our implementation, players with
+actual Challenger status will be classified as level 10 for system consistency.
+
+The constant is primarily defined for completeness in representing FACEIT's full ranking system
+and may be utilized in future enhancements for precise leaderboard position tracking.
+"""
 
 
 class FaceitStrEnum(StrEnum):
     @classmethod
-    def values(cls) -> List[str]:
+    def values(cls) -> t.List[str]:
         return [member.value for member in cls]
 
 
@@ -147,124 +165,113 @@ class Region(FaceitStrEnum):
     SA = "SA"
 
 
-_ChallengerLevel: TypeAlias = Literal["challenger"]
-
-# Maybe it's worth creating a `ChallengerLevel` class that would determine ELO up to #1000
-# (by game->region, but region complicates this task; we can think about it,
-# but it seems to me that this is not possible, unfortunately...)
-CHALLENGER_LEVEL: Final = "challenger"
-"""Elite tier reserved for `top 1000` players per `game`/`region`.
-
-This rank represents a dynamic threshold based on leaderboard position rather than a fixed ELO value.
-Due to its relative nature, determining Challenger status requires additional processing (leaderboard
-position analysis by region) beyond standard ELO calculations. In our implementation, players with
-actual Challenger status will be classified as level 10 for system consistency.
-
-The constant is primarily defined for completeness in representing FACEIT's full ranking system
-and may be utilized in future enhancements for precise leaderboard position tracking.
-"""
-
-
-class EloRange(NamedTuple):
+class EloRange(t.NamedTuple):
     lower: int
     # `Optional` - because "challenger" (>#1000) might not be present in all disciplines
-    upper: Optional[Union[int, _ChallengerLevel]]
+    upper: t.Optional[t.Union[int, t.Literal["challenger"]]]
 
     @property
     def is_open_ended(self) -> bool:
         return self.upper == CHALLENGER_LEVEL or self.upper is None
+
+    @property
+    def size(self) -> t.Optional[int]:
+        if self.is_open_ended:
+            return None
+        return t.cast(int, self.upper) - self.lower + 1
+
+    def contains(self, elo: int) -> bool:
+        if self.upper == CHALLENGER_LEVEL or self.upper is None:
+            return elo >= self.lower
+        return self.lower <= elo <= t.cast(int, self.upper)
 
     def __str__(self) -> str:
         if self.is_open_ended:
             return f"{self.lower}+"
         return f"{self.lower}-{self.upper}"
 
-    @property
-    def size(self) -> Optional[int]:
-        if self.is_open_ended:
-            return None
-        return cast(int, self.upper) - self.lower + 1
 
-    def contains(self, elo: int) -> bool:
-        if self.upper == CHALLENGER_LEVEL or self.upper is None:
-            return elo >= self.lower
-        return self.lower <= elo <= cast(int, self.upper)
-
-
-_EloThreshold: TypeAlias = Dict[int, EloRange]
-
-_DEFAULT_FIRST_ELO_RANGE: Final = EloRange(100, 800)
-_DEFAULT_TEN_LEVEL_LOWER: Final = 2001
+_DEFAULT_FIRST_ELO_RANGE: t.Final = EloRange(100, 800)
+_DEFAULT_TEN_LEVEL_LOWER: t.Final = 2001
 
 
 def _create_default_elo_tiers() -> _EloThreshold:
     tier_ranges = {1: _DEFAULT_FIRST_ELO_RANGE}
     for level in range(2, 10):
         # `cast(int, ...)` tells the type checker that we know `upper` is definitely an `int`
-        # for levels 1-9, not the full Optional[Union[int, _ChallengerLevel]] type
-        lower_bound = cast(int, tier_ranges[level - 1].upper) + 1
+        # for levels 1-9, not the full `Optional[Union[int, Literal["challenger"]]` type
+        lower_bound = t.cast(int, tier_ranges[level - 1].upper) + 1
         tier_ranges[level] = EloRange(lower_bound, lower_bound + 149)
 
     return tier_ranges
 
 
-_BASE_ELO_RANGES: Final = _create_default_elo_tiers()
+_BASE_ELO_RANGES: t.Final = _create_default_elo_tiers()
 
 
 def _append_elite_tier(
-    elite_upper_bound: Optional[_ChallengerLevel], base_tiers: _EloThreshold = _BASE_ELO_RANGES
+    elite_upper_bound: t.Optional[t.Literal["challenger"]],
+    base_tiers: _EloThreshold = _BASE_ELO_RANGES,
 ) -> _EloThreshold:
-    return {**base_tiers, 10: EloRange(_DEFAULT_TEN_LEVEL_LOWER, elite_upper_bound)}
+    return {
+        **base_tiers,
+        10: EloRange(_DEFAULT_TEN_LEVEL_LOWER, elite_upper_bound),
+    }
 
 
-CHALLENGER_CAPPED_ELO_RANGES: Final = _append_elite_tier(CHALLENGER_LEVEL)
+CHALLENGER_CAPPED_ELO_RANGES: t.Final = _append_elite_tier(CHALLENGER_LEVEL)
 # Pre-generating this range configuration for future implementation needs
-OPEN_ENDED_ELO_RANGES: Final = _append_elite_tier(None)
-
-_EloThresholds: TypeAlias = Dict[GameID, _EloThreshold]
+# Exposed as a constant for both internal use and potential library consumers
+OPEN_ENDED_ELO_RANGES: t.Final = _append_elite_tier(None)
 
 # fmt: off
-ELO_THRESHOLDS: Final[_EloThresholds] = {
+ELO_THRESHOLDS: t.Final[t.Dict[GameID, t.Dict[int, EloRange]]] = {
     GameID.CS2: {
         1: EloRange(100, 500), 2: EloRange(501, 750), 3: EloRange(751, 900),
         4: EloRange(901, 1050), 5: EloRange(1051, 1200), 6: EloRange(1201, 1350),
         7: EloRange(1351, 1530), 8: EloRange(1531, 1750), 9: EloRange(1751, 2000),
         10: EloRange(_DEFAULT_TEN_LEVEL_LOWER, CHALLENGER_LEVEL)
     },
-    # These default ELO ranges (level 1: up to 800, subsequent levels: +150) are standard across most games
-    # with few exceptions. CS2 demonstrates one such exception where FACEIT adjusted boundaries
-    # following the major update, even during its beta phase. This implementation accounts for
-    # both standard patterns and known variations in the platform's ranking system
+    # These default ELO ranges (level 1: up to 800, subsequent levels: +150) are standard across
+    # most games with few exceptions. CS2 demonstrates one such exception where FACEIT adjusted
+    # boundaries following the transition from CSGO. This implementation accounts for both
+    # standard patterns and known variations in the platform's ranking system
     GameID.CSGO: CHALLENGER_CAPPED_ELO_RANGES,
     # TODO: Add more games (e.g. Dota 2)
 }
 # fmt: on
 
 
-@final
-@dataclass(frozen=True, slots=True, kw_only=True)
+_HAS_DATACLASS_SLOTS_SUPPORT: t.Final = sys.version_info >= (3, 10)
+
+
+@t.final
+@dataclass(**{
+    "frozen": True,
+    **({"slots": True} if _HAS_DATACLASS_SLOTS_SUPPORT else {}),
+})
 class SkillLevel:
     level: int
     game_id: GameID
     elo_range: EloRange
     name: str
 
-    _registry: ClassVar[Dict[GameID, Dict[int, SkillLevel]]] = {}
-    _initialized: ClassVar[bool] = False
+    _registry: t.ClassVar[t.Dict[GameID, t.Dict[int, SkillLevel]]] = {}
+    _initialized: t.ClassVar[bool] = False
 
-    def __str__(self) -> str:
-        return f"{self.name} ({self.elo_range})"
+    if not _HAS_DATACLASS_SLOTS_SUPPORT:
+        __slots__ = "elo_range", "game_id", "level", "name"
 
     @property
     def is_highest_level(self) -> bool:
         return self.elo_range.is_open_ended
 
     @property
-    def range_size(self) -> Optional[int]:
+    def range_size(self) -> t.Optional[int]:
         return self.elo_range.size
 
     @property
-    def elo_needed_for_next_level(self) -> Optional[int]:
+    def elo_needed_for_next_level(self) -> t.Optional[int]:
         if self.is_highest_level:
             return None
 
@@ -277,37 +284,56 @@ class SkillLevel:
     def contains_elo(self, elo: int, /) -> bool:
         return self.elo_range.contains(elo)
 
-    def progress_percentage(self, elo: int) -> Optional[float]:
+    def progress_percentage(self, elo: int) -> t.Optional[float]:
         if self.is_highest_level:
-            warnings.warn("Cannot calculate progress percentage for highest level", UserWarning, stacklevel=2)
+            warnings.warn(
+                "Cannot calculate progress percentage for highest level",
+                UserWarning,
+                stacklevel=2,
+            )
             return None
 
         if not self.contains_elo(elo):
-            warnings.warn(f"Elo {elo} is out of range", UserWarning, stacklevel=2)
+            warnings.warn(
+                f"Elo {elo} is out of range", UserWarning, stacklevel=2
+            )
             return None
 
-        return ((elo - self.elo_range.lower) / (cast(int, self.elo_range.upper) - self.elo_range.lower)) * 100
+        return (
+            (elo - self.elo_range.lower)
+            / (t.cast(int, self.elo_range.upper) - self.elo_range.lower)
+        ) * 100
 
-    def get_next_level(self) -> Optional[SkillLevel]:
+    def get_next_level(self) -> t.Optional[SkillLevel]:
         if self.is_highest_level:
             return None
         return self.get_level(self.game_id, self.level + 1)
 
-    def get_previous_level(self) -> Optional[SkillLevel]:
+    def get_previous_level(self) -> t.Optional[SkillLevel]:
         if self.level <= 1:
             return None
         return self.get_level(self.game_id, self.level - 1)
 
-    @overload
-    @classmethod
-    def get_level(cls, game_id: GameID, level: int) -> Optional[SkillLevel]: ...
-    @overload
-    @classmethod
-    def get_level(cls, game_id: GameID, *, elo: int) -> Optional[SkillLevel]: ...
+    @t.overload
     @classmethod
     def get_level(
-        cls, game_id: GameID, level: Optional[int] = None, *, elo: Optional[int] = None
-    ) -> Optional[SkillLevel]:
+        cls, game_id: GameID, level: int
+    ) -> t.Optional[SkillLevel]: ...
+
+    @t.overload
+    @classmethod
+    def get_level(
+        cls, game_id: GameID, *, elo: int
+    ) -> t.Optional[SkillLevel]: ...
+
+    @classmethod
+    def get_level(
+        cls,
+        game_id: GameID,
+        level: t.Optional[int] = None,
+        *,
+        elo: t.Optional[int] = None,
+    ) -> t.Optional[SkillLevel]:
         cls._ensure_initialized()
 
         if game_id not in cls._registry:
@@ -316,19 +342,33 @@ class SkillLevel:
 
         if elo is not None:
             _logger.debug("Getting level for game %s and elo %s", game_id, elo)
-            return next((lvl for lvl in cls._registry[game_id].values() if lvl.contains_elo(elo)), None)
+            return next(
+                (
+                    lvl
+                    for lvl in cls._registry[game_id].values()
+                    if lvl.contains_elo(elo)
+                ),
+                None,
+            )
 
         if level is not None:
             _logger.debug("Getting level %s for game %s", level, game_id)
             return cls._registry.get(game_id, {}).get(level)
 
-        warnings.warn("Please provide either level or elo", UserWarning, stacklevel=2)
+        warnings.warn(
+            "Please provide either level or elo", UserWarning, stacklevel=2
+        )
         return None
 
+    def __str__(self) -> str:
+        return f"{self.name} ({self.elo_range})"
+
     @classmethod
-    def get_all_levels(cls, game_id: GameID) -> List[SkillLevel]:
+    def get_all_levels(cls, game_id: GameID) -> t.List[SkillLevel]:
         cls._ensure_initialized()
-        return sorted(cls._registry.get(game_id, {}).values(), key=lambda x: x.level)
+        return sorted(
+            cls._registry.get(game_id, {}).values(), key=lambda x: x.level
+        )
 
     @classmethod
     def _ensure_initialized(cls) -> None:
@@ -341,7 +381,7 @@ class SkillLevel:
 
             for level_num, elo_range in thresholds.items():
                 cls._registry[game_id][level_num] = cls(
-                    level=level_num, game_id=game_id, elo_range=elo_range, name=f"Level {level_num}"
+                    level_num, game_id, elo_range, f"Level {level_num}"
                 )
 
         cls._initialized = True

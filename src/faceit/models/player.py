@@ -3,10 +3,15 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
+from faceit._types import Annotated, UrlOrEmpty
 from faceit.constants import GameID, Region
-from faceit.types import Annotated, UrlOrEmpty
 
-from .custom_types import FaceitID, FaceitMatchID, LangFormattedHttpUrl, ResponseContainer
+from .custom_types import (
+    FaceitID,
+    FaceitMatchID,
+    LangFormattedAnyHttpUrl,
+    ResponseContainer,
+)
 
 
 class GameInfo(BaseModel):
@@ -35,7 +40,7 @@ class Player(BaseModel):
     steam_id_64: str
     steam_nickname: str
     memberships: List[str]
-    faceit_url: LangFormattedHttpUrl
+    faceit_url: LangFormattedAnyHttpUrl
     membership_type: str
     cover_featured_image: str
     infractions: ResponseContainer
@@ -78,7 +83,7 @@ class CS2MatchPlayerStats(BaseMatchPlayerStats):
     match_round: Annotated[int, Field(alias="Match Round")]
     created_at: Annotated[datetime, Field(alias="Created At")]
     best_of: Annotated[int, Field(alias="Best Of")]
-    adr: Annotated[float, Field(0.0, alias="ADR")]
+    adr: Annotated[float, Field(0, alias="ADR")]
     headshots_percentage: Annotated[float, Field(alias="Headshots %")]
     competition_id: Annotated[FaceitID, Field(alias="Competition Id")]
     score: Annotated[str, Field(alias="Score")]
@@ -101,7 +106,7 @@ class Hub(BaseModel):
     avatar: UrlOrEmpty
     game_id: GameID
     organizer_id: FaceitID
-    faceit_url: LangFormattedHttpUrl
+    faceit_url: LangFormattedAnyHttpUrl
 
 
 class GeneralTeam(BaseModel):
@@ -115,7 +120,7 @@ class GeneralTeam(BaseModel):
     members: Optional[List[str]] = None  # maybe List[Player] ?
     leader_id: Annotated[FaceitID, Field(alias="leader")]
     chat_room_id: str  # To be honest, I'm not totally sure what the ID is
-    faceit_url: LangFormattedHttpUrl
+    faceit_url: LangFormattedAnyHttpUrl
 
 
 class Tournament(BaseModel):
@@ -143,7 +148,7 @@ class Tournament(BaseModel):
     anticheat_required: bool
     started_at: int
     subscriptions_count: int
-    faceit_url: LangFormattedHttpUrl
+    faceit_url: LangFormattedAnyHttpUrl
 
 
 class LifetimeStats(BaseModel):
@@ -160,26 +165,44 @@ class LifetimeStats(BaseModel):
     average_kd_ratio: Annotated[str, Field(alias="Average K/D Ratio")]
     wins: str
     sniper_kill_rate: Annotated[str, Field(alias="Sniper Kill Rate")]
-    total_rounds_with_extended_stats: Annotated[str, Field(alias="Total Rounds with extended stats")]
+    total_rounds_with_extended_stats: Annotated[
+        str, Field(alias="Total Rounds with extended stats")
+    ]
     kd_ratio: Annotated[str, Field(alias="K/D Ratio")]
-    utility_damage_success_rate: Annotated[str, Field(alias="Utility Damage Success Rate")]
+    utility_damage_success_rate: Annotated[
+        str, Field(alias="Utility Damage Success Rate")
+    ]
     total_entry_count: Annotated[str, Field(alias="Total Entry Count")]
-    average_headshots_percentage: Annotated[str, Field(alias="Average Headshots %")]
-    total_utility_successes: Annotated[str, Field(alias="Total Utility Successes")]
+    average_headshots_percentage: Annotated[
+        str, Field(alias="Average Headshots %")
+    ]
+    total_utility_successes: Annotated[
+        str, Field(alias="Total Utility Successes")
+    ]
     v2_win_rate: Annotated[str, Field(alias="1v2 Win Rate")]
-    total_kills_with_extended_stats: Annotated[str, Field(alias="Total Kills with extended stats")]
+    total_kills_with_extended_stats: Annotated[
+        str, Field(alias="Total Kills with extended stats")
+    ]
     matches: str
     entry_success_rate: Annotated[str, Field(alias="Entry Success Rate")]
     total_utility_damage: Annotated[str, Field(alias="Total Utility Damage")]
     total_entry_wins: Annotated[str, Field(alias="Total Entry Wins")]
     current_win_streak: Annotated[str, Field(alias="Current Win Streak")]
-    utility_usage_per_round: Annotated[str, Field(alias="Utility Usage per Round")]
+    utility_usage_per_round: Annotated[
+        str, Field(alias="Utility Usage per Round")
+    ]
     recent_results: Annotated[List[str], Field(alias="Recent Results")]
     total_1v1_count: Annotated[str, Field(alias="Total 1v1 Count")]
-    total_headshots_percentage: Annotated[str, Field(alias="Total Headshots %")]
-    enemies_flashed_per_round: Annotated[str, Field(alias="Enemies Flashed per Round")]
+    total_headshots_percentage: Annotated[
+        str, Field(alias="Total Headshots %")
+    ]
+    enemies_flashed_per_round: Annotated[
+        str, Field(alias="Enemies Flashed per Round")
+    ]
     flashes_per_round: Annotated[str, Field(alias="Flashes per Round")]
-    sniper_kill_rate_per_round: Annotated[str, Field(alias="Sniper Kill Rate per Round")]
+    sniper_kill_rate_per_round: Annotated[
+        str, Field(alias="Sniper Kill Rate per Round")
+    ]
     adr: Annotated[str, Field(alias="ADR")]
     v1_win_rate: Annotated[str, Field(alias="1v1 Win Rate")]
     total_utility_count: Annotated[str, Field(alias="Total Utility Count")]
@@ -188,7 +211,9 @@ class LifetimeStats(BaseModel):
     total_matches: Annotated[str, Field(alias="Total Matches")]
     entry_rate: Annotated[str, Field(alias="Entry Rate")]
     total_enemies_flashed: Annotated[str, Field(alias="Total Enemies Flashed")]
-    utility_damage_per_round: Annotated[str, Field(alias="Utility Damage per Round")]
+    utility_damage_per_round: Annotated[
+        str, Field(alias="Utility Damage per Round")
+    ]
 
 
 class MapStats(BaseModel):
@@ -198,11 +223,15 @@ class MapStats(BaseModel):
     entry_success_rate: Annotated[float, Field(alias="Entry Success Rate")]
     total_entry_wins: Annotated[int, Field(alias="Total Entry Wins")]
     # NOTE посмотреть матчи за 2023 ?
-    total_rounds_with_extended_stats: Annotated[int, Field(alias="Total Rounds with extended stats")]
+    total_rounds_with_extended_stats: Annotated[
+        int, Field(alias="Total Rounds with extended stats")
+    ]
     deaths: Annotated[int, Field(alias="Deaths")]
     # TODO преобразование в проценты (*100) таких полей, как "v2_win_rate", "v1_win_rate", ...
     v2_win_rate: Annotated[float, Field(alias="1v2 Win Rate")]
-    total_kills_with_extended_stats: Annotated[int, Field(alias="Total Kills with extended stats")]
+    total_kills_with_extended_stats: Annotated[
+        int, Field(alias="Total Kills with extended stats")
+    ]
     v1_win_rate: Annotated[float, Field(alias="1v1 Win Rate")]
     total_enemies_flashed: Annotated[int, Field(alias="Total Enemies Flashed")]
     mvps: Annotated[int, Field(alias="MVPs")]
@@ -215,19 +244,27 @@ class MapStats(BaseModel):
     average_quadro_kills: Annotated[str, Field(alias="Average Quadro Kills")]
     penta_kills: Annotated[str, Field(alias="Penta Kills")]
     total_flash_successes: Annotated[str, Field(alias="Total Flash Successes")]
-    average_headshots_percentage: Annotated[str, Field(alias="Average Headshots %")]
+    average_headshots_percentage: Annotated[
+        str, Field(alias="Average Headshots %")
+    ]
     average_kd_ratio: Annotated[str, Field(alias="Average K/D Ratio")]
-    enemies_flashed_per_round: Annotated[str, Field(alias="Enemies Flashed per Round")]
+    enemies_flashed_per_round: Annotated[
+        str, Field(alias="Enemies Flashed per Round")
+    ]
     total_flash_count: Annotated[str, Field(alias="Total Flash Count")]
     quadro_kills: Annotated[str, Field(alias="Quadro Kills")]
     flashes_per_round: Annotated[str, Field(alias="Flashes per Round")]
-    total_headshots_percentage: Annotated[str, Field(alias="Total Headshots %")]
+    total_headshots_percentage: Annotated[
+        str, Field(alias="Total Headshots %")
+    ]
     total_1v1_wins: Annotated[str, Field(alias="Total 1v1 Wins")]
     average_deaths: Annotated[str, Field(alias="Average Deaths")]
     kills: Annotated[str, Field(alias="Kills")]
     flash_success_rate: Annotated[str, Field(alias="Flash Success Rate")]
     entry_rate: Annotated[str, Field(alias="Entry Rate")]
-    sniper_kill_rate_per_round: Annotated[str, Field(alias="Sniper Kill Rate per Round")]
+    sniper_kill_rate_per_round: Annotated[
+        str, Field(alias="Sniper Kill Rate per Round")
+    ]
     average_penta_kills: Annotated[str, Field(alias="Average Penta Kills")]
     headshots_per_match: Annotated[str, Field(alias="Headshots per Match")]
     adr: Annotated[str, Field(alias="ADR")]
@@ -239,15 +276,23 @@ class MapStats(BaseModel):
     total_1v2_wins: Annotated[str, Field(alias="Total 1v2 Wins")]
     headshots: Annotated[str, Field(alias="Headshots")]
     total_1v2_count: Annotated[str, Field(alias="Total 1v2 Count")]
-    utility_usage_per_round: Annotated[str, Field(alias="Utility Usage per Round")]
+    utility_usage_per_round: Annotated[
+        str, Field(alias="Utility Usage per Round")
+    ]
     total_utility_damage: Annotated[str, Field(alias="Total Utility Damage")]
     kd_ratio: Annotated[str, Field(alias="K/D Ratio")]
     kr_ratio: Annotated[str, Field(alias="K/R Ratio")]
     average_kills: Annotated[str, Field(alias="Average Kills")]
     win_rate: Annotated[str, Field(alias="Win Rate %")]
-    utility_damage_success_rate: Annotated[str, Field(alias="Utility Damage Success Rate")]
-    utility_damage_per_round: Annotated[str, Field(alias="Utility Damage per Round")]
-    total_utility_successes: Annotated[str, Field(alias="Total Utility Successes")]
+    utility_damage_success_rate: Annotated[
+        str, Field(alias="Utility Damage Success Rate")
+    ]
+    utility_damage_per_round: Annotated[
+        str, Field(alias="Utility Damage per Round")
+    ]
+    total_utility_successes: Annotated[
+        str, Field(alias="Total Utility Successes")
+    ]
     matches: Annotated[str, Field(alias="Matches")]
     total_matches: Annotated[str, Field(alias="Total Matches")]
     average_mvps: Annotated[str, Field(alias="Average MVPs")]

@@ -1,368 +1,233 @@
 from __future__ import annotations
 
-import logging
-import sys
+import typing as t
 import warnings
-from inspect import Parameter, iscoroutinefunction, signature
-from typing import (
-    Any,
-    AsyncIterator,
-    Awaitable,
-    Callable,
-    Dict,
-    Final,
-    Iterator,
-    List,
-    Literal,
-    NamedTuple,
-    Optional,
-    Set,
-    Union,
-    cast,
-    final,
-    overload,
-)
+from abc import ABC
+from inspect import Parameter, signature
 
 from annotated_types import Le
+from pydantic import Field
 from pydantic.fields import FieldInfo
 
+from faceit._types import RawAPIItem, RawAPIPageResponse, Self, TypeAlias
+from faceit._utils import deep_get, get_hashable_representation, lazy_import
 from faceit.constants import RAW_RESPONSE_ITEMS_KEY
 from faceit.models import ItemPage, PaginationTimeRange
-from faceit.types import Self, TypeAlias
-from faceit.utils import check_required_attributes, deep_get, get_hashable_representation
 
-from .base import BaseResource
-
-_logger = logging.getLogger(__name__)
+if t.TYPE_CHECKING:
+    from .base import BaseResource
 
 
-@final
-class PaginationMaxParams(NamedTuple):
+@lazy_import
+def _get_base_resource_class() -> t.Type[BaseResource]:
+    from .base import BaseResource  # noqa: PLC0415
+
+    return BaseResource
+
+
+_Func: TypeAlias = t.Callable[..., t.Any]
+
+_T = t.TypeVar("_T")
+_T_co = t.TypeVar("_T_co", covariant=True)
+
+_PageType: TypeAlias = t.Union[ItemPage, RawAPIPageResponse]
+_PageListType: TypeAlias = t.List[_PageType]
+_PageT_co = t.TypeVar("_PageT_co", bound=_PageType, covariant=True)
+
+
+class _BaseMethodProtocol(t.Protocol):
+    __name__: str
+    __call__: _Func
+
+
+class BasePaginationMethod(_BaseMethodProtocol, t.Protocol[_T_co]):
+    def __call__(
+        self,
+        *args: t.Any,
+        offset: int = Field(...),
+        limit: int = Field(...),
+        **kwargs: t.Any,
+    ) -> _T_co: ...
+
+
+class SyncPaginationMethod(BasePaginationMethod[_PageT_co], t.Protocol): ...
+
+
+class AsyncPaginationMethod(
+    BasePaginationMethod[t.Awaitable[_PageT_co]], t.Protocol
+): ...
+
+
+class BaseUnixPaginationMethod(_BaseMethodProtocol, t.Protocol[_T_co]):
+    def __call__(
+        self,
+        *args: t.Any,
+        offset: int = Field(...),
+        limit: int = Field(...),
+        start: t.Optional[int] = None,
+        to: t.Optional[int] = None,
+        **kwargs: t.Any,
+    ) -> _T_co: ...
+
+
+class SyncUnixPaginationMethod(
+    BaseUnixPaginationMethod[_PageT_co], t.Protocol
+): ...
+
+
+class AsyncUnixPaginationMethod(
+    BaseUnixPaginationMethod[t.Awaitable[_PageT_co]], t.Protocol
+): ...
+
+
+_MethodT = t.TypeVar("_MethodT", bound=_BaseMethodProtocol)
+
+
+class UnixPaginationConfig(t.TypedDict):
+    key: str
+    attr: str
+
+
+_UnixMethodRequiredKeys: t.Final[t.FrozenSet[str]] = frozenset(
+    UnixPaginationConfig.__annotations__.keys()
+)
+
+_UnixPaginationConfigType: TypeAlias = t.Union[
+    UnixPaginationConfig, t.Literal[False]
+]
+
+
+@t.final
+class PaginationMaxParams(t.NamedTuple):
     limit: int
     offset: int
 
 
-# Standard pagination parameter names `('limit', 'offset')` from PaginationMaxParams
-# Used for validation and extraction in pagination methods
-_PAGINATION_ARGS: Final = PaginationMaxParams._fields
-_UNIX_PAGINATION_PARAMS: Final = PaginationTimeRange._fields  # `('start', 'to')` from PaginationTimeRange
+_PAGINATION_ARGS = PaginationMaxParams._fields
+_UNIX_PAGINATION_PARAMS = PaginationTimeRange._fields
 
-_RawResponsePage: TypeAlias = Union[ItemPage, Dict[str, Any]]
-_ExtractedItemsCollection: TypeAlias = Union[ItemPage, List[Dict[str, Any]]]
-
-_SyncPaginationMethod: TypeAlias = Callable[..., _RawResponsePage]
-_AsyncPaginationMethod: TypeAlias = Callable[..., Awaitable[_RawResponsePage]]
-_PaginationMethod: TypeAlias = Union[_SyncPaginationMethod, _AsyncPaginationMethod]
-
-_SyncPageFetcher: TypeAlias = Callable[[int], Optional[_ExtractedItemsCollection]]
-_AsyncPageFetcher: TypeAlias = Callable[[int], Awaitable[Optional[_ExtractedItemsCollection]]]
-
-# Type aliases to improve readability of pagination iterator signatures
-_ItemsIterator = Iterator[_ExtractedItemsCollection]
-_AsyncItemsIterator = AsyncIterator[_ExtractedItemsCollection]
-
-
-if sys.version_info >= (3, 10):
-    # Use built-in `anext()` when available, but create a private alias
-    # to maintain consistent naming convention with our backport implementation
-    _anext = anext
-else:
-    # Backport of the `anext()` built-in function introduced in Python 3.10
-    # This allows using the same async iteration pattern regardless of Python version
-    from faceit.types import TypeVar
-
-    _T = TypeVar("_T")
-
-    async def _anext(ait: AsyncIterator[_T]) -> _T:
-        return await ait.__anext__()
+_CollectReturnFormat: TypeAlias = t.Literal["first", "raw", "model"]
+_COLLECT_RETURN_FORMATS: t.Final[
+    t.Dict[
+        _CollectReturnFormat,
+        t.Callable[
+            [_PageListType],
+            t.Union[t.Type[ItemPage], t.Type[RawAPIPageResponse]],
+        ],
+    ]
+] = {
+    "first": lambda collection: type(collection[0])
+    if collection
+    else RawAPIPageResponse,
+    "raw": lambda _: RawAPIPageResponse,
+    "model": lambda _: ItemPage,
+}
 
 
-def _concatenate_pages(
-    accumulated_page: _ExtractedItemsCollection, new_page: _ExtractedItemsCollection, /
-) -> Optional[_ExtractedItemsCollection]:
-    # Pages can only be concatenated if they're of the same type (both `ItemPage` or both `list`)
-    # `ItemPage` implements custom `__add__` method that handles pagination metadata
-    # Split into separate `if` statements to satisfy mypy type checking and improve readability
-    if isinstance(accumulated_page, ItemPage) and isinstance(new_page, ItemPage):
-        return accumulated_page + new_page
-
-    if isinstance(accumulated_page, list) and isinstance(new_page, list):
-        return accumulated_page + new_page
-
-    _logger.warning(
-        "Cannot concatenate pages of different types: %s and %s",
-        type(accumulated_page).__name__,
-        type(new_page).__name__,
+def _has_unix_pagination_params(method: BaseUnixPaginationMethod, /) -> bool:
+    return all(
+        param in signature(method).parameters
+        for param in _UNIX_PAGINATION_PARAMS
     )
-    return None
 
 
-def _extract_page_items(page: _RawResponsePage) -> Optional[_ExtractedItemsCollection]:
-    """Extract items from a paginated response."""
-    if isinstance(page, ItemPage):
-        return page if page else None
-    if not isinstance(page, dict):
-        raise TypeError(f"Invalid page format: expected ItemPage or dict, got {type(page).__name__}")
-    if RAW_RESPONSE_ITEMS_KEY not in page:
-        raise TypeError(f"Missing required '{RAW_RESPONSE_ITEMS_KEY}' key in response")
-    return page[RAW_RESPONSE_ITEMS_KEY] if page[RAW_RESPONSE_ITEMS_KEY] else None
+def _get_le(param: Parameter, /) -> t.Optional[Le]:
+    return next(
+        (items for items in param.default.metadata if isinstance(items, Le)),
+        None,
+    )
 
 
 def _extract_pagination_limits(
-    limit_param: Parameter, offset_param: Parameter, method_name: str = "unknown"
+    limit_param: Parameter, offset_param: Parameter, /, *, method_name: str
 ) -> PaginationMaxParams:
-    # These validations serve two purposes:
-    # 1. For developers implementing methods - they ensure function signatures meet
-    #    pagination requirements and fail early with clear error messages during development
-    # 2. For static type checking - they allow mypy to verify we're working with correct types,
-    #    catching potential type errors before runtime
+    # Validates pagination parameters for:
+    # 1. Development - ensures correct function signatures with clear error messages
+    # 2. Static typing - enables mypy to verify type correctness
     if limit_param.default is None or offset_param.default is None:
         raise ValueError(
-            f"Function {method_name} is missing default value for {" or ".join(_PAGINATION_ARGS)} parameter"
+            f"Function {method_name} is missing default value for limit or offset parameter"
         )
-    if not isinstance(limit_param.default, FieldInfo) or not isinstance(offset_param.default, FieldInfo):
-        raise ValueError(
-            f"Default value for {" or ".join(_PAGINATION_ARGS)} parameter in {method_name} is not a FieldInfo"
+    if not isinstance(limit_param.default, FieldInfo) or not isinstance(
+        offset_param.default, FieldInfo
+    ):
+        raise TypeError(
+            f"Default value for limit or offset parameter in {method_name} is not a FieldInfo"
         )
 
     limit_constraint = _get_le(limit_param)
     if limit_constraint is None:
-        raise ValueError(f"In limit metadata of {method_name}, no Le constraint found")
-    # We cast constraint values to `int` without additional type checking because:
-    # 1. Le constraints in Pydantic's `Field()` only accept numeric types
-    # 2. For pagination parameters, integers are the only sensible constraint type
-    # 3. Type errors would be caught during development, not at runtime
-    max_limit = cast(int, limit_constraint.le)
+        raise ValueError(
+            f"In limit metadata of {method_name}, no Le constraint found"
+        )
+    # Cast to `int` is safe because:
+    # - Le constraints only accept numeric types
+    # - Pagination parameters use integers
+    max_limit = t.cast(int, limit_constraint.le)
     offset_constraint = _get_le(offset_param)
-    # `Offset` is optional, unlike the `limit`, so if it is not found,
-    # consider that the maximum offset is equal to the maximum limit
-    max_offset = max_limit if offset_constraint is None else cast(int, offset_constraint.le)
+    max_offset = (
+        # If offset constraint is missing,
+        # use `max_limit` as the default `max_offset`
+        max_limit
+        if offset_constraint is None
+        else t.cast(int, offset_constraint.le)
+    )
     return PaginationMaxParams(max_limit, max_offset)
 
 
-def _extract_unix_timestamp(
-    collection: _ExtractedItemsCollection, dict_unix_key: str, model_unix_attr: str
-) -> Optional[int]:
-    # NOTE: The API provides Unix timestamps in milliseconds, which may need to be
-    # converted to seconds (divided by 1000) when creating datetime objects
+def check_pagination_support(
+    func: _Func, /
+) -> t.Union[PaginationMaxParams, t.Literal[False]]:
+    if not hasattr(func, "__self__") or not issubclass(
+        func.__self__.__class__, _get_base_resource_class()
+    ):
+        return False
 
-    if not collection:
-        return None
-
-    last_item = collection[-1]
-    if isinstance(last_item, dict):
-        return deep_get(last_item, dict_unix_key)
-    if hasattr(last_item, model_unix_attr):
-        return getattr(last_item, model_unix_attr)
-
-    warnings.warn(
-        f"Could not extract Unix timestamp from item of type {type(last_item).__name__}.",
-        UserWarning,
-        stacklevel=2,
+    limit_param, offset_param = (
+        signature(func).parameters.get(arg) for arg in _PAGINATION_ARGS
     )
-    return None
-
-
-def _get_le(param: Parameter, /) -> Optional[Le]:
-    """Extract `Le` constraint from parameter metadata if present."""
-    return next((items for items in param.default.metadata if isinstance(items, Le)), None)
-
-
-def _has_unix_pagination_params(method: _PaginationMethod, /) -> bool:
-    """Check if the `method` supports `Unix timestamp` pagination."""
-    return all(param in signature(method).parameters for param in _UNIX_PAGINATION_PARAMS)
-
-
-def _safe_create_iterator(
-    method: _PaginationMethod,
-    is_async_expected: bool,
-    method_name_for_error: Literal["collect", "acollect"],
-    *args: Any,
-    **kwargs: Any,
-) -> PaginatedIterator:
-    iterator = PaginatedIterator(method, *args, **kwargs)
-    if iterator._is_async != is_async_expected:
-        sync_type, async_type = (
-            ("synchronous", "asynchronous") if is_async_expected else ("asynchronous", "synchronous")
-        )
-        raise TypeError(
-            f"Cannot use {async_type} collection with {sync_type} method {method.__name__}. "
-            f"Use '{method_name_for_error}' instead."
-        )
-    return iterator
-
-
-def _validate_unix_pagination_settings(
-    method: _PaginationMethod,
-    use_unix_pagination: bool,
-    dict_unix_key: Optional[str],
-    model_unix_attr: Optional[str],
-    kwargs: Dict[str, Any],
-) -> bool:
-    if not use_unix_pagination:
-        return False
-
-    if not _has_unix_pagination_params(method):
-        warnings.warn(
-            f"Method {method.__name__} does not appear to support Unix timestamp pagination. "
-            f"Expected {' and '.join(_UNIX_PAGINATION_PARAMS)} parameters.",
-            UserWarning,
-            stacklevel=3,
-        )
-        return False
-
-    if any(not isinstance(value, str) or not value for value in (dict_unix_key, model_unix_attr)):
-        raise ValueError(
-            "When using Unix timestamp pagination, you must provide either 'dict_unix_key' or 'model_unix_attr' "
-            "as a non-empty string. These parameters specify how to extract timestamps from items."
-        )
-
-    if any(kwargs.pop(arg, None) for arg in _UNIX_PAGINATION_PARAMS):
-        warnings.warn(
-            f"The parameters {', '.join(_UNIX_PAGINATION_PARAMS)} will be managed automatically "
-            f"with Unix timestamp pagination. Your provided values will be ignored.",
-            UserWarning,
-            stacklevel=3,
-        )
-
-    return True
-
-
-def check_pagination_support(func: Callable[..., Any], /) -> Union[PaginationMaxParams, Literal[False]]:
-    """Check if a method supports pagination by examining its parameters.
-
-    Verifies that the function:
-    1. Is a method of a `BaseResource` subclass
-    2. Has both `limit` and `offset` parameters
-    3. Has proper constraints on these parameters
-
-    Args:
-        func: The function to check for pagination support
-
-    Returns:
-        `PaginationMaxParams` with pagination limits if supported, `False` otherwise
-    """
-    if not hasattr(func, "__self__") or not issubclass(func.__self__.__class__, BaseResource):
-        return False
-
-    limit_param, offset_param = (signature(func).parameters.get(arg) for arg in _PAGINATION_ARGS)
 
     if limit_param is None or offset_param is None:
         return False
 
-    return _extract_pagination_limits(limit_param, offset_param, func.__name__)
-
-
-def deduplicate_collection(collection: Optional[_ExtractedItemsCollection], /) -> Optional[_ExtractedItemsCollection]:
-    """Remove duplicate items from a collection while preserving order.
-
-    Uses hash-based deduplication to handle unhashable objects and maintains
-    original pagination metadata for `ItemPage` collections.
-
-    Args:
-        collection: The collection to deduplicate (`ItemPage` or `list`)
-
-    Returns:
-        A new collection with duplicates removed, preserving the original order
-        and metadata (for `ItemPage`). Returns None if input is None.
-    """
-    if collection is None:
-        return None
-
-    if not isinstance(collection, (ItemPage, list)):
-        warnings.warn(
-            f"Deduplication not supported for collection of type {type(collection).__name__}. "
-            f"Expected 'ItemPage' or 'list'. The collection will be returned unchanged.",
-            UserWarning,
-            stacklevel=2,
-        )
-        return collection
-
-    seen: Set[int] = set()
-    unique_items = []
-    for item in collection:
-        item_hash = get_hashable_representation(item)
-        if item_hash not in seen:
-            unique_items.append(item)
-            seen.add(item_hash)
-
-    return (
-        collection.model_copy(update={"items": unique_items, "limit": len(unique_items)})
-        if isinstance(collection, ItemPage)
-        else unique_items
+    return _extract_pagination_limits(
+        limit_param, offset_param, method_name=func.__name__
     )
 
 
-@final
-class PaginatedIterator(_ItemsIterator, _AsyncItemsIterator):
-    """Iterator for paginated API resources.
+class _MethodCall(t.NamedTuple, t.Generic[_MethodT]):
+    call: _MethodT
+    args: t.Tuple[t.Any, ...]
+    kwargs: t.Dict[str, t.Any]
 
-    Provides a unified interface for iterating through paginated resources,
-    supporting both synchronous and asynchronous iteration depending on the
-    underlying resource method.
 
-    This class handles pagination details automatically, including:
-    - Tracking pagination state (current offset, page index)
-    - Detecting when all pages have been exhausted
-    - Enforcing pagination limits
-    - Supporting both sync and async iteration patterns
-    """
+class BasePageIterator(t.Generic[_MethodT, _PageT_co], ABC):
+    _STOP_ITERATION: t.ClassVar[t.Type[Exception]]
 
-    __slots__ = (
-        "_exhausted",
-        "_fetch_page",
-        "_is_async",
-        "_method",
-        "_offset",
-        "_page_index",
-        "_pagination_limits",
-    )
+    UNIX_CFG: t.ClassVar = UnixPaginationConfig
 
-    def __init__(self, method: _PaginationMethod, /, *args: Any, **kwargs: Any) -> None:
-        """Initialize a paginated iterator for the given method.
-
-        Args:
-            method: A resource method that supports pagination
-            *args: Positional arguments to pass to the method
-            **kwargs: Keyword arguments to pass to the method
-
-        Raises:
-            ValueError: If the method doesn't support pagination
-        """
+    def __init__(
+        self, method: _MethodT, /, *args: t.Any, **kwargs: t.Any
+    ) -> None:
         pagination_limits = check_pagination_support(method)
-        if pagination_limits is False:  # Checking for `False` seems preferable to me
+        if pagination_limits is False:
             raise ValueError(
                 f"Method '{method.__name__}' does not support pagination. "
-                f"Ensure it's a BaseResource method with {" and ".join(_PAGINATION_ARGS)} parameters."
+                f"Ensure it's a BaseResource method with offset and limit parameters."
             )
 
-        self._method = method
-        self._pagination_limits = pagination_limits
-
-        # Unwrap the method to find its original function object
-        # This is necessary because some decorators (particularly `validate_uuid_args`)
-        # don't preserve the coroutine status of async functions
-        # By accessing the original unwrapped function, we can correctly
-        # determine if the method is synchronous or asynchronous
-        original_method = method
-        while hasattr(original_method, "__wrapped__"):
-            original_method = original_method.__wrapped__
-        self._is_async = iscoroutinefunction(original_method)
-
-        self._fetch_page = (self._build_async_page_fetcher if self._is_async else self._build_sync_page_fetcher)(
-            *args, **self.__class__._remove_pagination_args(**kwargs)
+        self._method = _MethodCall[_MethodT](
+            call=method,
+            args=args,
+            kwargs=self.__class__._remove_pagination_args(**kwargs),
         )
-
+        self._pagination_limits = pagination_limits
         self._init_iteration()
 
     def _init_iteration(self) -> None:
         self._exhausted = False
-        self._page_index = 0
         self._offset = 0
-
-    @property
-    def pagination_limits(self) -> PaginationMaxParams:
-        return self._pagination_limits
+        self._page_index = 0
 
     @property
     def exhausted(self) -> bool:
@@ -373,14 +238,19 @@ class PaginatedIterator(_ItemsIterator, _AsyncItemsIterator):
         return self._offset
 
     @current_offset.setter
-    def current_offset(self, value: int) -> None:
+    def current_offset(self, value: t.Any, /) -> None:
+        if not isinstance(value, int):
+            raise TypeError(f"Pagination offset must be an integer: {value}")
         if self._exhausted:
-            raise ValueError("Pagination offset cannot be set after the iterator has been exhausted")
+            raise ValueError(
+                "Pagination offset cannot be set after the iterator has been exhausted"
+            )
         if value < 0:
             raise ValueError(f"Pagination offset cannot be negative: {value}")
         if value > self._pagination_limits.limit:
             raise ValueError(
-                f"Pagination offset ({value}) cannot exceed the maximum limit ({self._pagination_limits.limit})"
+                f"Pagination offset cannot exceed the maximum limit "
+                f"({self._pagination_limits.limit}): {value}"
             )
         self._offset = value
 
@@ -389,67 +259,13 @@ class PaginatedIterator(_ItemsIterator, _AsyncItemsIterator):
         return self._page_index
 
     def reset(self) -> None:
-        """Reset the iterator to its initial state.
-
-        Resets the internal state of the iterator, allowing it to be reused
-        from the beginning without creating a new instance.
-        """
         self._init_iteration()
 
-    def with_updated_args(self, *args: Any, **kwargs: Any) -> Self:
-        """Create a new paginator with updated arguments but the same method.
-
-        Returns a new instance of the paginator with the same method but different
-        arguments, allowing for reuse of the paginator with modified parameters.
-
-        Args:
-            *args: New positional arguments to pass to the method
-            **kwargs: New keyword arguments to pass to the method
-
-        Returns:
-            A new paginator instance with updated arguments
-        """
-        return self.__class__.with_method(self._method, *args, **kwargs)
-
-    @classmethod
-    def with_method(cls, method: _PaginationMethod, /, *args: Any, **kwargs: Any) -> Self:
-        """Create a paginated iterator instance for the given method.
-
-        This is an alternative constructor that creates an iterator bound to a specific
-        paginated resource method.
-
-        Args:
-            method: A resource method that supports pagination
-            *args: Positional arguments to pass to the method
-            **kwargs: Keyword arguments to pass to the method
-
-        Returns:
-            A new paginated iterator instance
-        """
-        return cls(method, *args, **kwargs)
-
-    def __str__(self) -> str:
-        return (
-            f"{self.__class__.__name__}({self._method.__name__}, "
-            f"{"exhausted" if self._exhausted else "active"}, offset={self._offset}, page_index={self._page_index})"
-        )
-
-    def __repr__(self) -> str:
-        return (
-            check_required_attributes(self, "_method", "_is_async", "_pagination_limits")
-            or f"{self.__class__.__name__}("
-            f"method={self._method.__name__!r}, "
-            f"async={self._is_async}, "
-            f"pagination_limits={self._pagination_limits}, "
-            f"exhausted={self._exhausted}, "
-            f"current_offset={self._offset}, "
-            f"current_page_index={self._page_index})"
-        )
+    def with_updated_args(self, *args: t.Any, **kwargs: t.Any) -> Self:
+        return self.__class__(self._method.call, *args, **kwargs)
 
     @staticmethod
-    def _remove_pagination_args(**kwargs: Any) -> Dict[str, Any]:
-        """Filter out pagination parameters from kwargs to prevent conflicts with internal pagination."""
-        # More efficient to modify the existing dictionary in-place
+    def _remove_pagination_args(**kwargs: t.Any) -> t.Dict[str, t.Any]:
         if any(kwargs.pop(arg, None) for arg in _PAGINATION_ARGS):
             warnings.warn(
                 f"Pagination parameters {_PAGINATION_ARGS} should not be provided by users. "
@@ -459,252 +275,455 @@ class PaginatedIterator(_ItemsIterator, _AsyncItemsIterator):
             )
         return kwargs
 
-    def _build_sync_page_fetcher(self, *args: Any, **kwargs: Any) -> _SyncPageFetcher:
-        def fetch_page(offset: int) -> Optional[_ExtractedItemsCollection]:
-            # fmt: off
-            return _extract_page_items(cast(_SyncPaginationMethod, self._method)(
-                *args, offset=offset, limit=self._pagination_limits.limit, **kwargs
-            ))
-            # fmt: on
-
-        return fetch_page
-
-    def _build_async_page_fetcher(self, *args: Any, **kwargs: Any) -> _AsyncPageFetcher:
-        async def fetch_page(offset: int) -> Optional[_ExtractedItemsCollection]:
-            # fmt: off
-            return _extract_page_items(await cast(_AsyncPaginationMethod, self._method)(
-                *args, offset=offset, limit=self._pagination_limits.limit, **kwargs
-            ))
-            # fmt: on
-
-        return fetch_page
-
-    def _handle_iteration_state(self, page: Optional[_ExtractedItemsCollection]) -> _ExtractedItemsCollection:
+    def _handle_iteration_state(
+        self, page: t.Optional[_PageT_co], /
+    ) -> _PageT_co:
         if page is None:
             self._exhausted = True
-            raise StopAsyncIteration if self._is_async else StopIteration
+            raise self.__class__._STOP_ITERATION
 
         self._page_index += 1
         self._offset += self._pagination_limits.limit
-        self._exhausted = len(page) < self._pagination_limits.limit or self._offset >= self._pagination_limits.offset
+
+        is_page_smaller_than_limit = len(page) < self._pagination_limits.limit
+        is_offset_exceeded = self._offset >= self._pagination_limits.offset
+        self._exhausted = is_page_smaller_than_limit or is_offset_exceeded
+
         return page
 
-    def __iter__(self) -> Self:
-        if self._is_async:
-            raise TypeError(
-                f"Cannot use synchronous iteration with asynchronous method {self._method.__name__}. "
-                f"Use 'async for' instead of 'for'."
+    @staticmethod
+    def _validate_unix_pagination_parameter(
+        method: _MethodT,
+        /,
+        # Process `kwargs` to filter pagination parameters and issue warnings
+        # when user-provided values will be ignored
+        kwargs: t.Dict[str, t.Any],
+        key: str,
+        attr: str,
+    ) -> None:
+        if not _has_unix_pagination_params(method):
+            raise ValueError(
+                f"Method {method.__name__} does not appear to support Unix timestamp pagination. "
+                f"Expected start and to parameters."
             )
+        if any(
+            not isinstance(value, str) or not value for value in (key, attr)
+        ):
+            raise ValueError(
+                f"Key and attribute parameters must be non-empty strings: {key}, {attr}"
+            )
+        if any(kwargs.pop(arg, None) for arg in _UNIX_PAGINATION_PARAMS):
+            warnings.warn(
+                "The parameters start and to will be managed automatically "
+                "with Unix timestamp pagination. Your provided values will be ignored.",
+                UserWarning,
+                stacklevel=3,
+            )
+
+    @staticmethod
+    def _validate_unix_config(
+        unix_config: _UnixPaginationConfigType, /
+    ) -> None:
+        if unix_config is not False and not isinstance(unix_config, dict):
+            raise ValueError(
+                f"Invalid unix pagination configuration: "
+                f"expected UnixPaginationConfig dictionary or False, got {type(unix_config)}. "
+                f"See pagination.UnixPaginationConfig for the required format."
+            )
+        if (
+            isinstance(unix_config, dict)
+            and _UnixMethodRequiredKeys - unix_config.keys()
+        ):
+            raise ValueError(
+                f"Invalid unix pagination configuration: "
+                f"missing required keys {_UnixMethodRequiredKeys}. "
+                f"See pagination.UnixPaginationConfig for the required format."
+            )
+
+    @staticmethod
+    def _extract_unix_timestamp(
+        page: t.Optional[_PageT_co], key: str, attr: str, /
+    ) -> t.Optional[int]:
+        if not page:
+            return None
+        return (
+            deep_get(page[RAW_RESPONSE_ITEMS_KEY][-1], key)
+            if isinstance(page, dict)
+            else getattr(page.last(), attr, None)
+        )
+
+    @classmethod
+    def _process_collected_pages(
+        cls,
+        collection: t.List[_PageT_co],
+        return_format: _CollectReturnFormat,
+        deduplicate: bool,
+        /,
+    ) -> t.Union[ItemPage[_T], t.List[RawAPIItem]]:
+        is_raw_mode = (
+            _COLLECT_RETURN_FORMATS[return_format](
+                t.cast(_PageListType, collection)
+            )
+            is RawAPIPageResponse
+        )
+        filtered = cls._filter_collection(
+            collection, RawAPIPageResponse if is_raw_mode else ItemPage
+        )
+        processed = filtered if is_raw_mode else ItemPage.merge(filtered)
+        return (
+            cls._deduplicate_collection(processed)
+            if deduplicate
+            else processed
+        )
+
+    @staticmethod
+    def _filter_collection(
+        collection: t.List[_PageT_co], expected_type: t.Type[t.Any], /
+    ) -> t.List[t.Any]:
+        return [item for item in collection if isinstance(item, expected_type)]
+
+    @classmethod
+    def _deduplicate_collection(
+        cls, collection: t.Union[ItemPage, t.List[RawAPIItem]], /
+    ) -> t.Union[ItemPage, t.List[RawAPIItem]]:
+        unique_items = list(
+            {
+                get_hashable_representation(item): item for item in collection
+            }.values()
+        )
+        return (
+            collection.with_items(unique_items)
+            if isinstance(collection, ItemPage)
+            else unique_items
+        )
+
+    @classmethod
+    def _create_unix_timestamp_iterator(
+        cls,
+        method: _MethodT,
+        /,
+        *args: t.Any,
+        timestamp: t.Optional[int],
+        **kwargs: t.Any,
+    ) -> Self:
+        # fmt: off
+        return cls(method, *args, **{
+            **kwargs,
+            **({"to": timestamp + 1} if timestamp is not None else {}),
+        })
+        # fmt: on
+
+
+class SyncPageIterator(
+    BasePageIterator[
+        t.Union[
+            SyncPaginationMethod[_PageT_co],
+            SyncUnixPaginationMethod[_PageT_co],
+        ],
+        _PageT_co,
+    ],
+    t.Iterator[_PageT_co],
+):
+    _STOP_ITERATION: t.ClassVar = StopIteration
+
+    def _fetch_page(self) -> t.Optional[_PageT_co]:
+        return (
+            self._method.call(
+                *self._method.args,
+                **self._method.kwargs,
+                limit=self._pagination_limits.limit,
+                offset=self._offset,
+            )
+            or None
+        )
+
+    def __iter__(self) -> Self:
         return self
 
-    def __next__(self) -> _ExtractedItemsCollection:
+    def __next__(self) -> _PageT_co:
         if self._exhausted:
-            raise StopIteration
-        return self._handle_iteration_state(cast(_SyncPageFetcher, self._fetch_page)(self._offset))
+            raise self.__class__._STOP_ITERATION
+        return self._handle_iteration_state(self._fetch_page())
+
+    @classmethod
+    def unix(
+        cls,
+        method: SyncUnixPaginationMethod[_PageT_co],
+        /,
+        *_args: t.Any,
+        key: str,
+        attr: str,
+        **kwargs: t.Any,
+    ) -> t.Generator[_PageT_co, None, None]:
+        cls._validate_unix_pagination_parameter(method, kwargs, key, attr)
+
+        current_timestamp = None
+        while True:
+            pages = list(
+                cls._create_unix_timestamp_iterator(
+                    method, *_args, timestamp=current_timestamp, **kwargs
+                )
+            )
+
+            if not pages:
+                break
+
+            yield from pages
+
+            new_timestamp = cls._extract_unix_timestamp(pages[-1], key, attr)
+
+            if new_timestamp is None or new_timestamp == current_timestamp:
+                break
+
+            current_timestamp = new_timestamp
+
+    @t.overload
+    @classmethod
+    def collect(
+        cls,
+        method: SyncPaginationMethod[ItemPage[_T]],
+        /,
+        *args: t.Any,
+        unix: t.Literal[False] = ...,
+        return_format: _CollectReturnFormat = ...,
+        deduplicate: bool = ...,
+        **kwargs: t.Any,
+    ) -> ItemPage[_T]: ...
+
+    @t.overload
+    @classmethod
+    def collect(
+        cls,
+        method: SyncPaginationMethod[RawAPIPageResponse],
+        /,
+        *args: t.Any,
+        unix: t.Literal[False] = ...,
+        return_format: _CollectReturnFormat = ...,
+        deduplicate: bool = ...,
+        **kwargs: t.Any,
+    ) -> t.List[RawAPIItem]: ...
+
+    @t.overload
+    @classmethod
+    def collect(
+        cls,
+        method: SyncUnixPaginationMethod[ItemPage[_T]],
+        /,
+        *args: t.Any,
+        unix: _UnixPaginationConfigType,
+        return_format: _CollectReturnFormat = ...,
+        deduplicate: bool = ...,
+        **kwargs: t.Any,
+    ) -> ItemPage[_T]: ...
+
+    @t.overload
+    @classmethod
+    def collect(
+        cls,
+        method: SyncUnixPaginationMethod[RawAPIPageResponse],
+        /,
+        *args: t.Any,
+        unix: _UnixPaginationConfigType,
+        return_format: _CollectReturnFormat = ...,
+        deduplicate: bool = ...,
+        **kwargs: t.Any,
+    ) -> t.List[RawAPIItem]: ...
+
+    @classmethod
+    def collect(
+        cls,
+        method: t.Union[
+            SyncPaginationMethod[t.Union[ItemPage[_T], RawAPIPageResponse]],
+            SyncUnixPaginationMethod[
+                t.Union[ItemPage[_T], RawAPIPageResponse]
+            ],
+        ],
+        /,
+        *args: t.Any,
+        unix: _UnixPaginationConfigType = False,
+        return_format: _CollectReturnFormat = "first",
+        deduplicate: bool = True,
+        **kwargs: t.Any,
+    ) -> t.Union[ItemPage[_T], t.List[RawAPIItem]]:
+        cls._validate_unix_config(unix)
+        if unix is False:
+            casted_method = t.cast(
+                t.Union[
+                    SyncPaginationMethod[_PageT_co],
+                    SyncUnixPaginationMethod[_PageT_co],
+                ],
+                method,
+            )
+            collection = list(cls(casted_method, *args, **kwargs))
+        else:
+            collection = list(
+                cls.unix(
+                    t.cast(SyncUnixPaginationMethod[_PageT_co], method),
+                    *args,
+                    **unix,
+                    **kwargs,
+                )
+            )
+        return cls._process_collected_pages(
+            collection, return_format, deduplicate
+        )
+
+
+class AsyncPageIterator(
+    BasePageIterator[
+        t.Union[
+            AsyncPaginationMethod[_PageT_co],
+            AsyncUnixPaginationMethod[_PageT_co],
+        ],
+        _PageT_co,
+    ],
+    t.AsyncIterator[_PageT_co],
+):
+    _STOP_ITERATION: t.ClassVar = StopAsyncIteration
+
+    async def _fetch_page(self) -> t.Optional[_PageT_co]:
+        return (
+            await self._method.call(
+                *self._method.args,
+                **self._method.kwargs,
+                limit=self._pagination_limits.limit,
+                offset=self._offset,
+            )
+            or None
+        )
 
     def __aiter__(self) -> Self:
-        if not self._is_async:
-            raise TypeError(
-                f"Cannot use asynchronous iteration with synchronous method {self._method.__name__}. "
-                f"Use 'for' instead of 'async for'."
-            )
         return self
 
-    async def __anext__(self) -> _ExtractedItemsCollection:
+    async def __anext__(self) -> _PageT_co:
         if self._exhausted:
-            raise StopAsyncIteration
-        return self._handle_iteration_state(await cast(_AsyncPageFetcher, self._fetch_page)(self._offset))
+            raise self.__class__._STOP_ITERATION
+        return self._handle_iteration_state(await self._fetch_page())
 
+    @classmethod
+    async def unix(
+        cls,
+        method: AsyncUnixPaginationMethod[_PageT_co],
+        /,
+        *_args: t.Any,
+        key: str,
+        attr: str,
+        **kwargs: t.Any,
+    ) -> t.AsyncGenerator[_PageT_co, None]:
+        cls._validate_unix_pagination_parameter(method, kwargs, key, attr)
 
-@overload
-def collect(
-    method: _SyncPaginationMethod,
-    /,
-    *args: Any,
-    deduplicate: bool = False,
-    use_unix_pagination: Literal[False] = ...,
-    dict_unix_key: None = ...,
-    model_unix_attr: None = ...,
-    **kwargs: Any,
-) -> Optional[_ExtractedItemsCollection]: ...
-@overload
-def collect(
-    method: _SyncPaginationMethod,
-    /,
-    *args: Any,
-    deduplicate: bool = False,
-    use_unix_pagination: Literal[True],
-    dict_unix_key: str,
-    model_unix_attr: str,
-    **kwargs: Any,
-) -> Optional[_ExtractedItemsCollection]: ...
-def collect(
-    method: _SyncPaginationMethod,
-    /,
-    *args: Any,
-    deduplicate: bool = False,
-    use_unix_pagination: bool = False,
-    dict_unix_key: Optional[str] = None,
-    model_unix_attr: Optional[str] = None,
-    **kwargs: Any,
-) -> Optional[_ExtractedItemsCollection]:
-    """Collect all pages from a paginated method into a single collection.
+        current_timestamp = None
+        while True:
+            pages = [
+                page
+                async for page in cls._create_unix_timestamp_iterator(
+                    method, *_args, timestamp=current_timestamp, **kwargs
+                )
+            ]
 
-    This function iterates through all pages of a paginated resource method
-    and combines them into a single collection. It supports both standard pagination
-    and Unix timestamp-based pagination for methods that accept `start` and `to` parameters.
+            if not pages:
+                break
 
-    Args:
-        method: A synchronous method that supports pagination
-        *args: Positional arguments to pass to the method
-        deduplicate: Whether to remove duplicate items from the result collection.
-                     Use as a fallback when upstream API may return duplicates, though ideally data should be unique.
-        use_unix_pagination: Whether to use Unix timestamp-based pagination
-        dict_unix_key: The key to extract Unix timestamp from dictionary items (required if use_unix_pagination=True)
-        model_unix_attr: The attribute name to extract Unix timestamp from model objects (required if use_unix_pagination=True)
-        **kwargs: Keyword arguments to pass to the method
+            for page in pages:
+                yield page
 
-    Raises:
-        ValueError: If Unix pagination is enabled but required parameters are missing
-        TypeError: If the method is asynchronous (use `acollect` instead)
+            new_timestamp = cls._extract_unix_timestamp(pages[-1], key, attr)
 
-    Returns:
-        A collection containing all items from all pages, or None if no items were found
+            if new_timestamp is None or new_timestamp == current_timestamp:
+                break
 
-    Note:
-        For asynchronous methods, use `acollect` instead.
-        For memory-efficient streaming of large datasets, use `PaginatedIterator` directly.
-    """
-    use_unix_pagination = _validate_unix_pagination_settings(
-        method, use_unix_pagination, dict_unix_key, model_unix_attr, kwargs
-    )
+            current_timestamp = new_timestamp
 
-    iterator = _safe_create_iterator(method, False, "acollect", *args, **kwargs)
+    @t.overload
+    @classmethod
+    async def collect(
+        cls,
+        method: AsyncPaginationMethod[ItemPage[_T]],
+        /,
+        *args: t.Any,
+        unix: t.Literal[False] = ...,
+        return_format: _CollectReturnFormat = ...,
+        deduplicate: bool = ...,
+        **kwargs: t.Any,
+    ) -> ItemPage[_T]: ...
 
-    try:
-        collection = next(iterator)
-    except StopIteration:
-        return None
+    @t.overload
+    @classmethod
+    async def collect(
+        cls,
+        method: AsyncPaginationMethod[RawAPIPageResponse],
+        /,
+        *args: t.Any,
+        unix: t.Literal[False] = ...,
+        return_format: _CollectReturnFormat = ...,
+        deduplicate: bool = ...,
+        **kwargs: t.Any,
+    ) -> t.List[RawAPIItem]: ...
 
-    for page in iterator:
-        result = _concatenate_pages(collection, page)
-        if result is not None:
-            collection = result
+    @t.overload
+    @classmethod
+    async def collect(
+        cls,
+        method: AsyncUnixPaginationMethod[ItemPage[_T]],
+        /,
+        *args: t.Any,
+        unix: _UnixPaginationConfigType,
+        return_format: _CollectReturnFormat = ...,
+        deduplicate: bool = ...,
+        **kwargs: t.Any,
+    ) -> ItemPage[_T]: ...
 
-    if not use_unix_pagination:
-        return collection
+    @t.overload
+    @classmethod
+    async def collect(
+        cls,
+        method: AsyncUnixPaginationMethod[RawAPIPageResponse],
+        /,
+        *args: t.Any,
+        unix: _UnixPaginationConfigType,
+        return_format: _CollectReturnFormat = ...,
+        deduplicate: bool = ...,
+        **kwargs: t.Any,
+    ) -> t.List[RawAPIItem]: ...
 
-    # We use `cast(str, ...)` as mypy cannot correctly infer that these values
-    # have been validated in `_validate_unix_pagination_settings()`
-    # This ensures proper type checking while maintaining runtime safety
-    def get_last_item_timestamp(collection: _ExtractedItemsCollection) -> Optional[int]:
-        return _extract_unix_timestamp(collection, cast(str, dict_unix_key), cast(str, model_unix_attr))
-
-    # Store previous timestamp to prevent infinite loops when pagination reaches the end
-    timestamp, prev_timestamp = get_last_item_timestamp(collection), None
-    while timestamp is not None and timestamp != prev_timestamp:
-        iterator = iterator.with_updated_args(*args, **{**kwargs, _UNIX_PAGINATION_PARAMS[1]: timestamp + 1})
-
-        for page in iterator:
-            result = _concatenate_pages(collection, page)
-            if result is not None:
-                collection = result
-
-        timestamp, prev_timestamp = get_last_item_timestamp(collection), timestamp
-
-    return deduplicate_collection(collection) if deduplicate else collection
-
-
-@overload
-async def acollect(
-    method: _AsyncPaginationMethod,
-    /,
-    *args: Any,
-    deduplicate: bool = False,
-    use_unix_pagination: Literal[False] = ...,
-    dict_unix_key: None = ...,
-    model_unix_attr: None = ...,
-    **kwargs: Any,
-) -> Optional[_ExtractedItemsCollection]: ...
-@overload
-async def acollect(
-    method: _AsyncPaginationMethod,
-    /,
-    *args: Any,
-    deduplicate: bool = False,
-    use_unix_pagination: Literal[True],
-    dict_unix_key: str,
-    model_unix_attr: str,
-    **kwargs: Any,
-) -> Optional[_ExtractedItemsCollection]: ...
-async def acollect(
-    method: _AsyncPaginationMethod,
-    /,
-    *args: Any,
-    deduplicate: bool = False,
-    use_unix_pagination: bool = False,
-    dict_unix_key: Optional[str] = None,
-    model_unix_attr: Optional[str] = None,
-    **kwargs: Any,
-) -> Optional[_ExtractedItemsCollection]:
-    """Asynchronously collect all pages from a paginated method into a single collection.
-
-    This function iterates through all pages of a paginated resource method
-    and combines them into a single collection. It supports both standard pagination
-    and Unix timestamp-based pagination for methods that accept `start` and `to` parameters.
-
-    Args:
-        method: An asynchronous method that supports pagination
-        *args: Positional arguments to pass to the method
-        deduplicate: Whether to remove duplicate items from the result collection.
-                     Use as a fallback when upstream API may return duplicates, though ideally data should be unique.
-        use_unix_pagination: Whether to use Unix timestamp-based pagination
-        dict_unix_key: The key to extract Unix timestamp from dictionary items (required if use_unix_pagination=True)
-        model_unix_attr: The attribute name to extract Unix timestamp from model objects (required if use_unix_pagination=True)
-        **kwargs: Keyword arguments to pass to the method
-
-    Raises:
-        ValueError: If Unix pagination is enabled but required parameters are missing
-        TypeError: If the method is synchronous (use `collect` instead)
-
-    Returns:
-        A collection containing all items from all pages, or None if no items were found
-
-    Note:
-        For synchronous methods, use `collect` instead.
-        For memory-efficient streaming of large datasets, use `PaginatedIterator` directly.
-    """
-    use_unix_pagination = _validate_unix_pagination_settings(
-        method, use_unix_pagination, dict_unix_key, model_unix_attr, kwargs
-    )
-
-    iterator = _safe_create_iterator(method, True, "collect", *args, **kwargs)
-
-    try:
-        collection = await _anext(iterator)
-    except StopAsyncIteration:
-        return None
-
-    async for page in iterator:
-        result = _concatenate_pages(collection, page)
-        if result is not None:
-            collection = result
-
-    if not use_unix_pagination:
-        return collection
-
-    def get_last_item_timestamp(collection: _ExtractedItemsCollection) -> Optional[int]:
-        return _extract_unix_timestamp(collection, cast(str, dict_unix_key), cast(str, model_unix_attr))
-
-    timestamp, prev_timestamp = get_last_item_timestamp(collection), None
-    while timestamp is not None and timestamp != prev_timestamp:
-        iterator = iterator.with_updated_args(*args, **{**kwargs, _UNIX_PAGINATION_PARAMS[1]: timestamp + 1})
-
-        async for page in iterator:
-            result = _concatenate_pages(collection, page)
-            if result is not None:
-                collection = result
-
-        timestamp, prev_timestamp = get_last_item_timestamp(collection), timestamp
-
-    return deduplicate_collection(collection) if deduplicate else collection
+    @classmethod
+    async def collect(
+        cls,
+        method: t.Union[
+            AsyncPaginationMethod[t.Union[ItemPage[_T], RawAPIPageResponse]],
+            AsyncUnixPaginationMethod[
+                t.Union[ItemPage[_T], RawAPIPageResponse]
+            ],
+        ],
+        /,
+        *args: t.Any,
+        unix: _UnixPaginationConfigType = False,
+        return_format: _CollectReturnFormat = "first",
+        deduplicate: bool = True,
+        **kwargs: t.Any,
+    ) -> t.Union[ItemPage[_T], t.List[RawAPIItem]]:
+        cls._validate_unix_config(unix)
+        if unix is False:
+            casted_method = t.cast(
+                t.Union[
+                    AsyncPaginationMethod[_PageT_co],
+                    AsyncUnixPaginationMethod[_PageT_co],
+                ],
+                method,
+            )
+            collection = [
+                page async for page in cls(casted_method, *args, **kwargs)
+            ]
+        else:
+            collection = [
+                page
+                async for page in cls.unix(
+                    t.cast(AsyncUnixPaginationMethod[_PageT_co], method),
+                    *args,
+                    **unix,
+                    **kwargs,
+                )
+            ]
+        return cls._process_collected_pages(
+            collection, return_format, deduplicate
+        )

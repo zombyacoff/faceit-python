@@ -2,10 +2,10 @@ from typing import Any, List, Literal, Union
 
 from pydantic import BaseModel, Field, field_validator
 
+from faceit._types import Annotated, UrlOrEmpty
 from faceit.constants import GameID
-from faceit.types import Annotated, UrlOrEmpty
 
-from .custom_types import FaceitID, LangFormattedHttpUrl
+from .custom_types import FaceitID, LangFormattedAnyHttpUrl
 
 _RESULT_MAP = {"faction1": "first", "faction2": "second"}
 
@@ -17,7 +17,7 @@ class PlayerSummary(BaseModel):
     level: Annotated[int, Field(alias="skill_level")]
     game_player_id: str
     game_player_name: str
-    faceit_url: LangFormattedHttpUrl
+    faceit_url: LangFormattedAnyHttpUrl
 
 
 class Team(BaseModel):
@@ -45,7 +45,7 @@ class Results(BaseModel):
     score: Score
 
     @field_validator("winner", mode="before")
-    def convert_winner(cls, value: Any) -> str:
+    def convert_winner(cls, value: Any) -> str:  # noqa: N805
         if value in _RESULT_MAP:
             return _RESULT_MAP[value]
         raise ValueError(f"Invalid winner value: {value}")
@@ -69,4 +69,4 @@ class Match(BaseModel):
     started_at: int
     finished_at: int
     results: Results
-    faceit_url: LangFormattedHttpUrl
+    faceit_url: LangFormattedAnyHttpUrl
