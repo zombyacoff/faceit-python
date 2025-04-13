@@ -1,4 +1,4 @@
-from typing import List
+import typing as t
 
 from pydantic import BaseModel
 
@@ -10,12 +10,12 @@ from .custom_types import FaceitID, NullableList, ResponseContainer
 class JoinChecks(BaseModel):
     min_skill_level: int
     max_skill_level: int
-    whitelist_geo_countries: List[str]
+    whitelist_geo_countries: t.List[str]
     whitelist_geo_countries_min_players: int
-    blacklist_geo_countries: List[str]
+    blacklist_geo_countries: t.List[str]
     join_policy: str
     membership_type: str
-    allowed_team_types: List[str]
+    allowed_team_types: t.List[str]
 
 
 class SubstitutionConfiguration(BaseModel):

@@ -9,7 +9,7 @@ from uuid import UUID  # noqa: TCH003
 from pydantic import Field, validate_call
 
 from faceit._types import (
-    APIResponseFormat,
+    APIResponseFormatT,
     ClientT,
     Model,
     ParamSpec,
@@ -17,11 +17,7 @@ from faceit._types import (
     RawAPIItem,
     RawAPIPageResponse,
 )
-from faceit._utils import (  # noqa: F401 TODO
-    convert_to_unix_millis,
-    is_valid_uuid,
-    validate_uuid_args,
-)
+from faceit._utils import is_valid_uuid, validate_uuid_args
 from faceit.constants import GameID
 from faceit.http import AsyncClient, SyncClient
 from faceit.models import (
@@ -36,12 +32,13 @@ from faceit.models import (
     Tournament,
 )
 
-from .base import BaseResource, FaceitResourcePath
+from .base import BaseResource, FaceitResourcePath, RequestPayload
+
+if t.TYPE_CHECKING:
+    _T = t.TypeVar("_T")
+    _P = ParamSpec("_P")
 
 _logger = logging.getLogger(__name__)
-
-_T = t.TypeVar("_T")
-_P = ParamSpec("_P")
 
 
 def _validate_player_id(func: t.Callable[_P, _T]) -> t.Callable[_P, _T]:
@@ -60,7 +57,8 @@ class BasePlayers(BaseResource[ClientT], ABC):
         identifier: t.Optional[t.Union[str, UUID]],
         game: t.Optional[GameID],
         game_player_id: t.Optional[str],
-    ) -> t.Dict[str, t.Any]:
+        /,
+    ) -> RequestPayload:
         params = self.__class__._build_params(
             game=game, game_player_id=game_player_id
         )
@@ -76,7 +74,7 @@ class BasePlayers(BaseResource[ClientT], ABC):
                 game,
                 game_player_id,
             )
-            return self.__class__._build_request_payload(self.path, params)
+            return RequestPayload(endpoint=self.path, params=params)
 
         if game is not None or game_player_id is not None:
             warnings.warn(
@@ -88,33 +86,31 @@ class BasePlayers(BaseResource[ClientT], ABC):
 
         if is_valid_uuid(identifier):
             _logger.info("Fetching player by UUID: %s", identifier)
-            return self.__class__._build_request_payload(
-                self.path / str(identifier), params
+            return RequestPayload(
+                endpoint=self.path / str(identifier), params=params
             )
 
         _logger.info("Fetching player by nickname: %s", identifier)
         params["nickname"] = str(identifier)
-        return self.__class__._build_request_payload(self.path, params)
+        return RequestPayload(endpoint=self.path, params=params)
 
     # TODO: Выделить данную логику в универсальный метод класса,
     # так как весьма вероятно, что она будет использоваться в других ресурсах
     def _process_matches_stats_response(
-        self, response: RawAPIPageResponse, game: GameID
+        self, response: RawAPIPageResponse, game: GameID, /
     ) -> t.Union[ItemPage, RawAPIPageResponse]:
         _logger.debug("Processing match stats response for game: %s", game)
 
         validator = self._match_stats_model_types.get(game)
         if validator is not None:
-            _logger.info(
-                "Validating match stats with model for game: %s", game
-            )
             # Suppressing type checking warning because we're using a
             # dynamic runtime subscript `ItemPage` is being subscripted
             # with a variable (`validator`) which mypy cannot statically verify
             return self._validate_response(response, ItemPage[validator])  # type: ignore[valid-type]
 
         warnings.warn(
-            f"No model defined for game '{game}'. Consider using the raw response",
+            f"No model defined for game '{game}'. "
+            "Consider using the raw response",
             UserWarning,
             stacklevel=3,
         )
@@ -122,7 +118,7 @@ class BasePlayers(BaseResource[ClientT], ABC):
 
 
 @t.final
-class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormat]):
+class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
     @t.overload
     def get(
         self: SyncPlayers[Raw], identifier: t.Union[str, UUID]
@@ -221,7 +217,7 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormat]):
     ) -> t.Union[RawAPIPageResponse, ItemPage[BanEntry]]:
         return self._validate_response(
             self._client.get(
-                self.path / str(player_id) / "bans",
+                self.path / str(player_id) / "bans",  # `str(...)` for `UUID`
                 params=self.__class__._build_params(
                     offset=offset, limit=limit
                 ),
@@ -260,8 +256,8 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormat]):
     ) -> RawAPIPageResponse: ...
 
     # NOTE: Currently, there is only one model for validating game
-    # statistics - so we return only it. In the future, when expanding the models,
-    # we will need to devise a solution for the return value
+    # statistics - so we return only it. In the future, when expanding
+    # the models, we will need to devise a solution for the return value
     @t.overload
     def matches_stats(
         self: SyncPlayers[Model],
@@ -301,10 +297,12 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormat]):
     def all_matches_stats(
         self: SyncPlayers[Raw], player_id: t.Union[str, UUID], game: GameID
     ) -> t.List[RawAPIItem]: ...
+
     @t.overload
     def all_matches_stats(
         self: SyncPlayers[Model], player_id: t.Union[str, UUID], game: GameID
     ) -> ItemPage[BaseMatchPlayerStats]: ...
+
     def all_matches_stats(
         self, player_id: t.Union[str, UUID], game: GameID
     ) -> t.Union[ItemPage[BaseMatchPlayerStats], t.List[RawAPIItem]]:
@@ -362,6 +360,28 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormat]):
                 expect_page=True,
             ),
             ItemPage[Match],
+        )
+
+    @t.overload
+    def all_history(
+        self: SyncPlayers[Raw], player_id: t.Union[str, UUID], game: GameID
+    ) -> RawAPIPageResponse: ...
+
+    @t.overload
+    def all_history(
+        self: SyncPlayers[Model], player_id: t.Union[str, UUID], game: GameID
+    ) -> ItemPage[Match]: ...
+
+    def all_history(
+        self, player_id: t.Union[str, UUID], game: GameID
+    ) -> t.Union[RawAPIPageResponse, ItemPage[Match]]:
+        return self.__class__._sync_page_iterator.collect(
+            self.history,  # type: ignore[misc]
+            player_id,
+            game,
+            unix=self.__class__._unix_cfg(
+                key="finished_at", attr="finished_at"
+            ),
         )
 
     @t.overload
@@ -491,7 +511,7 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormat]):
 
 
 @t.final
-class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormat]):
+class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
     @t.overload
     async def get(
         self: AsyncPlayers[Raw], identifier: t.Union[str, UUID]

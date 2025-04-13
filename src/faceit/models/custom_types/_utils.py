@@ -1,10 +1,10 @@
-from typing import Any, Callable, Optional, Type
+import typing as t
 
 from pydantic_core import core_schema
 
 
 def build_validatable_string_type_schema(
-    obj: Type[Any], validator: Optional[Callable[..., Any]] = None
+    obj: t.Type[t.Any], validator: t.Optional[t.Callable[..., t.Any]] = None, /
 ) -> core_schema.CoreSchema:
     if validator is None:
         # If no explicit `validator` is provided,

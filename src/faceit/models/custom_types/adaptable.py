@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import typing as t
-from functools import lru_cache
 
 from pydantic import AnyHttpUrl, GetCoreSchemaHandler, RootModel
 from pydantic_core import core_schema
@@ -16,6 +15,8 @@ if t.TYPE_CHECKING:
 
 @t.final
 class ResponseContainer(RootModel[t.Dict[str, _T]]):
+    __slots__ = ()
+
     def items(self) -> t.ItemsView[str, _T]:
         return self.root.items()
 
@@ -51,7 +52,6 @@ class LangFormattedAnyHttpUrl:
     DEFAULT_LANG = "en"
 
     @classmethod
-    @lru_cache
     def validate(cls, value: str) -> AnyHttpUrl:
         try:
             return AnyHttpUrl(

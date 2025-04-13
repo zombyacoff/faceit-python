@@ -1,8 +1,8 @@
 import hashlib
 import json
 import typing as t
-from datetime import datetime
-from functools import _lru_cache_wrapper, lru_cache, reduce, wraps
+from datetime import datetime, timezone
+from functools import lru_cache, reduce, wraps
 from inspect import signature
 from uuid import UUID
 
@@ -16,11 +16,20 @@ _P = ParamSpec("_P")
 # This approach reduces project complexity and potential version conflicts
 # while maintaining full control over the implementation details
 
-_UNINITIALIZED_OBJECT_MSG: t.Final = "uninitialized"
+
+def lazy_import(func: t.Callable[[], _T]) -> t.Callable[[], _T]:
+    """Decorator for lazy importing to prevent cyclic dependencies.
+
+    This is an alias for `lru_cache(maxsize=1)` with a more descriptive name.
+    """
+    return lru_cache(maxsize=1)(func)
 
 
 def deep_get(
-    dictionary: t.Dict[str, t.Any], keys: str, default: t.Optional[_T] = None
+    dictionary: t.Dict[str, t.Any],
+    keys: str,
+    /,
+    default: t.Optional[_T] = None,
 ) -> t.Union[_T, t.Any]:
     return reduce(
         lambda d, key: d.get(key, default) if isinstance(d, dict) else default,
@@ -30,7 +39,7 @@ def deep_get(
 
 
 def get_nested_property(
-    obj: t.Any, path: str, default: t.Optional[_T] = None
+    obj: t.Any, path: str, /, default: t.Optional[_T] = None
 ) -> t.Union[_T, t.Any]:
     if obj is None or not path:
         return default
@@ -44,7 +53,7 @@ def get_nested_property(
         return default
 
 
-def get_hashable_representation(obj: t.Any) -> int:
+def get_hashable_representation(obj: t.Any, /) -> int:
     try:
         return hash(obj)
     except TypeError:
@@ -57,33 +66,42 @@ def get_hashable_representation(obj: t.Any) -> int:
                 signed=True,
             )
         except (TypeError, ValueError):
-            # For objects that can't be JSON serialized, use their string representation
+            # For objects that can't be JSON serialized,
+            # use their string representation
             # This is less precise but safer than pickle
             return hash(str(obj))
 
 
-@t.overload
-def convert_to_unix_millis(value: None) -> None: ...
+# NOTE: Some API methods return Unix timestamps in milliseconds
 
 
-@t.overload
-def convert_to_unix_millis(value: datetime) -> int: ...
-
-
-# The API provides Unix timestamps in milliseconds
-def convert_to_unix_millis(value: t.Optional[datetime]) -> t.Optional[int]:
+def convert_to_unix(
+    value: t.Optional[datetime], /, *, millis: bool = False
+) -> t.Optional[int]:
     if value is None:
         return None
     if isinstance(value, datetime):
-        return int(value.timestamp()) * 1000
+        return int(value.timestamp()) * (1000 if millis else 1)
     raise ValueError(f"Expected datetime or None, got {type(value).__name__}")
+
+
+def convert_from_unix(
+    value: t.Optional[int], /, *, millis: bool = False
+) -> t.Optional[datetime]:
+    if value is None:
+        return None
+    if isinstance(value, int):
+        return datetime.fromtimestamp(
+            value / (1000 if millis else 1), tz=timezone.utc
+        )
+    raise ValueError(f"Expected int or None, got {type(value).__name__}")
 
 
 # We maintain our own `UUID` validation implementation despite potentially more efficient
 # alternatives. This specific implementation is crucial for the library's internal logic to
 # distinguish between different resource types (e.g., nickname vs ID) and supports the
 # expected behavior of various resource handlers
-def is_valid_uuid(value: t.Any) -> bool:
+def is_valid_uuid(value: t.Any, /) -> bool:
     if isinstance(value, UUID):
         return True
     if not isinstance(value, (str, bytes)):
@@ -126,21 +144,3 @@ def validate_uuid_args(
         return wrapper
 
     return decorator
-
-
-def lazy_import(func: t.Callable[..., _T]) -> _lru_cache_wrapper[_T]:
-    """Decorator for lazy importing to prevent cyclic dependencies.
-
-    This is an alias for `lru_cache(maxsize=1)` with a more descriptive name.
-    """
-    return lru_cache(maxsize=1)(func)
-
-
-def check_required_attributes(
-    obj: t.Any, *attrs: str
-) -> t.Union[t.Literal[False], str]:
-    return (
-        False
-        if all(hasattr(obj, attr) for attr in attrs)
-        else f"{obj.__class__.__name__}({_UNINITIALIZED_OBJECT_MSG!r})"
-    )

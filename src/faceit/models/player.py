@@ -1,5 +1,5 @@
+import typing as t
 from datetime import datetime
-from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -20,10 +20,10 @@ class GameInfo(BaseModel):
     level: Annotated[int, Field(alias="skill_level")]
     elo: Annotated[int, Field(alias="faceit_elo")]
     game_player_name: str
-    # I think this attribute is outdated
-    # level_label: str = Field(alias="skill_level_label")
+    # I think this attribute is outdated:
+    # `level_label: str = Field(alias="skill_level_label")`
     regions: ResponseContainer = ResponseContainer({})
-    game_profile_id: str  # I have absolutely no idea what it is :<
+    game_profile_id: str
 
 
 class Player(BaseModel):
@@ -32,14 +32,14 @@ class Player(BaseModel):
     avatar: UrlOrEmpty
     country: str
     cover_image: UrlOrEmpty
-    platforms: Optional[ResponseContainer[str]]
+    platforms: t.Optional[ResponseContainer[str]]
     games: ResponseContainer[GameInfo]
     settings: ResponseContainer
-    friends_ids: List[FaceitID]
+    friends_ids: t.List[FaceitID]
     new_steam_id: str
     steam_id_64: str
     steam_nickname: str
-    memberships: List[str]
+    memberships: t.List[str]
     faceit_url: LangFormattedAnyHttpUrl
     membership_type: str
     cover_featured_image: str
@@ -49,7 +49,13 @@ class Player(BaseModel):
 
 
 class BaseMatchPlayerStats(BaseModel):
-    pass
+    """Base class for player match statistics models in the inheritance hierarchy.
+
+    Serves as a common type for different game-specific player statistics models.
+    Used for type annotations where the return type depends on the `game` parameter
+    provided by the user, allowing different `MatchPlayerStats` subclasses to be
+    returned based on the game context.
+    """
 
 
 # Не работает для игроков, игравших последний раз в ~авг. 2024 года
@@ -114,10 +120,10 @@ class GeneralTeam(BaseModel):
     nickname: str
     name: str
     avatar: UrlOrEmpty
-    cover_image: Optional[str] = None
+    cover_image: t.Optional[str] = None
     game: GameID
     type: Annotated[str, Field(alias="team_type")]
-    members: Optional[List[str]] = None  # maybe List[Player] ?
+    members: t.Optional[t.List[str]] = None  # Maybe `List[Player]`?
     leader_id: Annotated[FaceitID, Field(alias="leader")]
     chat_room_id: str  # To be honest, I'm not totally sure what the ID is
     faceit_url: LangFormattedAnyHttpUrl
@@ -126,7 +132,7 @@ class GeneralTeam(BaseModel):
 class Tournament(BaseModel):
     id: Annotated[FaceitID, Field(alias="tournament_id")]
     name: str
-    featured_image: UrlOrEmpty  # maybe just str
+    featured_image: UrlOrEmpty  # Maybe just `str`
     game_id: GameID
     region: Region
     status: str
@@ -139,7 +145,7 @@ class Tournament(BaseModel):
     max_skill: int
     match_type: str
     organizer_id: str
-    whitelist_countries: List[str]
+    whitelist_countries: t.List[str]
     membership_type: str
     number_of_players: int
     number_of_players_joined: int
@@ -191,7 +197,7 @@ class LifetimeStats(BaseModel):
     utility_usage_per_round: Annotated[
         str, Field(alias="Utility Usage per Round")
     ]
-    recent_results: Annotated[List[str], Field(alias="Recent Results")]
+    recent_results: Annotated[t.List[str], Field(alias="Recent Results")]
     total_1v1_count: Annotated[str, Field(alias="Total 1v1 Count")]
     total_headshots_percentage: Annotated[
         str, Field(alias="Total Headshots %")
@@ -315,7 +321,7 @@ class PlayerStats(BaseModel):
     id: Annotated[FaceitID, Field(alias="player_id")]
     game_id: GameID
     lifetime: LifetimeStats
-    maps: Annotated[List[MapSegment], Field(alias="segments")]
+    maps: Annotated[t.List[MapSegment], Field(alias="segments")]
 
     # TODO: Преобразование списка карт в словарь по "label"
     # Возможно лучше `GenericContainer` где атрибуты будут автоматически

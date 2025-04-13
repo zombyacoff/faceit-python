@@ -9,6 +9,7 @@ from annotated_types import Le
 from pydantic import Field
 from pydantic.fields import FieldInfo
 
+from faceit import _repr
 from faceit._types import RawAPIItem, RawAPIPageResponse, Self, TypeAlias
 from faceit._utils import deep_get, get_hashable_representation, lazy_import
 from faceit.constants import RAW_RESPONSE_ITEMS_KEY
@@ -16,6 +17,12 @@ from faceit.models import ItemPage, PaginationTimeRange
 
 if t.TYPE_CHECKING:
     from .base import BaseResource
+
+    _Func: TypeAlias = t.Callable[..., t.Any]
+    _UnixPaginationConfigType: TypeAlias = t.Union[
+        "UnixPaginationConfig", t.Literal[False]
+    ]
+    _CollectReturnFormat: TypeAlias = t.Literal["first", "raw", "model"]
 
 
 @lazy_import
@@ -25,14 +32,14 @@ def _get_base_resource_class() -> t.Type[BaseResource]:
     return BaseResource
 
 
-_Func: TypeAlias = t.Callable[..., t.Any]
-
 _T = t.TypeVar("_T")
 _T_co = t.TypeVar("_T_co", covariant=True)
 
+_MethodT = t.TypeVar("_MethodT", bound="_BaseMethodProtocol")
+
 _PageType: TypeAlias = t.Union[ItemPage, RawAPIPageResponse]
 _PageListType: TypeAlias = t.List[_PageType]
-_PageT_co = t.TypeVar("_PageT_co", bound=_PageType, covariant=True)
+_PageT = t.TypeVar("_PageT", bound=_PageType)
 
 
 class _BaseMethodProtocol(t.Protocol):
@@ -50,11 +57,11 @@ class BasePaginationMethod(_BaseMethodProtocol, t.Protocol[_T_co]):
     ) -> _T_co: ...
 
 
-class SyncPaginationMethod(BasePaginationMethod[_PageT_co], t.Protocol): ...
+class SyncPaginationMethod(BasePaginationMethod[_T_co], t.Protocol): ...
 
 
 class AsyncPaginationMethod(
-    BasePaginationMethod[t.Awaitable[_PageT_co]], t.Protocol
+    BasePaginationMethod[t.Awaitable[_T_co]], t.Protocol
 ): ...
 
 
@@ -71,30 +78,18 @@ class BaseUnixPaginationMethod(_BaseMethodProtocol, t.Protocol[_T_co]):
 
 
 class SyncUnixPaginationMethod(
-    BaseUnixPaginationMethod[_PageT_co], t.Protocol
+    BaseUnixPaginationMethod[_T_co], t.Protocol
 ): ...
 
 
 class AsyncUnixPaginationMethod(
-    BaseUnixPaginationMethod[t.Awaitable[_PageT_co]], t.Protocol
+    BaseUnixPaginationMethod[t.Awaitable[_T_co]], t.Protocol
 ): ...
-
-
-_MethodT = t.TypeVar("_MethodT", bound=_BaseMethodProtocol)
 
 
 class UnixPaginationConfig(t.TypedDict):
     key: str
     attr: str
-
-
-_UnixMethodRequiredKeys: t.Final[t.FrozenSet[str]] = frozenset(
-    UnixPaginationConfig.__annotations__.keys()
-)
-
-_UnixPaginationConfigType: TypeAlias = t.Union[
-    UnixPaginationConfig, t.Literal[False]
-]
 
 
 @t.final
@@ -103,25 +98,12 @@ class PaginationMaxParams(t.NamedTuple):
     offset: int
 
 
+_UNIX_METHOD_REQUIRED_KEYS: t.Final[t.FrozenSet[str]] = frozenset(
+    UnixPaginationConfig.__annotations__.keys()
+)
+
 _PAGINATION_ARGS = PaginationMaxParams._fields
 _UNIX_PAGINATION_PARAMS = PaginationTimeRange._fields
-
-_CollectReturnFormat: TypeAlias = t.Literal["first", "raw", "model"]
-_COLLECT_RETURN_FORMATS: t.Final[
-    t.Dict[
-        _CollectReturnFormat,
-        t.Callable[
-            [_PageListType],
-            t.Union[t.Type[ItemPage], t.Type[RawAPIPageResponse]],
-        ],
-    ]
-] = {
-    "first": lambda collection: type(collection[0])
-    if collection
-    else RawAPIPageResponse,
-    "raw": lambda _: RawAPIPageResponse,
-    "model": lambda _: ItemPage,
-}
 
 
 def _has_unix_pagination_params(method: BaseUnixPaginationMethod, /) -> bool:
@@ -201,10 +183,38 @@ class _MethodCall(t.NamedTuple, t.Generic[_MethodT]):
     kwargs: t.Dict[str, t.Any]
 
 
-class BasePageIterator(t.Generic[_MethodT, _PageT_co], ABC):
-    _STOP_ITERATION: t.ClassVar[t.Type[Exception]]
+_ITERATOR_SLOTS = (
+    "_exhausted",
+    "_method",
+    "_offset",
+    "_page_index",
+    "_pagination_limits",
+)
 
-    UNIX_CFG: t.ClassVar = UnixPaginationConfig
+
+@_repr.representation(*_ITERATOR_SLOTS)
+class BasePageIterator(t.Generic[_MethodT, _PageT], ABC):
+    __slots__ = _ITERATOR_SLOTS
+
+    _STOP_ITERATION_EXC: t.ClassVar[t.Type[Exception]]
+
+    _COLLECT_RETURN_FORMATS: t.ClassVar[
+        t.Dict[
+            _CollectReturnFormat,
+            t.Callable[
+                [_PageListType],
+                t.Union[t.Type[ItemPage], t.Type[RawAPIPageResponse]],
+            ],
+        ]
+    ] = {
+        "first": lambda collection: type(collection[0])
+        if collection
+        else RawAPIPageResponse,
+        "raw": lambda _: RawAPIPageResponse,
+        "model": lambda _: ItemPage,
+    }
+
+    UnixConfig: t.ClassVar = UnixPaginationConfig
 
     def __init__(
         self, method: _MethodT, /, *args: t.Any, **kwargs: t.Any
@@ -213,7 +223,8 @@ class BasePageIterator(t.Generic[_MethodT, _PageT_co], ABC):
         if pagination_limits is False:
             raise ValueError(
                 f"Method '{method.__name__}' does not support pagination. "
-                f"Ensure it's a BaseResource method with offset and limit parameters."
+                f"Ensure it's a BaseResource method "
+                f"with offset and limit parameters."
             )
 
         self._method = _MethodCall[_MethodT](
@@ -264,6 +275,20 @@ class BasePageIterator(t.Generic[_MethodT, _PageT_co], ABC):
     def with_updated_args(self, *args: t.Any, **kwargs: t.Any) -> Self:
         return self.__class__(self._method.call, *args, **kwargs)
 
+    def _handle_iteration_state(self, page: t.Optional[_PageT], /) -> _PageT:
+        if page is None:
+            self._exhausted = True
+            raise self.__class__._STOP_ITERATION_EXC
+
+        self._page_index += 1
+        self._offset += self._pagination_limits.limit
+
+        is_page_smaller_than_limit = len(page) < self._pagination_limits.limit
+        is_offset_exceeded = self._offset >= self._pagination_limits.offset
+        self._exhausted = is_page_smaller_than_limit or is_offset_exceeded
+
+        return page
+
     @staticmethod
     def _remove_pagination_args(**kwargs: t.Any) -> t.Dict[str, t.Any]:
         if any(kwargs.pop(arg, None) for arg in _PAGINATION_ARGS):
@@ -274,22 +299,6 @@ class BasePageIterator(t.Generic[_MethodT, _PageT_co], ABC):
                 stacklevel=2,
             )
         return kwargs
-
-    def _handle_iteration_state(
-        self, page: t.Optional[_PageT_co], /
-    ) -> _PageT_co:
-        if page is None:
-            self._exhausted = True
-            raise self.__class__._STOP_ITERATION
-
-        self._page_index += 1
-        self._offset += self._pagination_limits.limit
-
-        is_page_smaller_than_limit = len(page) < self._pagination_limits.limit
-        is_offset_exceeded = self._offset >= self._pagination_limits.offset
-        self._exhausted = is_page_smaller_than_limit or is_offset_exceeded
-
-        return page
 
     @staticmethod
     def _validate_unix_pagination_parameter(
@@ -303,7 +312,8 @@ class BasePageIterator(t.Generic[_MethodT, _PageT_co], ABC):
     ) -> None:
         if not _has_unix_pagination_params(method):
             raise ValueError(
-                f"Method {method.__name__} does not appear to support Unix timestamp pagination. "
+                f"Method {method.__name__} does not appear "
+                f"to support Unix timestamp pagination. "
                 f"Expected start and to parameters."
             )
         if any(
@@ -332,17 +342,17 @@ class BasePageIterator(t.Generic[_MethodT, _PageT_co], ABC):
             )
         if (
             isinstance(unix_config, dict)
-            and _UnixMethodRequiredKeys - unix_config.keys()
+            and _UNIX_METHOD_REQUIRED_KEYS - unix_config.keys()
         ):
             raise ValueError(
                 f"Invalid unix pagination configuration: "
-                f"missing required keys {_UnixMethodRequiredKeys}. "
+                f"missing required keys {_UNIX_METHOD_REQUIRED_KEYS}. "
                 f"See pagination.UnixPaginationConfig for the required format."
             )
 
     @staticmethod
     def _extract_unix_timestamp(
-        page: t.Optional[_PageT_co], key: str, attr: str, /
+        page: t.Optional[_PageT], key: str, attr: str, /
     ) -> t.Optional[int]:
         if not page:
             return None
@@ -355,19 +365,19 @@ class BasePageIterator(t.Generic[_MethodT, _PageT_co], ABC):
     @classmethod
     def _process_collected_pages(
         cls,
-        collection: t.List[_PageT_co],
+        collection: t.List[_PageT],
         return_format: _CollectReturnFormat,
         deduplicate: bool,
         /,
     ) -> t.Union[ItemPage[_T], t.List[RawAPIItem]]:
         is_raw_mode = (
-            _COLLECT_RETURN_FORMATS[return_format](
+            cls._COLLECT_RETURN_FORMATS[return_format](
                 t.cast(_PageListType, collection)
             )
             is RawAPIPageResponse
         )
         filtered = cls._filter_collection(
-            collection, RawAPIPageResponse if is_raw_mode else ItemPage
+            collection, dict if is_raw_mode else ItemPage
         )
         processed = filtered if is_raw_mode else ItemPage.merge(filtered)
         return (
@@ -378,7 +388,7 @@ class BasePageIterator(t.Generic[_MethodT, _PageT_co], ABC):
 
     @staticmethod
     def _filter_collection(
-        collection: t.List[_PageT_co], expected_type: t.Type[t.Any], /
+        collection: t.List[_PageT], expected_type: t.Type[t.Any], /
     ) -> t.List[t.Any]:
         return [item for item in collection if isinstance(item, expected_type)]
 
@@ -414,19 +424,24 @@ class BasePageIterator(t.Generic[_MethodT, _PageT_co], ABC):
         # fmt: on
 
 
+del _ITERATOR_SLOTS
+
+
+@t.final
 class SyncPageIterator(
     BasePageIterator[
         t.Union[
-            SyncPaginationMethod[_PageT_co],
-            SyncUnixPaginationMethod[_PageT_co],
+            SyncPaginationMethod[_PageT], SyncUnixPaginationMethod[_PageT]
         ],
-        _PageT_co,
+        _PageT,
     ],
-    t.Iterator[_PageT_co],
+    t.Iterator[_PageT],
 ):
-    _STOP_ITERATION: t.ClassVar = StopIteration
+    __slots__ = ()
 
-    def _fetch_page(self) -> t.Optional[_PageT_co]:
+    _STOP_ITERATION_EXC: t.ClassVar = StopIteration
+
+    def _fetch_page(self) -> t.Optional[_PageT]:
         return (
             self._method.call(
                 *self._method.args,
@@ -440,28 +455,28 @@ class SyncPageIterator(
     def __iter__(self) -> Self:
         return self
 
-    def __next__(self) -> _PageT_co:
+    def __next__(self) -> _PageT:
         if self._exhausted:
-            raise self.__class__._STOP_ITERATION
+            raise self.__class__._STOP_ITERATION_EXC
         return self._handle_iteration_state(self._fetch_page())
 
     @classmethod
     def unix(
         cls,
-        method: SyncUnixPaginationMethod[_PageT_co],
+        method: SyncUnixPaginationMethod[_PageT],
         /,
-        *_args: t.Any,
+        *args: t.Any,
         key: str,
         attr: str,
         **kwargs: t.Any,
-    ) -> t.Generator[_PageT_co, None, None]:
+    ) -> t.Generator[_PageT, None, None]:
         cls._validate_unix_pagination_parameter(method, kwargs, key, attr)
 
         current_timestamp = None
         while True:
             pages = list(
                 cls._create_unix_timestamp_iterator(
-                    method, *_args, timestamp=current_timestamp, **kwargs
+                    method, *args, timestamp=current_timestamp, **kwargs
                 )
             )
 
@@ -510,7 +525,7 @@ class SyncPageIterator(
         method: SyncUnixPaginationMethod[ItemPage[_T]],
         /,
         *args: t.Any,
-        unix: _UnixPaginationConfigType,
+        unix: _UnixPaginationConfigType = ...,
         return_format: _CollectReturnFormat = ...,
         deduplicate: bool = ...,
         **kwargs: t.Any,
@@ -523,7 +538,7 @@ class SyncPageIterator(
         method: SyncUnixPaginationMethod[RawAPIPageResponse],
         /,
         *args: t.Any,
-        unix: _UnixPaginationConfigType,
+        unix: _UnixPaginationConfigType = ...,
         return_format: _CollectReturnFormat = ...,
         deduplicate: bool = ...,
         **kwargs: t.Any,
@@ -549,39 +564,35 @@ class SyncPageIterator(
         if unix is False:
             casted_method = t.cast(
                 t.Union[
-                    SyncPaginationMethod[_PageT_co],
-                    SyncUnixPaginationMethod[_PageT_co],
+                    SyncPaginationMethod[_PageT],
+                    SyncUnixPaginationMethod[_PageT],
                 ],
                 method,
             )
             collection = list(cls(casted_method, *args, **kwargs))
         else:
-            collection = list(
-                cls.unix(
-                    t.cast(SyncUnixPaginationMethod[_PageT_co], method),
-                    *args,
-                    **unix,
-                    **kwargs,
-                )
-            )
+            casted_method = t.cast(SyncUnixPaginationMethod[_PageT], method)
+            collection = list(cls.unix(casted_method, *args, **unix, **kwargs))
         return cls._process_collected_pages(
             collection, return_format, deduplicate
         )
 
 
+@t.final
 class AsyncPageIterator(
     BasePageIterator[
         t.Union[
-            AsyncPaginationMethod[_PageT_co],
-            AsyncUnixPaginationMethod[_PageT_co],
+            AsyncPaginationMethod[_PageT], AsyncUnixPaginationMethod[_PageT]
         ],
-        _PageT_co,
+        _PageT,
     ],
-    t.AsyncIterator[_PageT_co],
+    t.AsyncIterator[_PageT],
 ):
-    _STOP_ITERATION: t.ClassVar = StopAsyncIteration
+    __slots__ = ()
 
-    async def _fetch_page(self) -> t.Optional[_PageT_co]:
+    _STOP_ITERATION_EXC: t.ClassVar = StopAsyncIteration
+
+    async def _fetch_page(self) -> t.Optional[_PageT]:
         return (
             await self._method.call(
                 *self._method.args,
@@ -595,21 +606,21 @@ class AsyncPageIterator(
     def __aiter__(self) -> Self:
         return self
 
-    async def __anext__(self) -> _PageT_co:
+    async def __anext__(self) -> _PageT:
         if self._exhausted:
-            raise self.__class__._STOP_ITERATION
+            raise self.__class__._STOP_ITERATION_EXC
         return self._handle_iteration_state(await self._fetch_page())
 
     @classmethod
     async def unix(
         cls,
-        method: AsyncUnixPaginationMethod[_PageT_co],
+        method: AsyncUnixPaginationMethod[_PageT],
         /,
-        *_args: t.Any,
+        *args: t.Any,
         key: str,
         attr: str,
         **kwargs: t.Any,
-    ) -> t.AsyncGenerator[_PageT_co, None]:
+    ) -> t.AsyncGenerator[_PageT, None]:
         cls._validate_unix_pagination_parameter(method, kwargs, key, attr)
 
         current_timestamp = None
@@ -617,7 +628,7 @@ class AsyncPageIterator(
             pages = [
                 page
                 async for page in cls._create_unix_timestamp_iterator(
-                    method, *_args, timestamp=current_timestamp, **kwargs
+                    method, *args, timestamp=current_timestamp, **kwargs
                 )
             ]
 
@@ -667,7 +678,7 @@ class AsyncPageIterator(
         method: AsyncUnixPaginationMethod[ItemPage[_T]],
         /,
         *args: t.Any,
-        unix: _UnixPaginationConfigType,
+        unix: _UnixPaginationConfigType = ...,
         return_format: _CollectReturnFormat = ...,
         deduplicate: bool = ...,
         **kwargs: t.Any,
@@ -680,7 +691,7 @@ class AsyncPageIterator(
         method: AsyncUnixPaginationMethod[RawAPIPageResponse],
         /,
         *args: t.Any,
-        unix: _UnixPaginationConfigType,
+        unix: _UnixPaginationConfigType = ...,
         return_format: _CollectReturnFormat = ...,
         deduplicate: bool = ...,
         **kwargs: t.Any,
@@ -706,24 +717,17 @@ class AsyncPageIterator(
         if unix is False:
             casted_method = t.cast(
                 t.Union[
-                    AsyncPaginationMethod[_PageT_co],
-                    AsyncUnixPaginationMethod[_PageT_co],
+                    AsyncPaginationMethod[_PageT],
+                    AsyncUnixPaginationMethod[_PageT],
                 ],
                 method,
             )
-            collection = [
-                page async for page in cls(casted_method, *args, **kwargs)
-            ]
+            # Type annotation needed as mypy can't infer that
+            # both branches return compatible async iterable
+            iterator: t.AsyncIterator = cls(casted_method, *args, **kwargs)
         else:
-            collection = [
-                page
-                async for page in cls.unix(
-                    t.cast(AsyncUnixPaginationMethod[_PageT_co], method),
-                    *args,
-                    **unix,
-                    **kwargs,
-                )
-            ]
+            casted_method = t.cast(AsyncUnixPaginationMethod[_PageT], method)
+            iterator = cls.unix(casted_method, *args, **unix, **kwargs)
         return cls._process_collected_pages(
-            collection, return_format, deduplicate
+            [page async for page in iterator], return_format, deduplicate
         )

@@ -131,7 +131,7 @@ class GameID(FaceitStrEnum):
     TEMPERIA = "temperia"
     TRACKMANIA = "trackmania"
     UFC5 = "ufc-5"
-    # VALORANT = "valorant" 4O4 ?
+    VALORANT = "valorant"  # 4O4 ?
     WARFACE = "warface"
     WARFACE_ALPHA = "warface_alpha"
     WARFACE_EU = "warface_eu"
@@ -167,7 +167,8 @@ class Region(FaceitStrEnum):
 
 class EloRange(t.NamedTuple):
     lower: int
-    # `Optional` - because "challenger" (>#1000) might not be present in all disciplines
+    # `Optional` - because "challenger" (>#1000)
+    # might not be present in all disciplines
     upper: t.Optional[t.Union[int, t.Literal["challenger"]]]
 
     @property
@@ -212,6 +213,7 @@ _BASE_ELO_RANGES: t.Final = _create_default_elo_tiers()
 def _append_elite_tier(
     elite_upper_bound: t.Optional[t.Literal["challenger"]],
     base_tiers: _EloThreshold = _BASE_ELO_RANGES,
+    /,
 ) -> _EloThreshold:
     return {
         **base_tiers,
@@ -242,7 +244,7 @@ ELO_THRESHOLDS: t.Final[t.Dict[GameID, t.Dict[int, EloRange]]] = {
 # fmt: on
 
 
-_HAS_DATACLASS_SLOTS_SUPPORT: t.Final = sys.version_info >= (3, 10)
+_HAS_DATACLASS_SLOTS_SUPPORT = sys.version_info >= (3, 10)
 
 
 @t.final
@@ -391,6 +393,8 @@ class SkillLevel:
         cls._registry.clear()
         cls._initialized = False
 
+
+del _HAS_DATACLASS_SLOTS_SUPPORT
 
 # Initialize the `SkillLevel` registry when the module is imported.
 # This ensures all skill levels are available immediately without requiring explicit initialization.

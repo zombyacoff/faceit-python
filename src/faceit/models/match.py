@@ -1,4 +1,4 @@
-from typing import Any, List, Literal, Union
+import typing as t
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -7,7 +7,7 @@ from faceit.constants import GameID
 
 from .custom_types import FaceitID, LangFormattedAnyHttpUrl
 
-_RESULT_MAP = {"faction1": "first", "faction2": "second"}
+_RESULT_MAP: t.Final = {"faction1": "first", "faction2": "second"}
 
 
 class PlayerSummary(BaseModel):
@@ -21,13 +21,19 @@ class PlayerSummary(BaseModel):
 
 
 class Team(BaseModel):
-    # The "bye" literal is used for placeholder teams in tournament brackets
-    # when a team gets a free pass to the next round (no opponent)
-    id: Annotated[Union[FaceitID, Literal["bye"]], Field(alias="team_id")]
+    id: Annotated[
+        t.Union[
+            FaceitID,
+            # The "bye" literal is used for placeholder teams in tournament
+            # brackets when a team gets a free pass to the next round (no opponent)
+            t.Literal["bye"],
+        ],
+        Field(alias="team_id"),
+    ]
     name: Annotated[str, Field(alias="nickname")]
     avatar: UrlOrEmpty
     type: str
-    players: List[PlayerSummary]
+    players: t.List[PlayerSummary]
 
 
 class Teams(BaseModel):
@@ -41,11 +47,11 @@ class Score(BaseModel):
 
 
 class Results(BaseModel):
-    winner: Literal["first", "second"]
+    winner: t.Literal["first", "second"]
     score: Score
 
     @field_validator("winner", mode="before")
-    def convert_winner(cls, value: Any) -> str:  # noqa: N805
+    def convert_winner(cls, value: t.Any) -> str:  # noqa: N805
         if value in _RESULT_MAP:
             return _RESULT_MAP[value]
         raise ValueError(f"Invalid winner value: {value}")
@@ -60,7 +66,7 @@ class Match(BaseModel):
     max_players: int
     teams_size: int
     teams: Teams
-    playing_players: List[FaceitID]
+    playing_players: t.List[FaceitID]
     competition_id: FaceitID
     competition_name: str
     competition_type: str

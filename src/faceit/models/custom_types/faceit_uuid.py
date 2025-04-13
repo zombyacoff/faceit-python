@@ -1,15 +1,15 @@
 from __future__ import annotations
 
+import typing as t
 from abc import ABC, abstractmethod
-from functools import lru_cache
-from typing import TYPE_CHECKING, Any, ClassVar, final
 from uuid import UUID
 
+from faceit import _repr
 from faceit._utils import is_valid_uuid
 
 from ._utils import build_validatable_string_type_schema
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from pydantic import GetCoreSchemaHandler
     from pydantic_core import CoreSchema
 
@@ -19,11 +19,10 @@ if TYPE_CHECKING:
 class _BaseFaceitUUIDValidator(ABC):
     __slots__ = ()
 
-    _PREFIX: ClassVar = ""
-    _SUFFIX: ClassVar = ""
+    _PREFIX: t.ClassVar = ""
+    _SUFFIX: t.ClassVar = ""
 
     @classmethod
-    @lru_cache
     def _remove_prefix_and_suffix(cls, value: str) -> str:
         if not cls._PREFIX and not cls._SUFFIX:
             return value
@@ -50,7 +49,7 @@ class _BaseFaceitUUIDValidator(ABC):
 
     @classmethod
     def __get_pydantic_core_schema__(
-        cls, source_type: Any, handler: GetCoreSchemaHandler
+        cls, source_type: t.Any, handler: GetCoreSchemaHandler
     ) -> CoreSchema:
         del source_type, handler
         return build_validatable_string_type_schema(
@@ -67,7 +66,7 @@ class BaseFaceitID(_BaseFaceitUUIDValidator, ABC):
     _SUFFIX = "gui"
 
 
-@final
+@t.final
 class FaceitID(UUID, BaseFaceitID):
     __slots__ = ()
 
@@ -80,17 +79,15 @@ class FaceitID(UUID, BaseFaceitID):
         return cls(value)
 
 
+@_repr.representation(use_str=True)
 class _FaceitIDWithUniquePrefix(str, BaseFaceitID, ABC):
     __slots__ = ()
 
-    UNIQUE_PREFIX: ClassVar[str]
+    UNIQUE_PREFIX: t.ClassVar[str]
 
-    def __init_subclass__(cls, *, unique_prefix: str, **kwargs: Any) -> None:
+    def __init_subclass__(cls, *, unique_prefix: str, **kwargs: t.Any) -> None:
         super().__init_subclass__(**kwargs)
         cls.UNIQUE_PREFIX = unique_prefix
-
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}('{self}')"
 
     @classmethod
     def validate(cls, value: str) -> Self:
@@ -107,11 +104,11 @@ class _FaceitIDWithUniquePrefix(str, BaseFaceitID, ABC):
         return cls(value)
 
 
-@final
+@t.final
 class FaceitTeamID(_FaceitIDWithUniquePrefix, unique_prefix="team-"):
     __slots__ = ()
 
 
-@final
+@t.final
 class FaceitMatchID(_FaceitIDWithUniquePrefix, unique_prefix="1-"):
     __slots__ = ()

@@ -1,9 +1,8 @@
 import sys
 import typing as t
-from uuid import UUID as _UUID
+from uuid import UUID
 
-from pydantic import AnyHttpUrl as _AnyHttpUrl
-from pydantic import BaseModel as _PydanticBaseModel
+from pydantic import AnyHttpUrl, BaseModel
 
 if t.TYPE_CHECKING:
     from .http import Endpoint as _Endpoint
@@ -59,18 +58,17 @@ __all__ = (
 )
 
 EmptyString: TypeAlias = t.Literal[""]
-UrlOrEmpty: TypeAlias = t.Union[_AnyHttpUrl, EmptyString]
-UUIDOrEmpty: TypeAlias = t.Union[_UUID, EmptyString]
-
+UrlOrEmpty: TypeAlias = t.Union[AnyHttpUrl, EmptyString]
+UUIDOrEmpty: TypeAlias = t.Union[UUID, EmptyString]
 EndpointParam: TypeAlias = t.Union[str, "_Endpoint"]
 
-ModelT = t.TypeVar("ModelT", bound=_PydanticBaseModel)
+ModelT = t.TypeVar("ModelT", bound=BaseModel)
 ClientT = t.TypeVar("ClientT", bound="_BaseAPIClient")
 ResourceT = t.TypeVar("ResourceT", bound="_BaseResources")
 
 Raw: TypeAlias = t.Literal[True]
 Model: TypeAlias = t.Literal[False]
-APIResponseFormat = t.TypeVar("APIResponseFormat", bound=t.Union[Raw, Model])
+APIResponseFormatT = t.TypeVar("APIResponseFormatT", Raw, Model)
 
 RawAPIItem: TypeAlias = t.Dict[str, t.Any]
 RawAPIPageResponse = t.TypedDict(
@@ -80,7 +78,7 @@ RawAPIPageResponse = t.TypedDict(
         # Required pagination parameters
         "start": int,
         "end": int,
-        # Unix timestamps (in milliseconds), optional
+        # Unix timestamps (in milliseconds)
         "from": NotRequired[int],
         "to": NotRequired[int],
     },

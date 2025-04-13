@@ -4,6 +4,7 @@ import typing as t
 import warnings
 from abc import ABC
 
+from . import _repr
 from ._types import ClientT, ResourceT, Self
 from .constants import BASE_WIKI_URL
 from .http import AsyncClient, SyncClient
@@ -13,6 +14,7 @@ if t.TYPE_CHECKING:
     from types import TracebackType
 
 
+@_repr.representation("resources", "client")
 class BaseFaceit(t.Generic[ClientT, ResourceT], ABC):
     __slots__ = "_client", "_resources"
 
@@ -40,7 +42,8 @@ class BaseFaceit(t.Generic[ClientT, ResourceT], ABC):
         if client is not None:
             if client_kwargs:
                 warnings.warn(
-                    "'client_kwargs' are ignored when an existing client instance is provided. "
+                    "'client_kwargs' are ignored when an "
+                    "existing client instance is provided. "
                     "Configure your client before passing it to this constructor.",
                     UserWarning,
                     stacklevel=2,
@@ -61,12 +64,9 @@ class BaseFaceit(t.Generic[ClientT, ResourceT], ABC):
         return self._resources
 
     def __str__(self) -> str:
-        return f"FACEIT API interface (resources and client, docs: {BASE_WIKI_URL})"
-
-    def __repr__(self) -> str:
         return (
-            f"{self.__class__.__name__}"
-            f"(client={self._client!r}, resources={self._resources.__class__.__name__})"
+            f"FACEIT API interface "
+            f"(resources and client, docs: {BASE_WIKI_URL})"
         )
 
 
@@ -96,6 +96,8 @@ class AsyncFaceit(BaseFaceit[AsyncClient, AsyncResources]):
 
     _client_cls = AsyncClient
     _resources_cls = AsyncResources
+
+    MAX_CONCURRENT_REQUESTS: t.Final = AsyncClient.MAX_CONCURRENT_REQUESTS
 
     async def __aenter__(self) -> Self:
         await self.client.__aenter__()

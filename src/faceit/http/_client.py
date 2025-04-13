@@ -6,9 +6,11 @@ import ssl
 import typing as t
 import warnings
 from abc import ABC, abstractmethod
+from enum import auto
 from inspect import iscoroutinefunction
 from threading import Lock
 from time import time
+from weakref import WeakSet
 
 import httpx
 from pydantic import PositiveInt, validate_call
@@ -21,7 +23,8 @@ from tenacity import (
     wait_random_exponential,
 )
 
-from faceit._utils import check_required_attributes, validate_uuid_args
+from faceit import _repr
+from faceit._utils import validate_uuid_args
 from faceit.constants import BASE_WIKI_URL, FaceitStrEnum
 from faceit.exceptions import FaceitAPIError
 
@@ -47,12 +50,13 @@ _HttpxClientT = t.TypeVar(
 
 @t.final
 class SupportedMethod(FaceitStrEnum):
-    GET = "GET"
-    POST = "POST"
+    GET = auto()
+    POST = auto()
 
 
+@_repr.representation("api_key", "base_url", "retry_args")
 class BaseAPIClient(t.Generic[_HttpxClientT], ABC):
-    __slots__ = "_api_key", "base_url", "retry_args", "timeout"
+    __slots__ = "_api_key", "base_url", "retry_args"
 
     DEFAULT_BASE_URL: t.Final = "https://open.faceit.com/data/v4"
     DEFAULT_TIMEOUT: float = 10
@@ -102,12 +106,12 @@ class BaseAPIClient(t.Generic[_HttpxClientT], ABC):
         base_url: str = DEFAULT_BASE_URL,
         retry_args: t.Optional[t.Dict[str, t.Any]] = None,
     ) -> None:
+        self.base_url = base_url.rstrip("/")
         # Handle edge case where `api_key` is `bytes` (passes UUID validation)
         # Convert to string instead of raising an exception
         self._api_key = (
             api_key.decode() if isinstance(api_key, bytes) else str(api_key)
         )
-        self.base_url = base_url.rstrip("/")
         self.retry_args = {
             **self.__class__.DEFAULT_RETRY_ARGS,
             **(retry_args or {}),
@@ -124,8 +128,9 @@ class BaseAPIClient(t.Generic[_HttpxClientT], ABC):
             "Authorization": f"Bearer {self._api_key}",
         }
 
-    # Provide read-only access to the underlying client for exceptional cases
-    # where direct interaction might be necessary, while keeping the interface immutable
+    # Provide read-only access to the underlying client for
+    # exceptional cases where direct interaction might be necessary,
+    # while keeping the interface immutable
     @property
     def raw_client(self) -> _HttpxClientT:
         return self._client
@@ -135,19 +140,6 @@ class BaseAPIClient(t.Generic[_HttpxClientT], ABC):
         # Defensive check to handle cases where client initialization failed
         # Prevents AttributeError in __del__ during garbage collection
         return self._client.is_closed if hasattr(self, "_client") else True
-
-    def __str__(self) -> str:
-        return f"{self.__class__.__name__}({self.api_key!r})"
-
-    def __repr__(self) -> str:
-        # `_client` is defined in the concrete implementation classes,
-        # not in this abstract base class. We check for it here to ensure
-        # proper representation across the inheritance hierarchy
-        return (
-            check_required_attributes(self, "_api_key", "base_url", "_client")
-            or f"{self.__class__.__name__}"
-            f"(api_key={self.api_key!r}, base_url={self.base_url!r}, raw_client={self.raw_client!r})"
-        )
 
     def create_endpoint(self, *path_parts: str) -> Endpoint:
         return Endpoint(*path_parts, base_path=self.base_url)
@@ -197,9 +189,9 @@ class BaseAPIClient(t.Generic[_HttpxClientT], ABC):
     def _warn_unclosed_client(self, *, asynchronous: bool = False) -> None:
         warnings.warn(
             f"Unclosed client session detected. Resources may be leaked. "
-            f"Use '{"async" if asynchronous else ""}with' or call "
-            f"'{"await client.a" if asynchronous else "client."}close()' to close the session properly. "
-            f"Relying on '__del__' for resource cleanup is not recommended.",
+            f"Use '{'async ' if asynchronous else ''}with' or call "
+            f"'{'await client.a' if asynchronous else 'client.'}close()' to close the session properly. "
+            f"Relying on __del__ for resource cleanup is not recommended.",
             ResourceWarning,
             stacklevel=2,
         )
@@ -243,7 +235,7 @@ class _BaseSyncClient(BaseAPIClient[httpx.Client]):
         exc: t.Optional[BaseException],
         tb: t.Optional[TracebackType],
     ) -> None:
-        del typ, exc, tb  # Unused variables, but required for `__exit__`
+        del typ, exc, tb  # Unused variables, but required for __exit__
         self.close()
 
     def __del__(self) -> None:
@@ -281,13 +273,15 @@ def _is_ssl_error(exception: BaseException) -> bool:
 # it was found that such errors often pop up even with a small
 # number of concurrent requests, probably problems on the FACEIT API side
 class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
-    __slots__ = ("_client",)
+    __slots__ = "__weakref__", "_client"
+
+    _instances: WeakSet[_BaseAsyncClient] = WeakSet()
 
     _semaphore: t.Optional[asyncio.Semaphore] = None
     _rate_limit_lock: Lock = Lock()
     _ssl_error_count: int = 0
     _adaptive_limit_enabled: bool = True
-    _last_ssl_error_time: float = 0
+    _last_ssl_error_time: float = time()
     _recovery_check_time: float = 0
 
     # Current limit value is based on empirical testing,
@@ -341,6 +335,7 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
         transport = raw_client_kwargs.pop(
             "transport", None
         ) or httpx.AsyncHTTPTransport(retries=1)
+
         self._client = httpx.AsyncClient(
             timeout=timeout,
             headers=self._base_headers,
@@ -361,11 +356,11 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
             )
 
         self._setup_ssl_retry_args()
+        self.__class__._instances.add(self)
 
     def _setup_ssl_retry_args(self) -> None:
         original_retry = self.retry_args.get(
-            "retry",
-            retry_if_exception(lambda e: False),  # noqa: ARG005
+            "retry", retry_if_exception(lambda _: False)
         )
         # Type checking assists mypy with static analysis while also providing
         # runtime validation to prevent configuration errors
@@ -381,8 +376,7 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
             return is_ssl or original_retry.predicate(exception)
 
         original_before_sleep = self.retry_args.get(
-            "before_sleep",
-            lambda s: None,  # noqa: ARG005
+            "before_sleep", lambda _: None
         )
 
         async def ssl_before_sleep(retry_state: RetryCallState) -> None:
@@ -409,13 +403,14 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
                 ) else original_before_sleep(retry_state)
                 return
             raise ValueError(
-                "Expected 'before_sleep' to be a callable that accepts a 'RetryCallState' parameter."
+                "Expected 'before_sleep' to be a callable "
+                "that accepts a 'RetryCallState' parameter."
             )
 
-        self.retry_args.update({
-            "retry": retry_if_exception(combined_retry),
-            "before_sleep": ssl_before_sleep,
-        })
+        self.retry_args.update(
+            retry=retry_if_exception(combined_retry),
+            before_sleep=ssl_before_sleep,
+        )
 
     async def __aenter__(self) -> Self:
         return self
@@ -528,8 +523,8 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
 
             # fmt: off
             _logger.info(
-                "Connection recovery: "
-                "increasing concurrent connections from %d to %d after %.1f minutes of stability",
+                "Connection recovery: increasing concurrent "
+                "connections from %d to %d after %.1f minutes of stability",
                 current, new_limit, time_since_last_error / 60
             )
             # fmt: on
@@ -548,15 +543,15 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
     def update_rate_limit(cls, new_limit: PositiveInt, /) -> None:
         with cls._rate_limit_lock:
             if new_limit > cls.MAX_CONCURRENT_REQUESTS:
-                # fmt: off
                 warnings.warn(
-                    f"Request limit of {new_limit} exceeds maximum allowed ({cls.MAX_CONCURRENT_REQUESTS})",
-                    UserWarning, stacklevel=2,
+                    f"Request limit of {new_limit} exceeds "
+                    f"maximum allowed ({cls.MAX_CONCURRENT_REQUESTS})",
+                    UserWarning,
+                    stacklevel=2,
                 )
-                # fmt: on
                 new_limit = cls.MAX_CONCURRENT_REQUESTS
 
-            # cls._semaphore is None when this method is called from __init__
+            # `cls._semaphore` is None when this method is called from __init__
             if (
                 cls._max_concurrent_requests == new_limit
                 and cls._semaphore is not None
@@ -616,8 +611,9 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
                     recovery_interval, enabled,
                 )):
                     _logger.warning(
-                        "No changes made to adaptive limits. Current settings: threshold=%d, "
-                        "min_connections=%d, enabled=%s, recovery_interval=%d",
+                        "No changes made to adaptive limits. "
+                        "Current settings: threshold=%d, min_connections=%d, "
+                        "enabled=%s, recovery_interval=%d",
                         cls._ssl_error_threshold, cls._min_connections,
                         cls._adaptive_limit_enabled, cls._recovery_interval,
                     )
@@ -625,7 +621,8 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
 
             _logger.info(
                 "Adaptive limits configured: "
-                "threshold=%d, min_connections=%d, enabled=%s, recovery_interval=%d",
+                "threshold=%d, min_connections=%d, "
+                "enabled=%s, recovery_interval=%d",
                 cls._ssl_error_threshold, cls._min_connections,
                 cls._adaptive_limit_enabled, cls._recovery_interval,
             )

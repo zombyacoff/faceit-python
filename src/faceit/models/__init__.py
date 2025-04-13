@@ -165,7 +165,7 @@ class ItemPage(BaseModel, t.Generic[_T], frozen=True):
         return self.model_copy(update={"items": new_items})
 
     @classmethod
-    # Using `ItemPage[_R]` return type and `type: ignore[...]`
+    # Using `ItemPage[_R]` return type and `type: ignore`
     # to support generic type transformation when called from
     # methods like `map()` that change the item type from `_T` to `_R`
     def _construct_without_pagination(

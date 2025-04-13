@@ -1,17 +1,20 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional, final
+import typing as t
 
-if TYPE_CHECKING:
+from faceit import _repr
+
+if t.TYPE_CHECKING:
     from faceit._types import EndpointParam, Self
 
 
-@final
+@t.final
+@_repr.representation(use_str=True)
 class Endpoint:
     __slots__ = "base_path", "path_parts"
 
     def __init__(
-        self, *path_parts: str, base_path: Optional[str] = None
+        self, *path_parts: str, base_path: t.Optional[str] = None
     ) -> None:
         self.path_parts = list(filter(None, path_parts))
         self.base_path = base_path
@@ -21,9 +24,6 @@ class Endpoint:
             [self.base_path] if self.base_path else []
         ) + self.path_parts
         return "/".join(part.strip("/") for part in all_parts if part)
-
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({str(self)!r})"
 
     def __truediv__(self, other: EndpointParam) -> Self:
         if isinstance(other, str):
