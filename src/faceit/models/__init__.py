@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import typing as t
+from functools import cached_property
 from itertools import chain, starmap
 from random import choice
 
@@ -83,15 +84,19 @@ class ItemPage(BaseModel, t.Generic[_T], frozen=True):
         ),
     ]
 
-    @property
+    # NOTE: These properties use cached_property since the model is frozen and
+    # underlying attributes (`_offset`, `_limit`, etc.) cannot change,
+    # making repeated calculations unnecessary
+
+    @cached_property
     def metadata(self) -> PaginationMetadata:
         return PaginationMetadata(self._offset, self._limit, self.time_range)
 
-    @property
+    @cached_property
     def time_range(self) -> PaginationTimeRange:
         return PaginationTimeRange(self._time_from, self._time_to)
 
-    @property
+    @cached_property
     def page(self) -> int:
         return (self._offset // self._limit) + 1 if self._limit else 1
 
@@ -169,12 +174,14 @@ class ItemPage(BaseModel, t.Generic[_T], frozen=True):
     # to support generic type transformation when called from
     # methods like `map()` that change the item type from `_T` to `_R`
     def _construct_without_pagination(
-        cls, items: t.List[_R] | None = None, /
+        cls, items: t.Optional[t.List[_R]] = None, /
     ) -> ItemPage[_R]:
         return cls.model_construct(
             items=items or [],
-            offset=_PAGINATION_UNSET,
-            limit=_PAGINATION_UNSET,
+            _offset=_PAGINATION_UNSET,
+            _limit=_PAGINATION_UNSET,
+            _time_from=_PAGINATION_UNSET,
+            _time_to=_PAGINATION_UNSET,
         )  # type: ignore[return-value]
 
     @classmethod
@@ -183,11 +190,14 @@ class ItemPage(BaseModel, t.Generic[_T], frozen=True):
             list(chain.from_iterable(pages))
         )
 
-    def __bool__(self) -> bool:
-        return bool(self.items)
+    def __iter__(self) -> t.Iterator[_T]:  # type: ignore[override]
+        yield from self.items
 
-    def __contains__(self, item: t.Any) -> bool:
-        return item in self.items
+    def __len__(self) -> int:
+        return len(self.items)
+
+    def __reversed__(self) -> Self:
+        return self.with_items(list(reversed(self.items)))
 
     @t.overload
     def __getitem__(self, index: t.SupportsIndex) -> _T: ...
@@ -210,29 +220,28 @@ class ItemPage(BaseModel, t.Generic[_T], frozen=True):
                 f"__index__ or slices, not {type(index).__name__}"
             ) from e
 
-    def __iter__(self) -> t.Iterator[_T]:  # type: ignore[override]
-        yield from self.items
+    def __contains__(self, item: t.Any) -> bool:
+        return item in self.items
 
-    def __len__(self) -> int:
-        return len(self.items)
-
-    def __reversed__(self) -> Self:
-        return self.with_items(list(reversed(self.items)))
+    def __bool__(self) -> bool:
+        return bool(self.items)
 
     def __str__(self) -> str:
         return str(self.items)
 
     @field_validator(RAW_RESPONSE_ITEMS_KEY, mode="before")
-    def normalize_items(cls, items: t.Any) -> t.List[t.Dict[str, t.Any]]:  # noqa: N805
+    def _normalize_items(cls, items: t.Any) -> t.List[t.Dict[str, t.Any]]:  # noqa: N805
         if not isinstance(items, list):
             raise TypeError(
-                f"Expected {RAW_RESPONSE_ITEMS_KEY} to be a list, got {type(items).__name__}"
+                f"Expected {RAW_RESPONSE_ITEMS_KEY} "
+                f"to be a list, got {type(items).__name__}"
             )
 
         def normalize_item(i: int, item: t.Any) -> t.Dict[str, t.Any]:
             if not isinstance(item, dict):
                 raise TypeError(
-                    f"Element at index {i} must be a dictionary, got {type(item).__name__}"
+                    f"Element at index {i} must "
+                    f"be a dictionary, got {type(item).__name__}"
                 )
 
             if len(item) == 1:  # Flatten single-item dictionaries

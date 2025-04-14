@@ -23,7 +23,12 @@ class _BaseFaceitUUIDValidator(ABC):
     _SUFFIX: t.ClassVar = ""
 
     @classmethod
-    def _remove_prefix_and_suffix(cls, value: str) -> str:
+    @abstractmethod
+    def validate(cls, value: str, /) -> Self:
+        pass
+
+    @classmethod
+    def _remove_prefix_and_suffix(cls, value: str, /) -> str:
         if not cls._PREFIX and not cls._SUFFIX:
             return value
 
@@ -42,10 +47,6 @@ class _BaseFaceitUUIDValidator(ABC):
             return value
 
         return value[start:end]
-
-    @classmethod
-    @abstractmethod
-    def validate(cls, value: str) -> Self: ...
 
     @classmethod
     def __get_pydantic_core_schema__(
@@ -71,12 +72,13 @@ class FaceitID(UUID, BaseFaceitID):
     __slots__ = ()
 
     @classmethod
-    def validate(cls, value: str) -> Self:
-        if not is_valid_uuid(value):
-            raise ValueError(
-                f"Invalid {cls.__name__}: '{value}' is not a valid UUID format."
-            )
-        return cls(value)
+    def validate(cls, value: str, /) -> Self:
+        if is_valid_uuid(value):
+            return cls(value)
+        raise ValueError(
+            f"Invalid {cls.__name__}: "
+            f"'{value}' is not a valid UUID format."
+        )
 
 
 @_repr.representation(use_str=True)
@@ -85,30 +87,30 @@ class _FaceitIDWithUniquePrefix(str, BaseFaceitID, ABC):
 
     UNIQUE_PREFIX: t.ClassVar[str]
 
-    def __init_subclass__(cls, *, unique_prefix: str, **kwargs: t.Any) -> None:
+    def __init_subclass__(cls, *, prefix: str, **kwargs: t.Any) -> None:
         super().__init_subclass__(**kwargs)
-        cls.UNIQUE_PREFIX = unique_prefix
+        cls.UNIQUE_PREFIX = prefix
 
     @classmethod
-    def validate(cls, value: str) -> Self:
+    def validate(cls, value: str, /) -> Self:
         if not value.startswith(cls.UNIQUE_PREFIX):
             raise ValueError(
-                f"Invalid {cls.__name__}: '{value}' must start with '{cls.UNIQUE_PREFIX}'"
+                f"Invalid {cls.__name__}: "
+                f"'{value}' must start with '{cls.UNIQUE_PREFIX}'"
             )
-
         if not is_valid_uuid(value[len(cls.UNIQUE_PREFIX) :]):
             raise ValueError(
-                f"Invalid {cls.__name__}: '{value}' contains invalid UUID part. "
+                f"Invalid {cls.__name__}: "
+                f"'{value}' contains invalid UUID part. "
             )
-
         return cls(value)
 
 
 @t.final
-class FaceitTeamID(_FaceitIDWithUniquePrefix, unique_prefix="team-"):
+class FaceitTeamID(_FaceitIDWithUniquePrefix, prefix="team-"):
     __slots__ = ()
 
 
 @t.final
-class FaceitMatchID(_FaceitIDWithUniquePrefix, unique_prefix="1-"):
+class FaceitMatchID(_FaceitIDWithUniquePrefix, prefix="1-"):
     __slots__ = ()

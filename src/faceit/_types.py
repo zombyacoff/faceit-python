@@ -83,4 +83,4 @@ RawAPIPageResponse = t.TypedDict(
         "to": NotRequired[int],
     },
 )
-APIResponse: TypeAlias = t.Union[RawAPIItem, RawAPIPageResponse]
+RawAPIResponse: TypeAlias = t.Union[RawAPIItem, RawAPIPageResponse]

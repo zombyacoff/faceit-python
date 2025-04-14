@@ -46,11 +46,20 @@ def _validate_player_id(func: t.Callable[_P, _T]) -> t.Callable[_P, _T]:
 
 
 class BasePlayers(BaseResource[ClientT], ABC):
-    _resource_path = FaceitResourcePath.PLAYERS
-    _match_stats_model_types: t.Dict[GameID, t.Type[BaseMatchPlayerStats]] = {
+    _resource_path: t.ClassVar = FaceitResourcePath.PLAYERS
+    _matches_stats_model_types: t.ClassVar[
+        t.Dict[GameID, t.Type[BaseMatchPlayerStats]]
+    ] = {
         GameID.CS2: CS2MatchPlayerStats,
         # TODO: Add other games (e.g. CSGO)
     }
+
+    _matches_stats_timestamp_cfg: t.ClassVar = BaseResource._timestamp_cfg(
+        key="stats.Match Finished At", attr="match_finished_at"
+    )
+    _history_timestamp_cfg: t.ClassVar = BaseResource._timestamp_cfg(
+        key="finished_at", attr="finished_at"
+    )
 
     def _process_get_request(
         self,
@@ -101,7 +110,7 @@ class BasePlayers(BaseResource[ClientT], ABC):
     ) -> t.Union[ItemPage, RawAPIPageResponse]:
         _logger.debug("Processing match stats response for game: %s", game)
 
-        validator = self._match_stats_model_types.get(game)
+        validator = self._matches_stats_model_types.get(game)
         if validator is not None:
             # Suppressing type checking warning because we're using a
             # dynamic runtime subscript `ItemPage` is being subscripted
@@ -238,7 +247,7 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
 
     def all_bans(
         self, player_id: t.Union[str, UUID]
-    ) -> t.Union[ItemPage[BanEntry], t.List[RawAPIItem]]:
+    ) -> t.Union[t.List[RawAPIItem], ItemPage[BanEntry]]:
         # Mypy can't infer return type when passing generic method to higher-order function
         # Runtime behavior is correct, but static typing is limited by generic invariance
         return self.__class__._sync_page_iterator.collect(self.bans, player_id)  # type: ignore[misc]
@@ -305,14 +314,12 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
 
     def all_matches_stats(
         self, player_id: t.Union[str, UUID], game: GameID
-    ) -> t.Union[ItemPage[BaseMatchPlayerStats], t.List[RawAPIItem]]:
+    ) -> t.Union[t.List[RawAPIItem], ItemPage[BaseMatchPlayerStats]]:
         return self.__class__._sync_page_iterator.collect(
             self.matches_stats,  # type: ignore[misc]
             player_id,
             game,
-            unix=self.__class__._unix_cfg(
-                key="stats.Match Finished At", attr="match_finished_at"
-            ),
+            unix=self.__class__._matches_stats_timestamp_cfg,
         )
 
     @t.overload
@@ -365,7 +372,7 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
     @t.overload
     def all_history(
         self: SyncPlayers[Raw], player_id: t.Union[str, UUID], game: GameID
-    ) -> RawAPIPageResponse: ...
+    ) -> t.List[RawAPIItem]: ...
 
     @t.overload
     def all_history(
@@ -374,14 +381,12 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
 
     def all_history(
         self, player_id: t.Union[str, UUID], game: GameID
-    ) -> t.Union[RawAPIPageResponse, ItemPage[Match]]:
+    ) -> t.Union[t.List[RawAPIItem], ItemPage[Match]]:
         return self.__class__._sync_page_iterator.collect(
             self.history,  # type: ignore[misc]
             player_id,
             game,
-            unix=self.__class__._unix_cfg(
-                key="finished_at", attr="finished_at"
-            ),
+            unix=self.__class__._history_timestamp_cfg,
         )
 
     @t.overload
@@ -421,6 +426,21 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
             ),
             ItemPage[Hub],
         )
+
+    @t.overload
+    def all_hubs(
+        self: SyncPlayers[Raw], player_id: t.Union[str, UUID]
+    ) -> t.List[RawAPIItem]: ...
+
+    @t.overload
+    def all_hubs(
+        self: SyncPlayers[Model], player_id: t.Union[str, UUID]
+    ) -> ItemPage[Hub]: ...
+
+    def all_hubs(
+        self, player_id: t.Union[str, UUID]
+    ) -> t.Union[t.List[RawAPIItem], ItemPage[Hub]]:
+        return self.__class__._sync_page_iterator.collect(self.hubs, player_id)  # type: ignore[misc]
 
     @_validate_player_id
     @validate_call
@@ -472,6 +492,24 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
         )
 
     @t.overload
+    def all_teams(
+        self: SyncPlayers[Raw], player_id: t.Union[str, UUID]
+    ) -> t.List[RawAPIItem]: ...
+
+    @t.overload
+    def all_teams(
+        self: SyncPlayers[Model], player_id: t.Union[str, UUID]
+    ) -> ItemPage[GeneralTeam]: ...
+
+    def all_teams(
+        self, player_id: t.Union[str, UUID]
+    ) -> t.Union[t.List[RawAPIItem], ItemPage[GeneralTeam]]:
+        return self.__class__._sync_page_iterator.collect(
+            self.teams,  # type: ignore[misc]
+            player_id,
+        )
+
+    @t.overload
     def tournaments(
         self: SyncPlayers[Raw],
         player_id: t.Union[str, UUID],
@@ -507,6 +545,24 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
                 expect_page=True,
             ),
             ItemPage[Tournament],
+        )
+
+    @t.overload
+    def all_tournaments(
+        self: SyncPlayers[Raw], player_id: t.Union[str, UUID]
+    ) -> t.List[RawAPIItem]: ...
+
+    @t.overload
+    def all_tournaments(
+        self: SyncPlayers[Model], player_id: t.Union[str, UUID]
+    ) -> ItemPage[Tournament]: ...
+
+    def all_tournaments(
+        self, player_id: t.Union[str, UUID]
+    ) -> t.Union[t.List[RawAPIItem], ItemPage[Tournament]]:
+        return self.__class__._sync_page_iterator.collect(
+            self.tournaments,  # type: ignore[misc]
+            player_id,
         )
 
 
@@ -616,6 +672,24 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
         )
 
     @t.overload
+    async def all_bans(
+        self: AsyncPlayers[Raw], player_id: t.Union[str, UUID]
+    ) -> t.List[RawAPIItem]: ...
+
+    @t.overload
+    async def all_bans(
+        self: AsyncPlayers[Model], player_id: t.Union[str, UUID]
+    ) -> ItemPage[BanEntry]: ...
+
+    async def all_bans(
+        self, player_id: t.Union[str, UUID]
+    ) -> t.Union[t.List[RawAPIItem], ItemPage[BanEntry]]:
+        return await self.__class__._async_page_iterator.collect(
+            self.bans,  # type: ignore[misc]
+            player_id,
+        )
+
+    @t.overload
     async def matches_stats(
         self: AsyncPlayers[Raw],
         player_id: t.Union[str, UUID],
@@ -650,7 +724,7 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
         limit: int = Field(20, ge=1, le=100),
         start: t.Optional[int] = None,
         to: t.Optional[int] = None,
-    ) -> t.Union[ItemPage[CS2MatchPlayerStats], RawAPIPageResponse]:
+    ) -> t.Union[RawAPIPageResponse, ItemPage[CS2MatchPlayerStats]]:
         return self._process_matches_stats_response(
             await self._client.get(
                 self.path / str(player_id) / "games" / game / "stats",
@@ -660,6 +734,26 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
                 expect_page=True,
             ),
             game,
+        )
+
+    @t.overload
+    async def all_matches_stats(
+        self: AsyncPlayers[Raw], player_id: t.Union[str, UUID], game: GameID
+    ) -> t.List[RawAPIItem]: ...
+
+    @t.overload
+    async def all_matches_stats(
+        self: AsyncPlayers[Model], player_id: t.Union[str, UUID], game: GameID
+    ) -> ItemPage[BaseMatchPlayerStats]: ...
+
+    async def all_matches_stats(
+        self, player_id: t.Union[str, UUID], game: GameID
+    ) -> t.Union[t.List[RawAPIItem], ItemPage[BaseMatchPlayerStats]]:
+        return await self.__class__._async_page_iterator.collect(
+            self.matches_stats,  # type: ignore[misc]
+            player_id,
+            game,
+            unix=self.__class__._matches_stats_timestamp_cfg,
         )
 
     @t.overload
@@ -710,6 +804,26 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
         )
 
     @t.overload
+    async def all_history(
+        self: AsyncPlayers[Raw], player_id: t.Union[str, UUID], game: GameID
+    ) -> t.List[RawAPIItem]: ...
+
+    @t.overload
+    async def all_history(
+        self: AsyncPlayers[Model], player_id: t.Union[str, UUID], game: GameID
+    ) -> ItemPage[Match]: ...
+
+    async def all_history(
+        self, player_id: t.Union[str, UUID], game: GameID
+    ) -> t.Union[t.List[RawAPIItem], ItemPage[Match]]:
+        return await self.__class__._async_page_iterator.collect(
+            self.history,  # type: ignore[misc]
+            player_id,
+            game,
+            unix=self.__class__._history_timestamp_cfg,
+        )
+
+    @t.overload
     async def hubs(
         self: AsyncPlayers[Raw],
         player_id: t.Union[str, UUID],
@@ -747,11 +861,29 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
             ItemPage[Hub],
         )
 
+    @t.overload
+    async def all_hubs(
+        self: AsyncPlayers[Raw], player_id: t.Union[str, UUID]
+    ) -> t.List[RawAPIItem]: ...
+
+    @t.overload
+    async def all_hubs(
+        self: AsyncPlayers[Model], player_id: t.Union[str, UUID]
+    ) -> ItemPage[Hub]: ...
+
+    async def all_hubs(
+        self, player_id: t.Union[str, UUID]
+    ) -> t.Union[t.List[RawAPIItem], ItemPage[Hub]]:
+        return await self.__class__._async_page_iterator.collect(
+            self.hubs,  # type: ignore[misc]
+            player_id,
+        )
+
     @_validate_player_id
     @validate_call
     async def stats(
         self, player_id: t.Union[str, UUID], game: GameID
-    ) -> t.Any:
+    ) -> t.Union[RawAPIItem, t.Any]:
         # NOT IMPLEMENTED YET — Validator is not defined
         return self._validate_response(
             await self._client.get(
@@ -799,6 +931,24 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
         )
 
     @t.overload
+    async def all_teams(
+        self: AsyncPlayers[Raw], player_id: t.Union[str, UUID]
+    ) -> t.List[RawAPIItem]: ...
+
+    @t.overload
+    async def all_teams(
+        self: AsyncPlayers[Model], player_id: t.Union[str, UUID]
+    ) -> ItemPage[GeneralTeam]: ...
+
+    async def all_teams(
+        self, player_id: t.Union[str, UUID]
+    ) -> t.Union[t.List[RawAPIItem], ItemPage[GeneralTeam]]:
+        return await self.__class__._async_page_iterator.collect(
+            self.teams,  # type: ignore[misc]
+            player_id,
+        )
+
+    @t.overload
     async def tournaments(
         self: AsyncPlayers[Raw],
         player_id: t.Union[str, UUID],
@@ -834,4 +984,22 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
                 expect_page=True,
             ),
             ItemPage[Tournament],
+        )
+
+    @t.overload
+    async def all_tournaments(
+        self: AsyncPlayers[Raw], player_id: t.Union[str, UUID]
+    ) -> t.List[RawAPIItem]: ...
+
+    @t.overload
+    async def all_tournaments(
+        self: AsyncPlayers[Model], player_id: t.Union[str, UUID]
+    ) -> ItemPage[Tournament]: ...
+
+    async def all_tournaments(
+        self, player_id: t.Union[str, UUID]
+    ) -> t.Union[t.List[RawAPIItem], ItemPage[Tournament]]:
+        return await self.__class__._async_page_iterator.collect(
+            self.tournaments,  # type: ignore[misc]
+            player_id,
         )

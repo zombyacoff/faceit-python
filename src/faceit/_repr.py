@@ -8,7 +8,7 @@ if t.TYPE_CHECKING:
 _ReprMethod: TypeAlias = t.Callable[[], str]
 _ClassT = t.TypeVar("_ClassT", bound=t.Type)
 
-_UNINITIALIZED_MARKER = "uninitialized"
+_UNINITIALIZED_MARKER: t.Final = "uninitialized"
 
 
 def _format_fields(

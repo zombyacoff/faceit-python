@@ -19,19 +19,21 @@ BASE_WIKI_URL: t.Final = "https://docs.faceit.com"
 
 RAW_RESPONSE_ITEMS_KEY: t.Final = "items"
 
-# Maybe it's worth creating a `ChallengerLevel` class that would determine ELO up to #1000
-# (by game->region, but region complicates this task; we can think about it,
-# but it seems to me that this is not possible, unfortunately...)
+# Maybe it's worth creating a `ChallengerLevel` class that would determine
+# ELO up to #1000 (by game->region, but region complicates this task;
+# we can think about it, but it seems to me that this is not possible, unfortunately...)
 CHALLENGER_LEVEL: t.Final = "challenger"
-"""Elite tier reserved for `top 1000` players per `game`/`region`.
+"""Elite tier reserved for **#1000** players per game/region.
 
-This rank represents a dynamic threshold based on leaderboard position rather than a fixed ELO value.
-Due to its relative nature, determining Challenger status requires additional processing (leaderboard
-position analysis by region) beyond standard ELO calculations. In our implementation, players with
-actual Challenger status will be classified as level 10 for system consistency.
+This rank represents a dynamic threshold based on leaderboard position rather
+than a fixed ELO value. Due to its relative nature, determining Challenger
+status requires additional processing (leaderboard position analysis by region)
+beyond standard ELO calculations. In our implementation, players with actual
+Challenger status will be classified as level 10 for system consistency.
 
-The constant is primarily defined for completeness in representing FACEIT's full ranking system
-and may be utilized in future enhancements for precise leaderboard position tracking.
+The constant is primarily defined for completeness in representing FACEIT's
+full ranking system and may be utilized in future enhancements for precise
+leaderboard position tracking.
 """
 
 
@@ -165,6 +167,7 @@ class Region(FaceitStrEnum):
     SA = "SA"
 
 
+@t.final
 class EloRange(t.NamedTuple):
     lower: int
     # `Optional` - because "challenger" (>#1000)
@@ -198,6 +201,7 @@ _DEFAULT_TEN_LEVEL_LOWER: t.Final = 2001
 
 def _create_default_elo_tiers() -> _EloThreshold:
     tier_ranges = {1: _DEFAULT_FIRST_ELO_RANGE}
+
     for level in range(2, 10):
         # `cast(int, ...)` tells the type checker that we know `upper` is definitely an `int`
         # for levels 1-9, not the full `Optional[Union[int, Literal["challenger"]]` type
@@ -227,7 +231,7 @@ CHALLENGER_CAPPED_ELO_RANGES: t.Final = _append_elite_tier(CHALLENGER_LEVEL)
 OPEN_ENDED_ELO_RANGES: t.Final = _append_elite_tier(None)
 
 # fmt: off
-ELO_THRESHOLDS: t.Final[t.Dict[GameID, t.Dict[int, EloRange]]] = {
+ELO_THRESHOLDS: t.Final[t.Dict[GameID, _EloThreshold]] = {
     GameID.CS2: {
         1: EloRange(100, 500), 2: EloRange(501, 750), 3: EloRange(751, 900),
         4: EloRange(901, 1050), 5: EloRange(1051, 1200), 6: EloRange(1201, 1350),
@@ -253,6 +257,9 @@ _HAS_DATACLASS_SLOTS_SUPPORT = sys.version_info >= (3, 10)
     **({"slots": True} if _HAS_DATACLASS_SLOTS_SUPPORT else {}),
 })
 class SkillLevel:
+    if not _HAS_DATACLASS_SLOTS_SUPPORT:
+        __slots__ = "elo_range", "game_id", "level", "name"
+
     level: int
     game_id: GameID
     elo_range: EloRange
@@ -260,9 +267,6 @@ class SkillLevel:
 
     _registry: t.ClassVar[t.Dict[GameID, t.Dict[int, SkillLevel]]] = {}
     _initialized: t.ClassVar[bool] = False
-
-    if not _HAS_DATACLASS_SLOTS_SUPPORT:
-        __slots__ = "elo_range", "game_id", "level", "name"
 
     @property
     def is_highest_level(self) -> bool:
@@ -336,11 +340,21 @@ class SkillLevel:
         *,
         elo: t.Optional[int] = None,
     ) -> t.Optional[SkillLevel]:
-        cls._ensure_initialized()
-
         if game_id not in cls._registry:
             _logger.warning("Game '%s' is not supported", game_id)
             return None
+
+        if level is not None and elo is not None:
+            warnings.warn(
+                "Both 'level' and 'elo' parameters provided; "
+                "'level' takes precedence",
+                UserWarning,
+                stacklevel=2,
+            )
+
+        if level is not None:
+            _logger.debug("Getting level %s for game %s", level, game_id)
+            return cls._registry.get(game_id, {}).get(level)
 
         if elo is not None:
             _logger.debug("Getting level for game %s and elo %s", game_id, elo)
@@ -353,21 +367,10 @@ class SkillLevel:
                 None,
             )
 
-        if level is not None:
-            _logger.debug("Getting level %s for game %s", level, game_id)
-            return cls._registry.get(game_id, {}).get(level)
-
-        warnings.warn(
-            "Please provide either level or elo", UserWarning, stacklevel=2
-        )
-        return None
-
-    def __str__(self) -> str:
-        return f"{self.name} ({self.elo_range})"
+        raise ValueError("Either level or elo must be specified")
 
     @classmethod
-    def get_all_levels(cls, game_id: GameID) -> t.List[SkillLevel]:
-        cls._ensure_initialized()
+    def get_all_levels(cls, game_id: GameID, /) -> t.List[SkillLevel]:
         return sorted(
             cls._registry.get(game_id, {}).values(), key=lambda x: x.level
         )
@@ -388,15 +391,15 @@ class SkillLevel:
 
         cls._initialized = True
 
-    @classmethod
-    def reset_registry(cls) -> None:
-        cls._registry.clear()
-        cls._initialized = False
-
 
 del _HAS_DATACLASS_SLOTS_SUPPORT
 
 # Initialize the `SkillLevel` registry when the module is imported.
-# This ensures all skill levels are available immediately without requiring explicit initialization.
-# The registry contains all game skill levels mapped by game_id and level number.
+# This ensures all skill levels are available immediately without requiring
+# explicit initialization. The registry contains all game skill levels mapped
+# by game_id and level number.
 SkillLevel._ensure_initialized()
+# Remove the constructor after initialization to prevent creation of new instances.
+# This enforces the registry pattern where all valid `SkillLevel` instances
+# are predefined, ensuring data integrity and preventing misuse of the class.
+del SkillLevel.__init__

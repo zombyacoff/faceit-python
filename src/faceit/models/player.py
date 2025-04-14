@@ -223,7 +223,7 @@ class LifetimeStats(BaseModel):
 
 
 class MapStats(BaseModel):
-    # TODO значения по умолчанию для полей "with_extended_stats" = None (или 0?),
+    # TODO значения по умолчанию для полей "_with_extended_stats" = None (или 0?),
     # так как они отсутсвтуют для старых матчей (предположу, что появились только в районе лета 2024)
     utility_success_rate: Annotated[float, Field(alias="Utility Success Rate")]
     entry_success_rate: Annotated[float, Field(alias="Entry Success Rate")]

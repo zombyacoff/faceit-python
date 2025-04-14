@@ -26,15 +26,6 @@ class ResponseContainer(RootModel[t.Dict[str, _T]]):
     def values(self) -> t.ValuesView[_T]:
         return self.root.values()
 
-    def __getattr__(self, name: str) -> t.Optional[_T]:
-        return self.root.get(name)
-
-    def __iter__(self) -> t.Generator[t.Tuple[str, _T], None, None]:
-        yield from self.items()
-
-    def __getitem__(self, key: str) -> _T:
-        return self.root[key]
-
     @t.overload
     def get(self, key: str, /) -> t.Optional[_T]: ...
 
@@ -43,6 +34,15 @@ class ResponseContainer(RootModel[t.Dict[str, _T]]):
 
     def get(self, key: str, /, default: t.Any = None) -> t.Any:
         return self.root.get(key, default)
+
+    def __getattr__(self, name: str) -> t.Optional[_T]:
+        return self.root.get(name)
+
+    def __iter__(self) -> t.Generator[t.Tuple[str, _T], None, None]:
+        yield from self.items()
+
+    def __getitem__(self, key: str) -> _T:
+        return self.root[key]
 
 
 @t.final

@@ -34,18 +34,16 @@ if t.TYPE_CHECKING:
     from types import TracebackType
 
     from faceit._types import (
-        APIResponse,
         EndpointParam,
         RawAPIItem,
         RawAPIPageResponse,
+        RawAPIResponse,
         Self,
     )
 
 _logger = logging.getLogger(__name__)
 
-_HttpxClientT = t.TypeVar(
-    "_HttpxClientT", bound=t.Union[httpx.Client, httpx.AsyncClient]
-)
+_HttpxClientT = t.TypeVar("_HttpxClientT", httpx.Client, httpx.AsyncClient)
 
 
 @t.final
@@ -58,9 +56,9 @@ class SupportedMethod(FaceitStrEnum):
 class BaseAPIClient(t.Generic[_HttpxClientT], ABC):
     __slots__ = "_api_key", "base_url", "retry_args"
 
-    DEFAULT_BASE_URL: t.Final = "https://open.faceit.com/data/v4"
-    DEFAULT_TIMEOUT: float = 10
-    DEFAULT_RETRY_ARGS: t.Dict[str, t.Any] = {
+    DEFAULT_BASE_URL: t.ClassVar = "https://open.faceit.com/data/v4"
+    DEFAULT_TIMEOUT: t.ClassVar[float] = 10
+    DEFAULT_RETRY_ARGS: t.ClassVar[t.Dict[str, t.Any]] = {
         "stop": stop_after_attempt(3),
         "wait": wait_random_exponential(multiplier=1, max=10),
         # Retry on transient errors:
@@ -81,7 +79,6 @@ class BaseAPIClient(t.Generic[_HttpxClientT], ABC):
             )
         ),
         "reraise": True,
-        # Log retry attempt details before sleeping
         "before_sleep": lambda s: _logger.warning(
             "Retry attempt %d failed; sleeping for %.2f seconds before next attempt",
             s.attempt_number,
@@ -156,7 +153,7 @@ class BaseAPIClient(t.Generic[_HttpxClientT], ABC):
         ), {**self._base_headers, **(headers or {})}
 
     @staticmethod
-    def _handle_response(response: httpx.Response) -> APIResponse:
+    def _handle_response(response: httpx.Response) -> RawAPIResponse:
         try:
             response.raise_for_status()
             _logger.debug("Successful response from %s", response.url)
@@ -235,7 +232,7 @@ class _BaseSyncClient(BaseAPIClient[httpx.Client]):
         exc: t.Optional[BaseException],
         tb: t.Optional[TracebackType],
     ) -> None:
-        del typ, exc, tb  # Unused variables, but required for __exit__
+        del typ, exc, tb
         self.close()
 
     def __del__(self) -> None:
@@ -250,7 +247,7 @@ class _BaseSyncClient(BaseAPIClient[httpx.Client]):
 
     def request(
         self, method: str, endpoint: EndpointParam, **kwargs: t.Any
-    ) -> APIResponse:
+    ) -> RawAPIResponse:
         url, headers = self._prepare_request(
             endpoint, kwargs.pop("headers", None)
         )
@@ -275,30 +272,31 @@ def _is_ssl_error(exception: BaseException) -> bool:
 class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
     __slots__ = "__weakref__", "_client"
 
-    _instances: WeakSet[_BaseAsyncClient] = WeakSet()
+    _instances: t.ClassVar[WeakSet[_BaseAsyncClient]] = WeakSet()
 
-    _semaphore: t.Optional[asyncio.Semaphore] = None
-    _rate_limit_lock: Lock = Lock()
-    _ssl_error_count: int = 0
-    _adaptive_limit_enabled: bool = True
-    _last_ssl_error_time: float = time()
-    _recovery_check_time: float = 0
+    _semaphore: t.ClassVar[t.Optional[asyncio.Semaphore]] = None
+    _rate_limit_lock: t.ClassVar = Lock()
+    _ssl_error_count: t.ClassVar = 0
+    _adaptive_limit_enabled: t.ClassVar = True
+    _last_ssl_error_time: t.ClassVar = time()
+    _recovery_check_time: t.ClassVar[float] = 0
 
     # Current limit value is based on empirical testing,
     # but requires further investigation for optimal setting
-    MAX_CONCURRENT_REQUESTS: t.Final = 100
+    MAX_CONCURRENT_REQUESTS: t.ClassVar = 100
 
-    DEFAULT_MAX_CONCURRENT_REQUESTS: int = 30
-    DEFAULT_SSL_ERROR_THRESHOLD: int = 5
-    DEFAULT_MIN_CONNECTIONS: int = 5
-    DEFAULT_RECOVERY_INTERVAL: int = 300
-    DEFAULT_KEEPALIVE_EXPIRY: float = 30
+    DEFAULT_MAX_CONCURRENT_REQUESTS: t.ClassVar = 30
+    DEFAULT_SSL_ERROR_THRESHOLD: t.ClassVar = 5
+    DEFAULT_MIN_CONNECTIONS: t.ClassVar = 5
+    DEFAULT_RECOVERY_INTERVAL: t.ClassVar = 300
 
-    _ssl_error_threshold: int = DEFAULT_SSL_ERROR_THRESHOLD
-    _min_connections: int = DEFAULT_MIN_CONNECTIONS
-    _max_concurrent_requests: int = DEFAULT_MAX_CONCURRENT_REQUESTS
-    _recovery_interval: int = DEFAULT_RECOVERY_INTERVAL
-    _initial_max_requests: int = DEFAULT_MAX_CONCURRENT_REQUESTS
+    _initial_max_requests: t.ClassVar = DEFAULT_MAX_CONCURRENT_REQUESTS
+    _max_concurrent_requests: t.ClassVar = DEFAULT_MAX_CONCURRENT_REQUESTS
+    _ssl_error_threshold: t.ClassVar = DEFAULT_SSL_ERROR_THRESHOLD
+    _min_connections: t.ClassVar = DEFAULT_MIN_CONNECTIONS
+    _recovery_interval: t.ClassVar = DEFAULT_RECOVERY_INTERVAL
+
+    DEFAULT_KEEPALIVE_EXPIRY: t.ClassVar[float] = 30
 
     def __init__(
         self,
@@ -370,10 +368,11 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
             )
 
         def combined_retry(exception: BaseException) -> bool:
-            is_ssl = _is_ssl_error(exception)
-            if is_ssl:
+            return (
                 self.__class__._register_ssl_error()
-            return is_ssl or original_retry.predicate(exception)
+                if _is_ssl_error(exception)
+                else original_retry.predicate(exception)
+            )
 
         original_before_sleep = self.retry_args.get(
             "before_sleep", lambda _: None
@@ -395,17 +394,15 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
 
             # Both helps mypy with type checking and serves as a runtime safeguard
             # against non-callable objects being passed as `before_sleep`
-            if callable(original_before_sleep):
-                await original_before_sleep(
-                    retry_state
-                ) if iscoroutinefunction(
-                    original_before_sleep
-                ) else original_before_sleep(retry_state)
+            if not callable(original_before_sleep):
+                raise TypeError(
+                    "Expected 'before_sleep' to be a callable "
+                    "that accepts a 'RetryCallState' parameter."
+                )
+            if iscoroutinefunction(original_before_sleep):
+                await original_before_sleep(retry_state)
                 return
-            raise ValueError(
-                "Expected 'before_sleep' to be a callable "
-                "that accepts a 'RetryCallState' parameter."
-            )
+            original_before_sleep(retry_state)
 
         self.retry_args.update(
             retry=retry_if_exception(combined_retry),
@@ -445,19 +442,20 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
 
     async def request(
         self, method: str, endpoint: EndpointParam, **kwargs: t.Any
-    ) -> APIResponse:
+    ) -> RawAPIResponse:
         url, headers = self._prepare_request(
             endpoint, kwargs.pop("headers", None)
         )
         await self.__class__._check_connection_recovery()
 
-        async def execute() -> APIResponse:
+        async def execute() -> RawAPIResponse:
             assert self.__class__._semaphore is not None  # noqa: S101
             async with self.__class__._semaphore:
-                response = await self._client.request(
-                    method, url, headers=headers, **kwargs
+                result = self.__class__._handle_response(
+                    await self._client.request(
+                        method, url, headers=headers, **kwargs
+                    )
                 )
-                result = self.__class__._handle_response(response)
 
                 # Decrease error count on successful request
                 if self.__class__._ssl_error_count > 0:
@@ -472,7 +470,9 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
         return await retryer(execute)
 
     @classmethod
-    def _register_ssl_error(cls) -> None:
+    # Always returns `True` to ensure retry
+    # happens for SSL errors in the retry mechanism
+    def _register_ssl_error(cls) -> t.Literal[True]:
         current_time = time()
         with cls._rate_limit_lock:
             cls._ssl_error_count += 1
@@ -484,19 +484,23 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
                 and cls._adaptive_limit_enabled
                 and current_limit > cls._min_connections
             ):
-                return
+                return True
 
             new_limit = max(cls._min_connections, current_limit // 2)
             # fmt: off
             _logger.warning(
                 "Adaptive rate limiting: "
-                "reducing concurrent connections from %d to %d (SSL errors: %d/%d)",
-                current_limit, new_limit, cls._ssl_error_count, cls._ssl_error_threshold,
+                "reducing concurrent connections "
+                "from %d to %d (SSL errors: %d/%d)",
+                current_limit, new_limit,
+                cls._ssl_error_count, cls._ssl_error_threshold,
             )
             # fmt: on
 
             cls.update_rate_limit(new_limit)
             cls._ssl_error_count = 0
+
+        return True
 
     @classmethod
     async def _check_connection_recovery(cls) -> None:
@@ -537,6 +541,13 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
             if value > cls._initial_max_requests:
                 cls._initial_max_requests = value
                 _logger.debug("Updated initial max requests to %d", value)
+
+    @classmethod
+    async def close_all(cls) -> None:
+        if cls._instances:
+            await asyncio.gather(*[
+                client.aclose() for client in cls._instances
+            ])
 
     @classmethod
     @validate_call
@@ -664,10 +675,7 @@ class SyncClient(_BaseSyncClient):
         **kwargs: t.Any,
     ) -> RawAPIPageResponse: ...
 
-    @t.overload
-    def get(self, endpoint: EndpointParam, **kwargs: t.Any) -> APIResponse: ...
-
-    def get(self, endpoint: EndpointParam, **kwargs: t.Any) -> APIResponse:
+    def get(self, endpoint: EndpointParam, **kwargs: t.Any) -> RawAPIResponse:
         return self.request(
             SupportedMethod.GET, endpoint, **_clean_type_hints(kwargs)
         )
@@ -690,12 +698,7 @@ class SyncClient(_BaseSyncClient):
         **kwargs: t.Any,
     ) -> RawAPIPageResponse: ...
 
-    @t.overload
-    def post(
-        self, endpoint: EndpointParam, **kwargs: t.Any
-    ) -> APIResponse: ...
-
-    def post(self, endpoint: EndpointParam, **kwargs: t.Any) -> APIResponse:
+    def post(self, endpoint: EndpointParam, **kwargs: t.Any) -> RawAPIResponse:
         return self.request(
             SupportedMethod.POST, endpoint, **_clean_type_hints(kwargs)
         )
@@ -723,14 +726,9 @@ class AsyncClient(_BaseAsyncClient):
         **kwargs: t.Any,
     ) -> RawAPIPageResponse: ...
 
-    @t.overload
     async def get(
         self, endpoint: EndpointParam, **kwargs: t.Any
-    ) -> APIResponse: ...
-
-    async def get(
-        self, endpoint: EndpointParam, **kwargs: t.Any
-    ) -> APIResponse:
+    ) -> RawAPIResponse:
         return await self.request(
             SupportedMethod.GET, endpoint, **_clean_type_hints(kwargs)
         )
@@ -753,14 +751,9 @@ class AsyncClient(_BaseAsyncClient):
         **kwargs: t.Any,
     ) -> RawAPIPageResponse: ...
 
-    @t.overload
     async def post(
         self, endpoint: EndpointParam, **kwargs: t.Any
-    ) -> APIResponse: ...
-
-    async def post(
-        self, endpoint: EndpointParam, **kwargs: t.Any
-    ) -> APIResponse:
+    ) -> RawAPIResponse:
         return await self.request(
             SupportedMethod.POST, endpoint, **_clean_type_hints(kwargs)
         )

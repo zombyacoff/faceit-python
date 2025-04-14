@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import hashlib
 import json
 import typing as t
@@ -6,10 +8,11 @@ from functools import lru_cache, reduce, wraps
 from inspect import signature
 from uuid import UUID
 
-from ._types import ParamSpec
+if t.TYPE_CHECKING:
+    from ._types import ParamSpec
 
-_T = t.TypeVar("_T")
-_P = ParamSpec("_P")
+    _T = t.TypeVar("_T")
+    _P = ParamSpec("_P")
 
 # NOTE: While similar utility functions likely exist in third-party libraries,
 # we've chosen to implement them directly to minimize external dependencies
@@ -23,6 +26,18 @@ def lazy_import(func: t.Callable[[], _T]) -> t.Callable[[], _T]:
     This is an alias for `lru_cache(maxsize=1)` with a more descriptive name.
     """
     return lru_cache(maxsize=1)(func)
+
+
+def raise_unsupported_operand_error(
+    sign: str,
+    self_name: str,
+    other_name: str,
+    /,
+) -> t.NoReturn:
+    raise TypeError(
+        f"unsupported operand type(s) for {sign}: "
+        f"'{self_name}' and '{other_name}'"
+    )
 
 
 def deep_get(
@@ -110,8 +125,7 @@ def is_valid_uuid(value: t.Any, /) -> bool:
         UUID(value if isinstance(value, str) else value.decode())
     except (ValueError, AttributeError):
         return False
-    else:
-        return True
+    return True
 
 
 def validate_uuid_args(
