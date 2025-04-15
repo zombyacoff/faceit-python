@@ -3,7 +3,7 @@ from __future__ import annotations
 import typing as t
 
 if t.TYPE_CHECKING:
-    from ._types import TypeAlias
+    from ._typing import TypeAlias
 
 _ReprMethod: TypeAlias = t.Callable[[], str]
 _ClassT = t.TypeVar("_ClassT", bound=t.Type)
@@ -65,7 +65,7 @@ if __name__ == "__main__":
     person = Person("John", 30)
     print(repr(person), str(person))  # noqa: T201
 
-    @representation("name", "age", use_str=True)
+    @representation(use_str=True)
     class Person2(BasePerson):
         def __str__(self) -> str:
             return f"{self.name} is {self.age} years old"

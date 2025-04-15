@@ -13,7 +13,7 @@ if t.TYPE_CHECKING:
     from pydantic import GetCoreSchemaHandler
     from pydantic_core import CoreSchema
 
-    from faceit._types import Self
+    from faceit._typing import Self
 
 
 class _BaseFaceitUUIDValidator(ABC):

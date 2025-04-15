@@ -9,7 +9,7 @@ from inspect import signature
 from uuid import UUID
 
 if t.TYPE_CHECKING:
-    from ._types import ParamSpec
+    from ._typing import ParamSpec
 
     _T = t.TypeVar("_T")
     _P = ParamSpec("_P")
@@ -21,10 +21,6 @@ if t.TYPE_CHECKING:
 
 
 def lazy_import(func: t.Callable[[], _T]) -> t.Callable[[], _T]:
-    """Decorator for lazy importing to prevent cyclic dependencies.
-
-    This is an alias for `lru_cache(maxsize=1)` with a more descriptive name.
-    """
     return lru_cache(maxsize=1)(func)
 
 

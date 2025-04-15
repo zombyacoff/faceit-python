@@ -3,7 +3,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
-from faceit._types import Annotated, UrlOrEmpty
+from faceit._typing import Annotated, UrlOrEmpty
 from faceit.constants import GameID, Region
 
 from .custom_types import (

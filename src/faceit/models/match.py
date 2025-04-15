@@ -2,7 +2,7 @@ import typing as t
 
 from pydantic import BaseModel, Field, field_validator
 
-from faceit._types import Annotated, UrlOrEmpty
+from faceit._typing import Annotated, UrlOrEmpty
 from faceit.constants import GameID
 
 from .custom_types import FaceitID, LangFormattedAnyHttpUrl

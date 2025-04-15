@@ -2,7 +2,7 @@ import typing as t
 
 from pydantic import BaseModel
 
-from faceit._types import UrlOrEmpty, UUIDOrEmpty
+from faceit._typing import UrlOrEmpty, UUIDOrEmpty
 
 from .custom_types import FaceitID, NullableList, ResponseContainer
 

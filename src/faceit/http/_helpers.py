@@ -6,7 +6,7 @@ from faceit import _repr
 from faceit._utils import raise_unsupported_operand_error
 
 if t.TYPE_CHECKING:
-    from faceit._types import EndpointParam, Self
+    from faceit._typing import EndpointParam, Self
 
 
 @t.final
@@ -52,7 +52,7 @@ class Endpoint:
 
     def __itruediv__(self, other: EndpointParam) -> Self:  # noqa: PYI034
         if isinstance(other, str):
-            self.path_parts.extend(filter(None, [other]))
+            self.path_parts.extend(filter(None, (other,)))
             return self
         if isinstance(other, self.__class__):
             self.path_parts.extend(other.path_parts)

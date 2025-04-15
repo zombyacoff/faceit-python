@@ -5,7 +5,7 @@ import warnings
 from abc import ABC
 
 from . import _repr
-from ._types import ClientT, ResourceT, Self
+from ._typing import ClientT, ResourceT, Self
 from .constants import BASE_WIKI_URL
 from .http import AsyncClient, SyncClient
 from .resources import AsyncResources, SyncResources
@@ -14,7 +14,7 @@ if t.TYPE_CHECKING:
     from types import TracebackType
 
 
-@_repr.representation("resources", "client")
+@_repr.representation("client", "resources")
 class BaseFaceit(t.Generic[ClientT, ResourceT], ABC):
     __slots__ = "_client", "_resources"
 
@@ -22,10 +22,19 @@ class BaseFaceit(t.Generic[ClientT, ResourceT], ABC):
     _resources_cls: t.Type[ResourceT]
 
     @t.overload
-    def __init__(self, *, api_key: str, **client_kwargs: t.Any) -> None: ...
+    def __init__(
+        self,
+        *,
+        api_key: str,
+        **client_kwargs: t.Any,
+    ) -> None: ...
 
     @t.overload
-    def __init__(self, *, client: ClientT) -> None: ...
+    def __init__(
+        self,
+        *,
+        client: ClientT,
+    ) -> None: ...
 
     def __init__(
         self,
@@ -42,13 +51,12 @@ class BaseFaceit(t.Generic[ClientT, ResourceT], ABC):
         if client is not None:
             if client_kwargs:
                 warnings.warn(
-                    "'client_kwargs' are ignored when an "
-                    "existing client instance is provided. "
-                    "Configure your client before passing it to this constructor.",
+                    "'client_kwargs' are ignored when an existing client "
+                    "instance is provided. Configure your client before "
+                    "passing it to this constructor.",
                     UserWarning,
                     stacklevel=2,
                 )
-
             self._client = client
         else:
             self._client = self.__class__._client_cls(api_key, **client_kwargs)
@@ -97,7 +105,9 @@ class AsyncFaceit(BaseFaceit[AsyncClient, AsyncResources]):
     _client_cls = AsyncClient
     _resources_cls = AsyncResources
 
-    MAX_CONCURRENT_REQUESTS: t.Final = AsyncClient.MAX_CONCURRENT_REQUESTS
+    MAX_CONCURRENT_REQUESTS: t.ClassVar[int] = (
+        AsyncClient.MAX_CONCURRENT_REQUESTS
+    )
 
     async def __aenter__(self) -> Self:
         await self.client.__aenter__()

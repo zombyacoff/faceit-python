@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 import typing as t
 import warnings
 from abc import ABC
@@ -11,7 +12,7 @@ from pydantic import Field
 from pydantic.fields import FieldInfo
 
 from faceit import _repr
-from faceit._types import RawAPIItem, RawAPIPageResponse, Self, TypeAlias
+from faceit._typing import RawAPIItem, RawAPIPageResponse, Self, TypeAlias
 from faceit._utils import deep_get, get_hashable_representation, lazy_import
 from faceit.constants import RAW_RESPONSE_ITEMS_KEY
 from faceit.models import ItemPage, PaginationTimeRange
@@ -228,7 +229,14 @@ class BasePageIterator(t.Generic[_MethodT, _PageT], ABC):
                 f"Ensure it's a BaseResource method "
                 f"with offset and limit parameters."
             )
-        self._method = _MethodCall[_MethodT](
+        self._method = (
+            # Handle type subscription differently based on Python version
+            # In Python 3.9+, Generic types became subscriptable (`_MethodCall[_MethodT]`)
+            # For Python 3.8 and below, we must use the unsubscripted type
+            _MethodCall[_MethodT]
+            if sys.version_info >= (3, 9)
+            else _MethodCall
+        )(
             call=method,
             args=args,
             kwargs=self.__class__._remove_pagination_args(**kwargs),

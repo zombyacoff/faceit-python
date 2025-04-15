@@ -7,7 +7,7 @@ from random import choice
 
 from pydantic import BaseModel, Field, field_validator
 
-from faceit._types import Annotated, Self, TypeAlias
+from faceit._typing import Annotated, Self, TypeAlias
 from faceit._utils import get_nested_property
 from faceit.constants import RAW_RESPONSE_ITEMS_KEY
 

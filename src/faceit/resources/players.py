@@ -8,7 +8,7 @@ from uuid import UUID  # noqa: TCH003
 
 from pydantic import Field, validate_call
 
-from faceit._types import (
+from faceit._typing import (
     APIResponseFormatT,
     ClientT,
     Model,

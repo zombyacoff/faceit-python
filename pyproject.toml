@@ -23,8 +23,18 @@ classifiers = [
 
 [tool.poetry.dependencies]
 python = "^3.8"
+annotated-types = "^0.6.0"
+httpx = "^0.27.0"
+pydantic = "^2.7.1"
+pydantic-core = "^2.18.2"
+strenum = "^0.4.15"
+tenacity = "^8.2.3"
+typing-extensions = "^4.11.0"
 
 [tool.poetry.group.dev.dependencies]
+pytest = "^7.4.0"
+pytest-asyncio = "^0.21.1"
+python-dotenv = "^1.0.0"
 ruff = "^0.4.8"
 
 [tool.pytest.ini_options]

@@ -7,10 +7,14 @@ from pydantic import ValidationError
 from strenum import LowercaseStrEnum
 
 from faceit import _repr
-from faceit._types import ClientT, ModelT, RawAPIResponse
+from faceit._typing import ClientT, ModelT, RawAPIResponse
 from faceit.http import Endpoint
 
-from .pagination import AsyncPageIterator, SyncPageIterator
+from .pagination import (
+    AsyncPageIterator,
+    SyncPageIterator,
+    TimestampPaginationConfig,
+)
 
 _logger = logging.getLogger(__name__)
 
@@ -35,7 +39,7 @@ class BaseResource(t.Generic[ClientT], ABC):
 
     _sync_page_iterator: t.ClassVar = SyncPageIterator
     _async_page_iterator: t.ClassVar = AsyncPageIterator
-    _timestamp_cfg: t.ClassVar = SyncPageIterator.timestamp_cfg
+    _timestamp_cfg: t.ClassVar = TimestampPaginationConfig
 
     def __init__(self, client: ClientT, /, *, raw: bool) -> None:
         self._client = client

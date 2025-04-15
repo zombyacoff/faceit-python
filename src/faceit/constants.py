@@ -5,11 +5,12 @@ import sys
 import typing as t
 import warnings
 from dataclasses import dataclass
+from operator import attrgetter
 
 from strenum import StrEnum
 
 if t.TYPE_CHECKING:
-    from ._types import TypeAlias
+    from ._typing import TypeAlias
 
     _EloThreshold: TypeAlias = t.Dict[int, "EloRange"]
 
@@ -23,7 +24,7 @@ RAW_RESPONSE_ITEMS_KEY: t.Final = "items"
 # ELO up to #1000 (by game->region, but region complicates this task;
 # we can think about it, but it seems to me that this is not possible, unfortunately...)
 CHALLENGER_LEVEL: t.Final = "challenger"
-"""Elite tier reserved for **#1000** players per game/region.
+"""Elite tier reserved for #1000 players per game/region.
 
 This rank represents a dynamic threshold based on leaderboard position rather
 than a fixed ELO value. Due to its relative nature, determining Challenger
@@ -372,11 +373,11 @@ class SkillLevel:
     @classmethod
     def get_all_levels(cls, game_id: GameID, /) -> t.List[SkillLevel]:
         return sorted(
-            cls._registry.get(game_id, {}).values(), key=lambda x: x.level
+            cls._registry.get(game_id, {}).values(), key=attrgetter("level")
         )
 
     @classmethod
-    def _ensure_initialized(cls) -> None:
+    def _initialize_skill_levels_registry(cls) -> None:
         if cls._initialized:
             return
 
@@ -393,12 +394,11 @@ class SkillLevel:
 
 
 del _HAS_DATACLASS_SLOTS_SUPPORT
-
 # Initialize the `SkillLevel` registry when the module is imported.
 # This ensures all skill levels are available immediately without requiring
 # explicit initialization. The registry contains all game skill levels mapped
 # by game_id and level number.
-SkillLevel._ensure_initialized()
+SkillLevel._initialize_skill_levels_registry()
 # Remove the constructor after initialization to prevent creation of new instances.
 # This enforces the registry pattern where all valid `SkillLevel` instances
 # are predefined, ensuring data integrity and preventing misuse of the class.

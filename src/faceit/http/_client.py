@@ -33,7 +33,7 @@ from ._helpers import Endpoint
 if t.TYPE_CHECKING:
     from types import TracebackType
 
-    from faceit._types import (
+    from faceit._typing import (
         EndpointParam,
         RawAPIItem,
         RawAPIPageResponse,
@@ -153,7 +153,7 @@ class BaseAPIClient(t.Generic[_HttpxClientT], ABC):
         ), {**self._base_headers, **(headers or {})}
 
     @staticmethod
-    def _handle_response(response: httpx.Response) -> RawAPIResponse:
+    def _handle_response(response: httpx.Response, /) -> RawAPIResponse:
         try:
             response.raise_for_status()
             _logger.debug("Successful response from %s", response.url)
@@ -183,11 +183,11 @@ class BaseAPIClient(t.Generic[_HttpxClientT], ABC):
                 response.status_code, "Invalid JSON response"
             ) from None
 
-    def _warn_unclosed_client(self, *, asynchronous: bool = False) -> None:
+    def _warn_unclosed_client(self, *, async_: bool = False) -> None:
         warnings.warn(
             f"Unclosed client session detected. Resources may be leaked. "
-            f"Use '{'async ' if asynchronous else ''}with' or call "
-            f"'{'await client.a' if asynchronous else 'client.'}close()' to close the session properly. "
+            f"Use '{'async ' if async_ else ''}with' or call "
+            f"'{'await client.a' if async_ else 'client.'}close()' to close the session properly. "
             f"Relying on __del__ for resource cleanup is not recommended.",
             ResourceWarning,
             stacklevel=2,
@@ -198,11 +198,11 @@ class BaseAPIClient(t.Generic[_HttpxClientT], ABC):
         )
 
     @abstractmethod
-    def __del__(self) -> None:
+    def close(self) -> None:
         pass
 
     @abstractmethod
-    def close(self) -> None:
+    def __del__(self) -> None:
         pass
 
 
@@ -223,22 +223,6 @@ class _BaseSyncClient(BaseAPIClient[httpx.Client]):
             timeout=timeout, headers=self._base_headers, **raw_client_kwargs
         )
 
-    def __enter__(self) -> Self:
-        return self
-
-    def __exit__(
-        self,
-        typ: t.Optional[t.Type[BaseException]],
-        exc: t.Optional[BaseException],
-        tb: t.Optional[TracebackType],
-    ) -> None:
-        del typ, exc, tb
-        self.close()
-
-    def __del__(self) -> None:
-        if not self.is_closed:
-            self._warn_unclosed_client()
-
     def close(self) -> None:
         """Close the HTTP client and release resources."""
         if not self.is_closed:
@@ -258,8 +242,24 @@ class _BaseSyncClient(BaseAPIClient[httpx.Client]):
             )
         )
 
+    def __enter__(self) -> Self:
+        return self
 
-def _is_ssl_error(exception: BaseException) -> bool:
+    def __exit__(
+        self,
+        typ: t.Optional[t.Type[BaseException]],
+        exc: t.Optional[BaseException],
+        tb: t.Optional[TracebackType],
+    ) -> None:
+        del typ, exc, tb
+        self.close()
+
+    def __del__(self) -> None:
+        if not self.is_closed:
+            self._warn_unclosed_client()
+
+
+def _is_ssl_error(exception: BaseException, /) -> bool:
     return isinstance(exception, ssl.SSLError) or (
         isinstance(exception, httpx.ConnectError)
         and ("SSL" in str(exception) or "TLS" in str(exception))
@@ -408,22 +408,6 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
             retry=retry_if_exception(combined_retry),
             before_sleep=ssl_before_sleep,
         )
-
-    async def __aenter__(self) -> Self:
-        return self
-
-    async def __aexit__(
-        self,
-        typ: t.Optional[t.Type[BaseException]],
-        exc: t.Optional[BaseException],
-        tb: t.Optional[TracebackType],
-    ) -> None:
-        del typ, exc, tb
-        await self.aclose()
-
-    def __del__(self) -> None:
-        if not self.is_closed:
-            self._warn_unclosed_client(asynchronous=True)
 
     def close(self) -> None:
         """
@@ -638,6 +622,22 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
                 cls._adaptive_limit_enabled, cls._recovery_interval,
             )
             # fmt: on
+
+    async def __aenter__(self) -> Self:
+        return self
+
+    async def __aexit__(
+        self,
+        typ: t.Optional[t.Type[BaseException]],
+        exc: t.Optional[BaseException],
+        tb: t.Optional[TracebackType],
+    ) -> None:
+        del typ, exc, tb
+        await self.aclose()
+
+    def __del__(self) -> None:
+        if not self.is_closed:
+            self._warn_unclosed_client(async_=True)
 
 
 # NOTE: The base client classes are fully functional and could be used directly,

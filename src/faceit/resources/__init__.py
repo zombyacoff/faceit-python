@@ -1,9 +1,9 @@
 import typing as t
 from abc import ABC
+from dataclasses import dataclass
 from functools import cached_property
 
-from faceit import _repr
-from faceit._types import ClientT, Model, Raw
+from faceit._typing import ClientT, Model, Raw
 from faceit.http import AsyncClient, SyncClient
 
 from .players import AsyncPlayers, SyncPlayers
@@ -11,13 +11,9 @@ from .players import AsyncPlayers, SyncPlayers
 __all__ = "AsyncResources", "BaseResources", "SyncResources"
 
 
-@_repr.representation()
+@dataclass(eq=False, frozen=True)
 class BaseResources(t.Generic[ClientT], ABC):
-    def __init__(self, client: ClientT) -> None:
-        self._client = client
-
-    def __str__(self) -> str:
-        return f"{self.__class__.__name__} with {self._client}"
+    _client: ClientT
 
 
 @t.final
