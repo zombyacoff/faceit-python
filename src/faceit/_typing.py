@@ -95,9 +95,9 @@ Model: TypeAlias = t.Literal[False]
 # Placeholder type that signals developers to implement a proper model
 # for a resource method. Acts as a temporary stub during development.
 # TODO: Consider removing in release versions once all models are implemented.
-ModelNotImplemented: TypeAlias = t.Union[t.Type[BaseModel], t.Any]
+ModelNotImplemented: TypeAlias = BaseModel
 
-RawAPIItem: TypeAlias = t.Dict[str, t.Any]
+RawAPIItem = t.NewType("RawAPIItem", t.Dict[str, t.Any])
 RawAPIPageResponse = t.TypedDict(
     "RawAPIPageResponse",
     {

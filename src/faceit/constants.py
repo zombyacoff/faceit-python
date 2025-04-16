@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from operator import attrgetter
 from warnings import warn
 
+from pydantic import Field, validate_call
 from strenum import StrEnum
 
 if t.TYPE_CHECKING:
@@ -146,7 +147,7 @@ class GameID(FaceitStrEnum):
     WOW = "wow"
 
 
-class EventStatus(FaceitStrEnum):
+class EventCategory(FaceitStrEnum):
     ALL = "all"
     UPCOMING = "upcoming"
     ONGOING = "ongoing"
@@ -195,7 +196,13 @@ class EloRange(t.NamedTuple):
         return f"{self.lower}-{self.upper}"
 
 
-_DEFAULT_FIRST_ELO_RANGE: t.Final = EloRange(100, 800)
+MIN_ELO: t.Final = 100
+"""Minimum ELO value across all FACEIT games.
+
+Players cannot drop below this threshold regardless of consecutive losses.
+"""
+
+_DEFAULT_FIRST_ELO_RANGE: t.Final = EloRange(MIN_ELO, 800)
 _DEFAULT_TEN_LEVEL_LOWER: t.Final = 2001
 
 
@@ -203,8 +210,9 @@ def _create_default_elo_tiers() -> _EloThreshold:
     tier_ranges = {1: _DEFAULT_FIRST_ELO_RANGE}
 
     for level in range(2, 10):
-        # `cast(int, ...)` tells the type checker that we know `upper` is definitely an `int`
-        # for levels 1-9, not the full `Optional[Union[int, Literal["challenger"]]` type
+        # `cast(int, ...)` tells the type checker that we know `upper` is
+        # definitely an `int` for levels 1-9, not the full
+        # `Optional[Union[int, Literal["challenger"]]` type
         lower_bound = t.cast(int, tier_ranges[level - 1].upper) + 1
         tier_ranges[level] = EloRange(lower_bound, lower_bound + 149)
 
@@ -233,7 +241,7 @@ OPEN_ENDED_ELO_RANGES: t.Final = _append_elite_tier(None)
 # fmt: off
 ELO_THRESHOLDS: t.Final[t.Dict[GameID, _EloThreshold]] = {
     GameID.CS2: {
-        1: EloRange(100, 500), 2: EloRange(501, 750), 3: EloRange(751, 900),
+        1: EloRange(MIN_ELO, 500), 2: EloRange(501, 750), 3: EloRange(751, 900),
         4: EloRange(901, 1050), 5: EloRange(1051, 1200), 6: EloRange(1201, 1350),
         7: EloRange(1351, 1530), 8: EloRange(1531, 1750), 9: EloRange(1751, 2000),
         10: EloRange(_DEFAULT_TEN_LEVEL_LOWER, CHALLENGER_LEVEL)
@@ -283,7 +291,10 @@ class SkillLevel:
     def contains_elo(self, elo: int, /) -> bool:
         return self.elo_range.contains(elo)
 
-    def progress_percentage(self, elo: int) -> t.Optional[float]:
+    @validate_call
+    def progress_percentage(
+        self, elo: int = Field(ge=MIN_ELO), /
+    ) -> t.Optional[float]:
         if self.is_highest_level:
             warn(
                 "Cannot calculate progress percentage for highest level",
@@ -301,12 +312,15 @@ class SkillLevel:
             / (t.cast(int, self.elo_range.upper) - self.elo_range.lower)
         ) * 100
 
-    def get_next_level(self) -> t.Optional[SkillLevel]:
+    # Ignoring forward reference lint error (UP037) due to conflict between
+    # pydantic's validate_call decorator and type annotations. The forward reference
+    # is necessary here for proper type hinting of the class's own type.
+    def get_next_level(self) -> t.Optional["SkillLevel"]:  # noqa: UP037
         if self.is_highest_level:
             return None
         return self.get_level(self.game_id, self.level + 1)
 
-    def get_previous_level(self) -> t.Optional[SkillLevel]:
+    def get_previous_level(self) -> t.Optional["SkillLevel"]:  # noqa: UP037
         if self.level <= 1:
             return None
         return self.get_level(self.game_id, self.level - 1)
@@ -314,25 +328,28 @@ class SkillLevel:
     @t.overload
     @classmethod
     def get_level(
-        cls, game_id: GameID, level: int
-    ) -> t.Optional[SkillLevel]: ...
+        cls, game_id: GameID, level: int = Field(ge=1, le=10)
+    ) -> t.Optional["SkillLevel"]: ...  # noqa: UP037
 
     @t.overload
     @classmethod
     def get_level(
-        cls, game_id: GameID, *, elo: int
-    ) -> t.Optional[SkillLevel]: ...
+        cls, game_id: GameID, *, elo: int = Field(ge=MIN_ELO)
+    ) -> t.Optional["SkillLevel"]: ...  # noqa: UP037
 
     @classmethod
+    @validate_call
     def get_level(
         cls,
         game_id: GameID,
-        level: t.Optional[int] = None,
+        level: t.Optional[int] = Field(None, ge=1, le=10),
         *,
-        elo: t.Optional[int] = None,
-    ) -> t.Optional[SkillLevel]:
+        elo: t.Optional[int] = Field(None, ge=MIN_ELO),
+    ) -> t.Optional["SkillLevel"]:  # noqa: UP037
         if game_id not in cls._registry:
-            _logger.warning("Game '%s' is not supported", game_id)
+            warn(
+                f"Game '{game_id}' is not supported", UserWarning, stacklevel=2
+            )
             return None
 
         if level is not None and elo is not None:
@@ -361,7 +378,8 @@ class SkillLevel:
         raise ValueError("Either level or elo must be specified")
 
     @classmethod
-    def get_all_levels(cls, game_id: GameID, /) -> t.List[SkillLevel]:
+    @validate_call
+    def get_all_levels(cls, game_id: GameID, /) -> t.List["SkillLevel"]:  # noqa: UP037
         return sorted(
             cls._registry.get(game_id, {}).values(), key=attrgetter("level")
         )
@@ -371,14 +389,15 @@ class SkillLevel:
 
     @classmethod
     def _initialize_skill_levels_registry(cls) -> None:
-        for game_id, thresholds in ELO_THRESHOLDS.items():
-            if game_id not in cls._registry:
-                cls._registry[game_id] = {}
-
-            for level_num, elo_range in thresholds.items():
-                cls._registry[game_id][level_num] = cls(
+        cls._registry = {
+            game_id: {
+                level_num: cls(
                     level_num, game_id, elo_range, f"Level {level_num}"
                 )
+                for level_num, elo_range in thresholds.items()
+            }
+            for game_id, thresholds in ELO_THRESHOLDS.items()
+        }
 
 
 # Initialize the `SkillLevel` registry when the module is imported.
@@ -386,7 +405,6 @@ class SkillLevel:
 # explicit initialization. The registry contains all game skill levels mapped
 # by game_id and level number.
 SkillLevel._initialize_skill_levels_registry()
-
 # Remove both constructor and initialization method after registry setup.
 # This enforces the registry pattern where all valid `SkillLevel` instances
 # are predefined, ensuring data integrity and preventing misuse of the class.

@@ -10,7 +10,7 @@ import uuid
 import pytest
 from pydantic import BaseModel, ValidationError
 
-from faceit.models.custom_types.faceit_uuid import (
+from faceit.models.custom_types._faceit_uuid import (
     FaceitID,
     FaceitTeamID,
     FaceitMatchID,

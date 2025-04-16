@@ -11,9 +11,9 @@ from faceit._typing import Annotated, Self, TypeAlias
 from faceit._utils import get_nested_property
 from faceit.constants import RAW_RESPONSE_ITEMS_KEY
 
-from .championship import Championship
-from .match import Match
-from .player import (
+from ._championship import Championship
+from ._match import Match
+from ._player import (
     AbstractMatchPlayerStats,
     BanEntry,
     CS2MatchPlayerStats,
@@ -245,7 +245,7 @@ class ItemPage(BaseModel, t.Generic[_T], frozen=True):
                 )
 
             if len(item) == 1:  # Flatten single-item dictionaries
-                _, value = next(iter(item.items()))
+                value = next(iter(item.values()))
                 if isinstance(value, dict):
                     return value
 

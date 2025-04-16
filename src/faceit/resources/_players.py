@@ -33,7 +33,7 @@ from faceit.models import (
     Tournament,
 )
 
-from .base import (
+from ._base import (
     BaseResource,
     FaceitResourcePath,
     MappedValidatorConfig,
@@ -89,7 +89,7 @@ class BasePlayers(
                     "When 'identifier' is not provided,"
                     "both 'game' AND 'game_player_id' must be specified"
                 )
-            _logger.info(
+            _logger.debug(
                 "Fetching player by game parameters: game=%s, game_player_id=%s",
                 game,
                 game_player_id,
@@ -105,12 +105,12 @@ class BasePlayers(
             )
 
         if is_valid_uuid(identifier):
-            _logger.info("Fetching player by UUID: %s", identifier)
+            _logger.debug("Fetching player by UUID: %s", identifier)
             return RequestPayload(
                 endpoint=self.PATH / str(identifier), params=params
             )
 
-        _logger.info("Fetching player by nickname: %s", identifier)
+        _logger.debug("Fetching player by nickname: %s", identifier)
         params["nickname"] = str(identifier)
         return RequestPayload(endpoint=self.PATH, params=params)
 
@@ -434,7 +434,7 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
     @t.overload
     def stats(
         self: SyncPlayers[Raw], player_id: t.Union[str, UUID], game: GameID
-    ) -> RawAPIItem: ...
+    ) -> RawAPIPageResponse: ...
 
     @t.overload
     def stats(
@@ -445,7 +445,7 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
     @validate_call
     def stats(
         self, player_id: t.Union[str, UUID], game: GameID
-    ) -> t.Union[RawAPIItem, ModelNotImplemented]:
+    ) -> t.Union[RawAPIPageResponse, ModelNotImplemented]:
         return self._validate_response(
             self._client.get(
                 self.PATH / str(player_id) / "stats" / game, expect_page=True
@@ -885,7 +885,7 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
     @t.overload
     async def stats(
         self: AsyncPlayers[Raw], player_id: t.Union[str, UUID], game: GameID
-    ) -> RawAPIItem: ...
+    ) -> RawAPIPageResponse: ...
 
     @t.overload
     async def stats(
@@ -896,7 +896,7 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
     @validate_call
     async def stats(
         self, player_id: t.Union[str, UUID], game: GameID
-    ) -> t.Union[RawAPIItem, ModelNotImplemented]:
+    ) -> t.Union[RawAPIPageResponse, ModelNotImplemented]:
         return self._validate_response(
             await self._client.get(
                 self.PATH / str(player_id) / "stats" / game, expect_page=True

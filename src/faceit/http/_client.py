@@ -668,6 +668,11 @@ class SyncClient(_BaseSyncClient):
         **kwargs: t.Any,
     ) -> RawAPIPageResponse: ...
 
+    @t.overload
+    def get(
+        self, endpoint: EndpointParam, **kwargs: t.Any
+    ) -> RawAPIResponse: ...
+
     def get(self, endpoint: EndpointParam, **kwargs: t.Any) -> RawAPIResponse:
         return self.request(
             SupportedMethod.GET, endpoint, **_clean_type_hints(kwargs)
@@ -690,6 +695,11 @@ class SyncClient(_BaseSyncClient):
         expect_page: t.Literal[True],
         **kwargs: t.Any,
     ) -> RawAPIPageResponse: ...
+
+    @t.overload
+    def post(
+        self, endpoint: EndpointParam, **kwargs: t.Any
+    ) -> RawAPIResponse: ...
 
     def post(self, endpoint: EndpointParam, **kwargs: t.Any) -> RawAPIResponse:
         return self.request(
@@ -719,6 +729,11 @@ class AsyncClient(_BaseAsyncClient):
         **kwargs: t.Any,
     ) -> RawAPIPageResponse: ...
 
+    @t.overload
+    async def get(
+        self, endpoint: EndpointParam, **kwargs: t.Any
+    ) -> RawAPIResponse: ...
+
     async def get(
         self, endpoint: EndpointParam, **kwargs: t.Any
     ) -> RawAPIResponse:
@@ -743,6 +758,11 @@ class AsyncClient(_BaseAsyncClient):
         expect_page: t.Literal[True],
         **kwargs: t.Any,
     ) -> RawAPIPageResponse: ...
+
+    @t.overload
+    async def post(
+        self, endpoint: EndpointParam, **kwargs: t.Any
+    ) -> RawAPIResponse: ...
 
     async def post(
         self, endpoint: EndpointParam, **kwargs: t.Any

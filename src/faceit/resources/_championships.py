@@ -16,11 +16,11 @@ from faceit._typing import (
     RawAPIPageResponse,
 )
 from faceit._utils import uuid_validator_alias
-from faceit.constants import EventStatus, ExpandOption, GameID
+from faceit.constants import EventCategory, ExpandOption, GameID
 from faceit.http import AsyncClient, SyncClient
 from faceit.models import Championship, ItemPage
 
-from .base import BaseResource, FaceitResourcePath
+from ._base import BaseResource, FaceitResourcePath
 
 _championship_id_validator = uuid_validator_alias("championship_id")
 
@@ -43,7 +43,7 @@ class SyncChampionships(
     def all(
         self: SyncChampionships[Raw],
         game: GameID,
-        status: EventStatus = EventStatus.ALL,
+        category: EventCategory = EventCategory.ALL,
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(10, ge=1, le=10),
@@ -53,7 +53,7 @@ class SyncChampionships(
     def all(
         self: SyncChampionships[Model],
         game: GameID,
-        status: EventStatus = EventStatus.ALL,
+        category: EventCategory = EventCategory.ALL,
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(10, ge=1, le=10),
@@ -63,7 +63,7 @@ class SyncChampionships(
     def all(
         self,
         game: GameID,
-        status: EventStatus = EventStatus.ALL,
+        category: EventCategory = EventCategory.ALL,
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(10, ge=1, le=10),
@@ -72,7 +72,7 @@ class SyncChampionships(
             self._client.get(
                 self.PATH,
                 params=self.__class__._build_params(
-                    game=game, status=status, offset=offset, limit=limit
+                    game=game, category=category, offset=offset, limit=limit
                 ),
                 expect_page=True,
             ),
@@ -100,7 +100,14 @@ class SyncChampionships(
         championship_id: t.Union[str, UUID],
         expanded: ExpandOption = ExpandOption.NONE,
     ) -> t.Union[RawAPIItem, ModelNotImplemented]:
-        pass
+        return self._validate_response(
+            self._client.get(
+                self.PATH / str(championship_id),
+                params=self.__class__._build_params(expanded=expanded),
+                expect_item=True,
+            ),
+            None,
+        )
 
     __call__ = get
 
@@ -108,7 +115,7 @@ class SyncChampionships(
     def matches(
         self: SyncChampionships[Raw],
         championship_id: t.Union[str, UUID],
-        status: EventStatus = EventStatus.ALL,
+        category: EventCategory = EventCategory.ALL,
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
@@ -118,7 +125,7 @@ class SyncChampionships(
     def matches(
         self: SyncChampionships[Model],
         championship_id: t.Union[str, UUID],
-        status: EventStatus = EventStatus.ALL,
+        category: EventCategory = EventCategory.ALL,
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
@@ -129,12 +136,21 @@ class SyncChampionships(
     def matches(
         self,
         championship_id: t.Union[str, UUID],
-        status: EventStatus = EventStatus.ALL,
+        category: EventCategory = EventCategory.ALL,
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
     ) -> t.Union[RawAPIPageResponse, ModelNotImplemented]:
-        pass
+        return self._validate_response(
+            self._client.get(
+                self.PATH / str(championship_id) / "matches",
+                params=self.__class__._build_params(
+                    category=category, offset=offset, limit=limit
+                ),
+                expect_page=True,
+            ),
+            None,
+        )
 
     @t.overload
     def results(
@@ -163,7 +179,16 @@ class SyncChampionships(
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
     ) -> t.Union[RawAPIPageResponse, ModelNotImplemented]:
-        pass
+        return self._validate_response(
+            self._client.get(
+                self.PATH / str(championship_id) / "results",
+                params=self.__class__._build_params(
+                    offset=offset, limit=limit
+                ),
+                expect_page=True,
+            ),
+            None,
+        )
 
     @t.overload
     def subscriptions(
@@ -192,7 +217,16 @@ class SyncChampionships(
         offset: int = Field(0, ge=0),
         limit: int = Field(10, ge=1, le=10),
     ) -> t.Union[RawAPIPageResponse, ModelNotImplemented]:
-        pass
+        return self._validate_response(
+            self._client.get(
+                self.PATH / str(championship_id) / "subscriptions",
+                params=self.__class__._build_params(
+                    offset=offset, limit=limit
+                ),
+                expect_page=True,
+            ),
+            None,
+        )
 
 
 @t.final

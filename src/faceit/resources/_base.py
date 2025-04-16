@@ -35,12 +35,6 @@ _logger = logging.getLogger(__name__)
 
 
 @t.final
-class FaceitResourcePath(LowercaseStrEnum):
-    PLAYERS = auto()
-    CHAMPIONSHIPS = auto()
-
-
-@t.final
 class RequestPayload(t.TypedDict):
     endpoint: Endpoint
     params: t.Dict[str, t.Any]
@@ -51,6 +45,13 @@ class MappedValidatorConfig(t.TypedDict, t.Generic[_KT, ModelT]):
     validator_map: t.Dict[_KT, t.Type[ModelT]]
     is_paged: bool
     key_name: NotRequired[str]
+
+
+@t.final
+class FaceitResourcePath(LowercaseStrEnum):
+    CHAMPIONSHIPS = auto()
+    MATCHES = auto()
+    PLAYERS = auto()
 
 
 @dataclass(eq=False, frozen=True)
@@ -68,7 +69,7 @@ class BaseResource(t.Generic[ClientT], ABC):
 
     _PARAM_NAME_MAP: t.ClassVar = {
         "start": "from",
-        "status": "type",
+        "category": "type",
     }
 
     def __init_subclass__(
@@ -135,27 +136,30 @@ class BaseResource(t.Generic[ClientT], ABC):
         )
 
         validator = validator_map.get(key)
-        if validator is not None:
-            # Suppressing type checking warning because we're using a
-            # dynamic runtime subscript `ItemPage` is being subscripted
-            # with a variable (`validator`) which mypy cannot statically verify
-            return self._validate_response(
-                response,
-                t.cast(t.Type[ModelT], ItemPage[validator])  # type: ignore[valid-type]
-                if is_paged
-                else validator,
+        if validator is None:
+            warn(
+                f"No model defined for {key_name} '{key}'. "
+                f"Consider using the raw response.",
+                UserWarning,
+                stacklevel=3,
             )
+            return response
 
-        warn(
-            f"No model defined for {key_name} '{key}'. "
-            f"Consider using the raw response",
-            UserWarning,
-            stacklevel=3,
+        # Suppressing type checking warning because we're using a
+        # dynamic runtime subscript `ItemPage` is being subscripted
+        # with a variable (`validator`) which mypy cannot statically verify
+        return self._validate_response(
+            response,
+            t.cast(t.Type[ModelT], ItemPage[validator])  # type: ignore[valid-type]
+            if is_paged
+            else validator,
         )
-        return response
 
     def _validate_response(
-        self, response: _ResponseT, validator: t.Optional[t.Type[ModelT]], /
+        self,
+        response: _ResponseT,
+        validator: t.Optional[t.Type[ModelT]],
+        /,
     ) -> t.Union[_ResponseT, ModelT]:
         if validator is not None and not self.raw:
             try:

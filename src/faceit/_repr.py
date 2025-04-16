@@ -52,26 +52,3 @@ def representation(
         return _apply_representation(cls, fields, use_str)
 
     return decorator
-
-
-if __name__ == "__main__":
-
-    class BasePerson:
-        def __init__(self, name: str, age: int) -> None:
-            self.name = name
-            self.age = age
-
-    @representation("name", "age")
-    class Person(BasePerson):
-        pass
-
-    person = Person("John", 30)
-    print(repr(person), str(person))  # noqa: T201
-
-    @representation(use_str=True)
-    class Person2(BasePerson):
-        def __str__(self) -> str:
-            return f"{self.name} is {self.age} years old"
-
-    person2 = Person2("John", 30)
-    print(repr(person2), str(person2))  # noqa: T201

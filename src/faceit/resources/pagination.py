@@ -30,7 +30,7 @@ from faceit.constants import RAW_RESPONSE_ITEMS_KEY
 from faceit.models import ItemPage, PaginationTimeRange
 
 if t.TYPE_CHECKING:
-    from .base import BaseResource
+    from ._base import BaseResource
 
     _UnixPaginationConfigType: TypeAlias = t.Union[
         "TimestampPaginationConfig", t.Literal[False]
@@ -39,7 +39,7 @@ if t.TYPE_CHECKING:
 
 @lazy_import
 def _get_base_resource_class() -> t.Type[BaseResource]:
-    from .base import BaseResource  # noqa: PLC0415
+    from ._base import BaseResource  # noqa: PLC0415
 
     return BaseResource
 
