@@ -48,7 +48,10 @@ def _apply_representation(
 def representation(
     *fields: str, use_str: bool = False
 ) -> t.Callable[[_ClassT], _ClassT]:
-    return lambda cls: _apply_representation(cls, fields, use_str)
+    def decorator(cls: _ClassT) -> _ClassT:
+        return _apply_representation(cls, fields, use_str)
+
+    return decorator
 
 
 if __name__ == "__main__":

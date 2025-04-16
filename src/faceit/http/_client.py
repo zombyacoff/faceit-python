@@ -4,12 +4,12 @@ import asyncio
 import logging
 import ssl
 import typing as t
-import warnings
 from abc import ABC, abstractmethod
 from enum import auto
 from inspect import iscoroutinefunction
 from threading import Lock
 from time import time
+from warnings import warn
 from weakref import WeakSet
 
 import httpx
@@ -23,7 +23,7 @@ from tenacity import (
     wait_random_exponential,
 )
 
-from faceit import _repr
+from faceit._repr import representation
 from faceit._utils import validate_uuid_args
 from faceit.constants import BASE_WIKI_URL, FaceitStrEnum
 from faceit.exceptions import FaceitAPIError
@@ -52,7 +52,7 @@ class SupportedMethod(FaceitStrEnum):
     POST = auto()
 
 
-@_repr.representation("api_key", "base_url", "retry_args")
+@representation("api_key", "base_url", "retry_args")
 class BaseAPIClient(t.Generic[_HttpxClientT], ABC):
     __slots__ = "_api_key", "base_url", "retry_args"
 
@@ -93,7 +93,7 @@ class BaseAPIClient(t.Generic[_HttpxClientT], ABC):
     # convertible types (e.g., `UUID`, `bytes`) are accepted
     @validate_uuid_args(
         "api_key",
-        error_message=f"Invalid FACEIT API key format. "
+        error_message=f"Invalid FACEIT API key format: '{{value}}'. "
         f"Please visit the official wiki for API key information: "
         f"{BASE_WIKI_URL}/getting-started/authentication/api-keys",
     )
@@ -107,7 +107,11 @@ class BaseAPIClient(t.Generic[_HttpxClientT], ABC):
         # Handle edge case where `api_key` is `bytes` (passes UUID validation)
         # Convert to string instead of raising an exception
         self._api_key = (
-            api_key.decode() if isinstance(api_key, bytes) else str(api_key)
+            # Cast needed: signature declares `api_key` as str for API clarity,
+            # but we accept `bytes` too which type checkers can't narrow automatically
+            t.cast(bytes, api_key).decode()
+            if isinstance(api_key, bytes)
+            else str(api_key)
         )
         self.retry_args = {
             **self.__class__.DEFAULT_RETRY_ARGS,
@@ -183,27 +187,24 @@ class BaseAPIClient(t.Generic[_HttpxClientT], ABC):
                 response.status_code, "Invalid JSON response"
             ) from None
 
-    def _warn_unclosed_client(self, *, async_: bool = False) -> None:
-        warnings.warn(
-            f"Unclosed client session detected. Resources may be leaked. "
-            f"Use '{'async ' if async_ else ''}with' or call "
-            f"'{'await client.a' if async_ else 'client.'}close()' to close the session properly. "
-            f"Relying on __del__ for resource cleanup is not recommended.",
-            ResourceWarning,
-            stacklevel=2,
-        )
+    @classmethod
+    def _warn_unclosed_client(cls) -> None:
+        async_ = "Async" in cls.__name__
         _logger.warning(
-            "Unclosed %s instance garbage collected. Resources may be leaked.",
-            self.__class__.__name__,
+            "Unclosed client session detected. Resources may be leaked. "
+            "Either use %swith statement (context manager) or explicitly "
+            "call %sclose() to properly close the session.",
+            "async " if async_ else "",
+            "await client.a" if async_ else "client.",
         )
 
     @abstractmethod
     def close(self) -> None:
         pass
 
-    @abstractmethod
     def __del__(self) -> None:
-        pass
+        if not self.is_closed:
+            self.__class__._warn_unclosed_client()
 
 
 class _BaseSyncClient(BaseAPIClient[httpx.Client]):
@@ -253,10 +254,6 @@ class _BaseSyncClient(BaseAPIClient[httpx.Client]):
     ) -> None:
         del typ, exc, tb
         self.close()
-
-    def __del__(self) -> None:
-        if not self.is_closed:
-            self._warn_unclosed_client()
 
 
 def _is_ssl_error(exception: BaseException, /) -> bool:
@@ -538,7 +535,7 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
     def update_rate_limit(cls, new_limit: PositiveInt, /) -> None:
         with cls._rate_limit_lock:
             if new_limit > cls.MAX_CONCURRENT_REQUESTS:
-                warnings.warn(
+                warn(
                     f"Request limit of {new_limit} exceeds "
                     f"maximum allowed ({cls.MAX_CONCURRENT_REQUESTS})",
                     UserWarning,
@@ -635,16 +632,12 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
         del typ, exc, tb
         await self.aclose()
 
-    def __del__(self) -> None:
-        if not self.is_closed:
-            self._warn_unclosed_client(async_=True)
 
-
-# NOTE: The base client classes are fully functional and could be used directly,
-# but the public classes (`SyncClient`, `AsyncClient`) provide additional convenience
-# methods that align with FACEIT API's expected HTTP methods.
-# This separation allows for a cleaner interface while
-# maintaining the core implementation details in the base classes
+# NOTE: The base client classes are fully functional and could be used
+# directly, but the public classes (`SyncClient`, `AsyncClient`) provide
+# additional convenience methods that align with FACEIT API's expected HTTP
+# methods. This separation allows for a cleaner interface while maintaining
+# the core implementation details in the base classes
 
 
 def _clean_type_hints(kwargs: t.Dict[str, t.Any]) -> t.Dict[str, t.Any]:

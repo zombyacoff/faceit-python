@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import typing as t
 
-from faceit import _repr
+from faceit._repr import representation
 from faceit._utils import raise_unsupported_operand_error
 
 if t.TYPE_CHECKING:
@@ -10,7 +10,7 @@ if t.TYPE_CHECKING:
 
 
 @t.final
-@_repr.representation(use_str=True)
+@representation(use_str=True)
 class Endpoint:
     __slots__ = "base_path", "path_parts"
 
@@ -21,13 +21,8 @@ class Endpoint:
         self.base_path = base_path
 
     def __str__(self) -> str:
-        return "/".join(
-            part.strip("/")
-            for part in (
-                ([self.base_path] if self.base_path else []) + self.path_parts
-            )
-            if part
-        )
+        parts = ([self.base_path] if self.base_path else []) + self.path_parts
+        return "/".join(part.strip("/") for part in parts if part)
 
     def add(self, *path_parts: str) -> Self:
         return self.__class__(
@@ -44,15 +39,15 @@ class Endpoint:
             return self.__class__(
                 *self.path_parts, *other.path_parts, base_path=self.base_path
             )
-        # Ignore RET503 (function always raises)
-        # as this is an intentional error path
+        # Intentional error path - Ruff limitation (RET503)
         raise_unsupported_operand_error(  # noqa: RET503
             "/", self.__class__.__name__, type(other).__name__
         )
 
     def __itruediv__(self, other: EndpointParam) -> Self:  # noqa: PYI034
         if isinstance(other, str):
-            self.path_parts.extend(filter(None, (other,)))
+            if other:
+                self.path_parts.append(other)
             return self
         if isinstance(other, self.__class__):
             self.path_parts.extend(other.path_parts)

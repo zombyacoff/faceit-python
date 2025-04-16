@@ -24,18 +24,6 @@ def lazy_import(func: t.Callable[[], _T]) -> t.Callable[[], _T]:
     return lru_cache(maxsize=1)(func)
 
 
-def raise_unsupported_operand_error(
-    sign: str,
-    self_name: str,
-    other_name: str,
-    /,
-) -> t.NoReturn:
-    raise TypeError(
-        f"unsupported operand type(s) for {sign}: "
-        f"'{self_name}' and '{other_name}'"
-    )
-
-
 def deep_get(
     dictionary: t.Dict[str, t.Any],
     keys: str,
@@ -108,10 +96,11 @@ def convert_from_unix(
     raise ValueError(f"Expected int or None, got {type(value).__name__}")
 
 
-# We maintain our own `UUID` validation implementation despite potentially more efficient
-# alternatives. This specific implementation is crucial for the library's internal logic to
-# distinguish between different resource types (e.g., nickname vs ID) and supports the
-# expected behavior of various resource handlers
+# We maintain our own `UUID` validation implementation despite potentially more
+# efficient alternatives. This specific implementation is crucial for the
+# library's internal logic to distinguish between different resource types
+# (e.g., nickname vs ID) and supports the expected behavior of various
+# resource handlers
 def is_valid_uuid(value: t.Any, /) -> bool:
     if isinstance(value, UUID):
         return True
@@ -125,7 +114,8 @@ def is_valid_uuid(value: t.Any, /) -> bool:
 
 
 def validate_uuid_args(
-    *arg_names: str, error_message: t.Optional[str] = None
+    *arg_names: str,
+    error_message: str = "Invalid {arg_name}: {value}. Must be a valid UUID.",
 ) -> t.Callable[[t.Callable[_P, _T]], t.Callable[_P, _T]]:
     def decorator(func: t.Callable[_P, _T]) -> t.Callable[_P, _T]:
         sig = signature(func)
@@ -145,8 +135,7 @@ def validate_uuid_args(
 
                 if not is_valid_uuid(value):
                     raise ValueError(
-                        error_message
-                        or f"Invalid {arg_name}: {value}. Must be a valid UUID."
+                        error_message.format(arg_name=arg_name, value=value)
                     )
 
             return func(*args, **kwargs)
@@ -154,3 +143,25 @@ def validate_uuid_args(
         return wrapper
 
     return decorator
+
+
+def uuid_validator_alias(
+    param_name: str,
+    /,
+) -> t.Callable[[t.Callable[_P, _T]], t.Callable[_P, _T]]:
+    def decorator(func: t.Callable[_P, _T]) -> t.Callable[_P, _T]:
+        return validate_uuid_args(param_name)(func)
+
+    return decorator
+
+
+def raise_unsupported_operand_error(
+    sign: str,
+    self_name: str,
+    other_name: str,
+    /,
+) -> t.NoReturn:
+    raise TypeError(
+        f"unsupported operand type(s) for {sign}: "
+        f"'{self_name}' and '{other_name}'"
+    )

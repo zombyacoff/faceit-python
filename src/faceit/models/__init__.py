@@ -14,8 +14,8 @@ from faceit.constants import RAW_RESPONSE_ITEMS_KEY
 from .championship import Championship
 from .match import Match
 from .player import (
+    AbstractMatchPlayerStats,
     BanEntry,
-    BaseMatchPlayerStats,
     CS2MatchPlayerStats,
     GameInfo,
     GeneralTeam,
@@ -25,8 +25,8 @@ from .player import (
 )
 
 __all__ = (
+    "AbstractMatchPlayerStats",
     "BanEntry",
-    "BaseMatchPlayerStats",
     "CS2MatchPlayerStats",
     "Championship",
     "GameInfo",
@@ -176,13 +176,13 @@ class ItemPage(BaseModel, t.Generic[_T], frozen=True):
     def _construct_without_pagination(
         cls, items: t.Optional[t.List[_R]] = None, /
     ) -> ItemPage[_R]:
-        return cls.model_construct(
+        return cls.model_construct(  # type: ignore[return-value]
             items=items or [],
             _offset=_PAGINATION_UNSET,
             _limit=_PAGINATION_UNSET,
             _time_from=_PAGINATION_UNSET,
             _time_to=_PAGINATION_UNSET,
-        )  # type: ignore[return-value]
+        )
 
     @classmethod
     def merge(cls, pages: t.Iterable[ItemPage[_T]], /) -> ItemPage[_T]:

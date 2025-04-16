@@ -49,13 +49,13 @@ class ResponseContainer(RootModel[t.Dict[str, _T]]):
 class LangFormattedAnyHttpUrl:
     __slots__ = ()
 
-    DEFAULT_LANG = "en"
+    _DEFAULT_LANG = "en"
 
     @classmethod
     def validate(cls, value: str) -> AnyHttpUrl:
         try:
             return AnyHttpUrl(
-                value.format(lang=cls.DEFAULT_LANG)
+                value.format(lang=cls._DEFAULT_LANG)
                 if "{lang}" in value
                 else value
             )
@@ -76,16 +76,11 @@ class NullableList(t.List[_T]):
     def __get_pydantic_core_schema__(
         cls, source_type: t.Any, handler: GetCoreSchemaHandler
     ) -> core_schema.CoreSchema:
-        del source_type, handler
-        # fmt: off
-        return core_schema.union_schema([
-            core_schema.is_instance_schema(cls),
-            core_schema.chain_schema([
-                core_schema.union_schema([
-                    core_schema.none_schema(),
-                    core_schema.str_schema(max_length=0),
-                ]),
-                core_schema.no_info_plain_validator_function(lambda _: []),
-            ]),
-        ])
-        # fmt: on
+        return core_schema.no_info_before_validator_function(
+            lambda value: value or [],
+            core_schema.list_schema(
+                # NOTE: Current implementation relies on type
+                # argument extraction which may be fragile.
+                handler.generate_schema(t.get_args(source_type)[0])
+            ),
+        )

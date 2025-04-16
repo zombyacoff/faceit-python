@@ -37,7 +37,7 @@ class Stream(BaseModel):
 
 class Championship(BaseModel):
     id: FaceitID
-    # championship_id: FaceitUUID unnecessary
+    # `championship_id: FaceitID` unnecessary
     name: str
     cover_image: UrlOrEmpty
     background_image: UrlOrEmpty

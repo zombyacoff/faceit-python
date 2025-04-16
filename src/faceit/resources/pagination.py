@@ -2,17 +2,29 @@ from __future__ import annotations
 
 import sys
 import typing as t
-import warnings
 from abc import ABC
+from enum import auto
 from inspect import Parameter, signature
 from itertools import chain
+from warnings import warn
 
 from annotated_types import Le
-from pydantic import Field
 from pydantic.fields import FieldInfo
+from strenum import LowercaseStrEnum
 
-from faceit import _repr
-from faceit._typing import RawAPIItem, RawAPIPageResponse, Self, TypeAlias
+from faceit._repr import representation
+from faceit._typing import (
+    AsyncPaginationMethod,
+    AsyncUnixPaginationMethod,
+    BaseUnixPaginationMethod,
+    PaginationMethodT,
+    RawAPIItem,
+    RawAPIPageResponse,
+    Self,
+    SyncPaginationMethod,
+    SyncUnixPaginationMethod,
+    TypeAlias,
+)
 from faceit._utils import deep_get, get_hashable_representation, lazy_import
 from faceit.constants import RAW_RESPONSE_ITEMS_KEY
 from faceit.models import ItemPage, PaginationTimeRange
@@ -20,11 +32,9 @@ from faceit.models import ItemPage, PaginationTimeRange
 if t.TYPE_CHECKING:
     from .base import BaseResource
 
-    _Function: TypeAlias = t.Callable[..., t.Any]
     _UnixPaginationConfigType: TypeAlias = t.Union[
         "TimestampPaginationConfig", t.Literal[False]
     ]
-    _CollectReturnFormat: TypeAlias = t.Literal["first", "raw", "model"]
 
 
 @lazy_import
@@ -35,58 +45,10 @@ def _get_base_resource_class() -> t.Type[BaseResource]:
 
 
 _T = t.TypeVar("_T")
-_T_co = t.TypeVar("_T_co", covariant=True)
-
-_MethodT = t.TypeVar("_MethodT", bound="_BaseMethodProtocol")
 
 _PageType: TypeAlias = t.Union[ItemPage, RawAPIPageResponse]
 _PageListType: TypeAlias = t.List[_PageType]
 _PageT = t.TypeVar("_PageT", bound=_PageType)
-
-
-class _BaseMethodProtocol(t.Protocol):
-    __name__: str
-    __call__: _Function
-
-
-class BasePaginationMethod(_BaseMethodProtocol, t.Protocol[_T_co]):
-    def __call__(
-        self,
-        *args: t.Any,
-        offset: int = Field(...),
-        limit: int = Field(...),
-        **kwargs: t.Any,
-    ) -> _T_co: ...
-
-
-class SyncPaginationMethod(BasePaginationMethod[_T_co], t.Protocol): ...
-
-
-class AsyncPaginationMethod(
-    BasePaginationMethod[t.Awaitable[_T_co]], t.Protocol
-): ...
-
-
-class BaseUnixPaginationMethod(_BaseMethodProtocol, t.Protocol[_T_co]):
-    def __call__(
-        self,
-        *args: t.Any,
-        offset: int = Field(...),
-        limit: int = Field(...),
-        start: t.Optional[int] = None,
-        to: t.Optional[int] = None,
-        **kwargs: t.Any,
-    ) -> _T_co: ...
-
-
-class SyncUnixPaginationMethod(
-    BaseUnixPaginationMethod[_T_co], t.Protocol
-): ...
-
-
-class AsyncUnixPaginationMethod(
-    BaseUnixPaginationMethod[t.Awaitable[_T_co]], t.Protocol
-): ...
 
 
 @t.final
@@ -101,10 +63,16 @@ class PaginationMaxParams(t.NamedTuple):
     offset: int
 
 
+@t.final
+class CollectReturnFormat(LowercaseStrEnum):
+    FIRST = auto()
+    RAW = auto()
+    MODEL = auto()
+
+
 _UNIX_METHOD_REQUIRED_KEYS: t.Final[t.FrozenSet[str]] = frozenset(
     TimestampPaginationConfig.__annotations__.keys()
 )
-
 _PAGINATION_ARGS = PaginationMaxParams._fields
 _UNIX_PAGINATION_PARAMS = PaginationTimeRange._fields
 
@@ -131,13 +99,14 @@ def _extract_pagination_limits(
     # 2. Static typing - enables mypy to verify type correctness
     if limit_param.default is None or offset_param.default is None:
         raise ValueError(
-            f"Function {method_name} is missing default value for limit or offset parameter"
+            f"Function {method_name} missing "
+            f"default value for limit/offset parameter"
         )
     if not isinstance(limit_param.default, FieldInfo) or not isinstance(
         offset_param.default, FieldInfo
     ):
         raise TypeError(
-            f"Default value for limit or offset parameter in {method_name} is not a FieldInfo"
+            f"Default for limit/offset in {method_name} is not a FieldInfo"
         )
 
     limit_constraint = _get_le(limit_param)
@@ -161,7 +130,7 @@ def _extract_pagination_limits(
 
 
 def check_pagination_support(
-    func: _Function, /
+    func: t.Callable[..., t.Any], /
 ) -> t.Union[PaginationMaxParams, t.Literal[False]]:
     if not hasattr(func, "__self__") or not issubclass(
         func.__self__.__class__, _get_base_resource_class()
@@ -180,8 +149,8 @@ def check_pagination_support(
     )
 
 
-class _MethodCall(t.NamedTuple, t.Generic[_MethodT]):
-    call: _MethodT
+class _MethodCall(t.NamedTuple, t.Generic[PaginationMethodT]):
+    call: PaginationMethodT
     args: t.Tuple[t.Any, ...]
     kwargs: t.Dict[str, t.Any]
 
@@ -195,32 +164,32 @@ _ITERATOR_SLOTS = (
 )
 
 
-@_repr.representation(*_ITERATOR_SLOTS)
-class BasePageIterator(t.Generic[_MethodT, _PageT], ABC):
+@representation(*_ITERATOR_SLOTS)
+class BasePageIterator(t.Generic[PaginationMethodT, _PageT], ABC):
     __slots__ = _ITERATOR_SLOTS
 
     _STOP_ITERATION_EXC: t.ClassVar[t.Type[Exception]]
 
     _COLLECT_RETURN_FORMATS: t.ClassVar[
         t.Dict[
-            _CollectReturnFormat,
+            CollectReturnFormat,
             t.Callable[
                 [_PageListType],
                 t.Union[t.Type[ItemPage], t.Type[RawAPIPageResponse]],
             ],
         ]
     ] = {
-        "first": lambda collection: type(collection[0])
+        CollectReturnFormat.FIRST: lambda collection: type(collection[0])
         if collection
         else RawAPIPageResponse,
-        "raw": lambda _: RawAPIPageResponse,
-        "model": lambda _: ItemPage,
+        CollectReturnFormat.RAW: lambda _: RawAPIPageResponse,
+        CollectReturnFormat.MODEL: lambda _: ItemPage,
     }
 
     timestamp_cfg: t.ClassVar = TimestampPaginationConfig
 
     def __init__(
-        self, method: _MethodT, /, *args: t.Any, **kwargs: t.Any
+        self, method: PaginationMethodT, /, *args: t.Any, **kwargs: t.Any
     ) -> None:
         pagination_limits = check_pagination_support(method)
         if pagination_limits is False:
@@ -231,9 +200,10 @@ class BasePageIterator(t.Generic[_MethodT, _PageT], ABC):
             )
         self._method = (
             # Handle type subscription differently based on Python version
-            # In Python 3.9+, Generic types became subscriptable (`_MethodCall[_MethodT]`)
+            # In Python 3.9+, Generic types became subscriptable
+            # (`_MethodCall[PaginationMethodT]`)
             # For Python 3.8 and below, we must use the unsubscripted type
-            _MethodCall[_MethodT]
+            _MethodCall[PaginationMethodT]
             if sys.version_info >= (3, 9)
             else _MethodCall
         )(
@@ -263,7 +233,8 @@ class BasePageIterator(t.Generic[_MethodT, _PageT], ABC):
             raise TypeError(f"Pagination offset must be an integer: {value}")
         if self._exhausted:
             raise ValueError(
-                "Pagination offset cannot be set after the iterator has been exhausted"
+                "Pagination offset cannot be set "
+                "after the iterator has been exhausted"
             )
         if value < 0:
             raise ValueError(f"Pagination offset cannot be negative: {value}")
@@ -301,7 +272,7 @@ class BasePageIterator(t.Generic[_MethodT, _PageT], ABC):
     @staticmethod
     def _remove_pagination_args(**kwargs: t.Any) -> t.Dict[str, t.Any]:
         if any(kwargs.pop(arg, None) for arg in _PAGINATION_ARGS):
-            warnings.warn(
+            warn(
                 f"Pagination parameters {_PAGINATION_ARGS} should not be provided by users. "
                 f"These parameters are managed internally by the pagination system. ",
                 UserWarning,
@@ -311,7 +282,7 @@ class BasePageIterator(t.Generic[_MethodT, _PageT], ABC):
 
     @staticmethod
     def _validate_unix_pagination_parameter(
-        method: _MethodT,
+        method: PaginationMethodT,
         /,
         # Process `kwargs` to filter pagination parameters and issue warnings
         # when user-provided values will be ignored
@@ -332,7 +303,7 @@ class BasePageIterator(t.Generic[_MethodT, _PageT], ABC):
                 f"Key and attribute parameters must be non-empty strings: {key}, {attr}"
             )
         if any(kwargs.pop(arg, None) for arg in _UNIX_PAGINATION_PARAMS):
-            warnings.warn(
+            warn(
                 "The parameters start and to will be managed automatically "
                 "with Unix timestamp pagination. Your provided values will be ignored.",
                 UserWarning,
@@ -389,7 +360,7 @@ class BasePageIterator(t.Generic[_MethodT, _PageT], ABC):
     def _process_collected_pages(
         cls,
         collection: t.List[_PageT],
-        return_format: _CollectReturnFormat,
+        return_format: CollectReturnFormat,
         deduplicate: bool,
         /,
     ) -> t.Union[ItemPage[_T], t.List[RawAPIItem]]:
@@ -431,7 +402,7 @@ class BasePageIterator(t.Generic[_MethodT, _PageT], ABC):
     @classmethod
     def _create_unix_timestamp_iterator(
         cls,
-        method: _MethodT,
+        method: PaginationMethodT,
         /,
         *args: t.Any,
         timestamp: t.Optional[int],
@@ -513,7 +484,7 @@ class SyncPageIterator(
         /,
         *args: t.Any,
         unix: t.Literal[False] = ...,
-        return_format: _CollectReturnFormat = ...,
+        return_format: CollectReturnFormat = ...,
         deduplicate: bool = ...,
         **kwargs: t.Any,
     ) -> ItemPage[_T]: ...
@@ -526,7 +497,7 @@ class SyncPageIterator(
         /,
         *args: t.Any,
         unix: t.Literal[False] = ...,
-        return_format: _CollectReturnFormat = ...,
+        return_format: CollectReturnFormat = ...,
         deduplicate: bool = ...,
         **kwargs: t.Any,
     ) -> t.List[RawAPIItem]: ...
@@ -539,7 +510,7 @@ class SyncPageIterator(
         /,
         *args: t.Any,
         unix: _UnixPaginationConfigType = ...,
-        return_format: _CollectReturnFormat = ...,
+        return_format: CollectReturnFormat = ...,
         deduplicate: bool = ...,
         **kwargs: t.Any,
     ) -> ItemPage[_T]: ...
@@ -552,7 +523,7 @@ class SyncPageIterator(
         /,
         *args: t.Any,
         unix: _UnixPaginationConfigType = ...,
-        return_format: _CollectReturnFormat = ...,
+        return_format: CollectReturnFormat = ...,
         deduplicate: bool = ...,
         **kwargs: t.Any,
     ) -> t.List[RawAPIItem]: ...
@@ -569,7 +540,7 @@ class SyncPageIterator(
         /,
         *args: t.Any,
         unix: _UnixPaginationConfigType = False,
-        return_format: _CollectReturnFormat = "first",
+        return_format: CollectReturnFormat = CollectReturnFormat.FIRST,
         deduplicate: bool = True,
         **kwargs: t.Any,
     ) -> t.Union[ItemPage[_T], t.List[RawAPIItem]]:
@@ -666,7 +637,7 @@ class AsyncPageIterator(
         /,
         *args: t.Any,
         unix: t.Literal[False] = ...,
-        return_format: _CollectReturnFormat = ...,
+        return_format: CollectReturnFormat = ...,
         deduplicate: bool = ...,
         **kwargs: t.Any,
     ) -> ItemPage[_T]: ...
@@ -679,7 +650,7 @@ class AsyncPageIterator(
         /,
         *args: t.Any,
         unix: t.Literal[False] = ...,
-        return_format: _CollectReturnFormat = ...,
+        return_format: CollectReturnFormat = ...,
         deduplicate: bool = ...,
         **kwargs: t.Any,
     ) -> t.List[RawAPIItem]: ...
@@ -692,7 +663,7 @@ class AsyncPageIterator(
         /,
         *args: t.Any,
         unix: _UnixPaginationConfigType = ...,
-        return_format: _CollectReturnFormat = ...,
+        return_format: CollectReturnFormat = ...,
         deduplicate: bool = ...,
         **kwargs: t.Any,
     ) -> ItemPage[_T]: ...
@@ -705,7 +676,7 @@ class AsyncPageIterator(
         /,
         *args: t.Any,
         unix: _UnixPaginationConfigType = ...,
-        return_format: _CollectReturnFormat = ...,
+        return_format: CollectReturnFormat = ...,
         deduplicate: bool = ...,
         **kwargs: t.Any,
     ) -> t.List[RawAPIItem]: ...
@@ -722,7 +693,7 @@ class AsyncPageIterator(
         /,
         *args: t.Any,
         unix: _UnixPaginationConfigType = False,
-        return_format: _CollectReturnFormat = "first",
+        return_format: CollectReturnFormat = CollectReturnFormat.FIRST,
         deduplicate: bool = True,
         **kwargs: t.Any,
     ) -> t.Union[ItemPage[_T], t.List[RawAPIItem]]:

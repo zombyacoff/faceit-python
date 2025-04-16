@@ -74,6 +74,7 @@ ipython_config.py
 # Poetry
 poetry.lock
 .poetry/
+poetry.toml
 
 # pipenv
 Pipfile.lock

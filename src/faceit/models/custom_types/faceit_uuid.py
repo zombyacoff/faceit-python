@@ -4,7 +4,7 @@ import typing as t
 from abc import ABC, abstractmethod
 from uuid import UUID
 
-from faceit import _repr
+from faceit._repr import representation
 from faceit._utils import is_valid_uuid
 
 from ._utils import build_validatable_string_type_schema
@@ -81,7 +81,7 @@ class FaceitID(UUID, BaseFaceitID):
         )
 
 
-@_repr.representation(use_str=True)
+@representation(use_str=True)
 class _FaceitIDWithUniquePrefix(str, BaseFaceitID, ABC):
     __slots__ = ()
 

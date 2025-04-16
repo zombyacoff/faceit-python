@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import logging
+import sys
 import typing as t
-import warnings
 from abc import ABC
 from uuid import UUID  # noqa: TCH003
+from warnings import warn
 
 from pydantic import Field, validate_call
 
@@ -12,17 +13,17 @@ from faceit._typing import (
     APIResponseFormatT,
     ClientT,
     Model,
-    ParamSpec,
+    ModelNotImplemented,
     Raw,
     RawAPIItem,
     RawAPIPageResponse,
 )
-from faceit._utils import is_valid_uuid, validate_uuid_args
+from faceit._utils import is_valid_uuid, uuid_validator_alias
 from faceit.constants import GameID
 from faceit.http import AsyncClient, SyncClient
 from faceit.models import (
+    AbstractMatchPlayerStats,
     BanEntry,
-    BaseMatchPlayerStats,
     CS2MatchPlayerStats,
     GeneralTeam,
     Hub,
@@ -32,27 +33,37 @@ from faceit.models import (
     Tournament,
 )
 
-from .base import BaseResource, FaceitResourcePath, RequestPayload
-
-if t.TYPE_CHECKING:
-    _T = t.TypeVar("_T")
-    _P = ParamSpec("_P")
+from .base import (
+    BaseResource,
+    FaceitResourcePath,
+    MappedValidatorConfig,
+    RequestPayload,
+)
 
 _logger = logging.getLogger(__name__)
 
-
-def _validate_player_id(func: t.Callable[_P, _T]) -> t.Callable[_P, _T]:
-    return validate_uuid_args("player_id")(func)
+_validate_player_id = uuid_validator_alias("player_id")
 
 
-class BasePlayers(BaseResource[ClientT], ABC):
-    _resource_path: t.ClassVar = FaceitResourcePath.PLAYERS
-    _matches_stats_model_types: t.ClassVar[
-        t.Dict[GameID, t.Type[BaseMatchPlayerStats]]
-    ] = {
-        GameID.CS2: CS2MatchPlayerStats,
-        # TODO: Add other games (e.g. CSGO)
-    }
+class BasePlayers(
+    BaseResource[ClientT],
+    ABC,
+    resource_path=FaceitResourcePath.PLAYERS,
+):
+    __slots__ = ()
+
+    _matches_stats_validator_cfg: t.ClassVar = (
+        MappedValidatorConfig[GameID, AbstractMatchPlayerStats]
+        if sys.version_info >= (3, 9)
+        else MappedValidatorConfig
+    )(
+        validator_map={
+            GameID.CS2: CS2MatchPlayerStats,
+            # TODO: Add other games (e.g. CSGO)
+        },
+        is_paged=True,
+        key_name="game",
+    )
 
     _matches_stats_timestamp_cfg: t.ClassVar = BaseResource._timestamp_cfg(
         key="stats.Match Finished At", attr="match_finished_at"
@@ -83,10 +94,10 @@ class BasePlayers(BaseResource[ClientT], ABC):
                 game,
                 game_player_id,
             )
-            return RequestPayload(endpoint=self.path, params=params)
+            return RequestPayload(endpoint=self.PATH, params=params)
 
         if game is not None or game_player_id is not None:
-            warnings.warn(
+            warn(
                 "When 'identifier' is provided, "
                 "'game' and 'game_player_id' should not be specified",
                 UserWarning,
@@ -96,38 +107,18 @@ class BasePlayers(BaseResource[ClientT], ABC):
         if is_valid_uuid(identifier):
             _logger.info("Fetching player by UUID: %s", identifier)
             return RequestPayload(
-                endpoint=self.path / str(identifier), params=params
+                endpoint=self.PATH / str(identifier), params=params
             )
 
         _logger.info("Fetching player by nickname: %s", identifier)
         params["nickname"] = str(identifier)
-        return RequestPayload(endpoint=self.path, params=params)
-
-    # TODO: Выделить данную логику в универсальный метод класса,
-    # так как весьма вероятно, что она будет использоваться в других ресурсах
-    def _process_matches_stats_response(
-        self, response: RawAPIPageResponse, game: GameID, /
-    ) -> t.Union[ItemPage, RawAPIPageResponse]:
-        _logger.debug("Processing match stats response for game: %s", game)
-
-        validator = self._matches_stats_model_types.get(game)
-        if validator is not None:
-            # Suppressing type checking warning because we're using a
-            # dynamic runtime subscript `ItemPage` is being subscripted
-            # with a variable (`validator`) which mypy cannot statically verify
-            return self._validate_response(response, ItemPage[validator])  # type: ignore[valid-type]
-
-        warnings.warn(
-            f"No model defined for game '{game}'. "
-            "Consider using the raw response",
-            UserWarning,
-            stacklevel=3,
-        )
-        return response
+        return RequestPayload(endpoint=self.PATH, params=params)
 
 
 @t.final
 class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
+    __slots__ = ()
+
     @t.overload
     def get(
         self: SyncPlayers[Raw], identifier: t.Union[str, UUID]
@@ -226,7 +217,7 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
     ) -> t.Union[RawAPIPageResponse, ItemPage[BanEntry]]:
         return self._validate_response(
             self._client.get(
-                self.path / str(player_id) / "bans",  # `str(...)` for `UUID`
+                self.PATH / str(player_id) / "bans",  # `str(...)` for `UUID`
                 params=self.__class__._build_params(
                     offset=offset, limit=limit
                 ),
@@ -264,9 +255,6 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
         to: t.Optional[int] = None,
     ) -> RawAPIPageResponse: ...
 
-    # NOTE: Currently, there is only one model for validating game
-    # statistics - so we return only it. In the future, when expanding
-    # the models, we will need to devise a solution for the return value
     @t.overload
     def matches_stats(
         self: SyncPlayers[Model],
@@ -277,7 +265,7 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
         limit: int = Field(20, ge=1, le=100),
         start: t.Optional[int] = None,
         to: t.Optional[int] = None,
-    ) -> ItemPage[CS2MatchPlayerStats]: ...
+    ) -> ItemPage[AbstractMatchPlayerStats]: ...
 
     @_validate_player_id
     @validate_call
@@ -290,16 +278,17 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
         limit: int = Field(20, ge=1, le=100),
         start: t.Optional[int] = None,
         to: t.Optional[int] = None,
-    ) -> t.Union[ItemPage[CS2MatchPlayerStats], RawAPIPageResponse]:
-        return self._process_matches_stats_response(
+    ) -> t.Union[ItemPage[AbstractMatchPlayerStats], RawAPIPageResponse]:
+        return self._process_response_with_mapped_validator(
             self._client.get(
-                self.path / str(player_id) / "games" / game / "stats",
+                self.PATH / str(player_id) / "games" / game / "stats",
                 params=self.__class__._build_params(
                     offset=offset, limit=limit, start=start, to=to
                 ),
                 expect_page=True,
             ),
-            game,  # `game` parameter is used to select the appropriate model for validation
+            game,
+            **self.__class__._matches_stats_validator_cfg,
         )
 
     @t.overload
@@ -310,11 +299,11 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
     @t.overload
     def all_matches_stats(
         self: SyncPlayers[Model], player_id: t.Union[str, UUID], game: GameID
-    ) -> ItemPage[BaseMatchPlayerStats]: ...
+    ) -> ItemPage[AbstractMatchPlayerStats]: ...
 
     def all_matches_stats(
         self, player_id: t.Union[str, UUID], game: GameID
-    ) -> t.Union[t.List[RawAPIItem], ItemPage[BaseMatchPlayerStats]]:
+    ) -> t.Union[t.List[RawAPIItem], ItemPage[AbstractMatchPlayerStats]]:
         return self.__class__._sync_page_iterator.collect(
             self.matches_stats,  # type: ignore[misc]
             player_id,
@@ -360,7 +349,7 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
     ) -> t.Union[RawAPIPageResponse, ItemPage[Match]]:
         return self._validate_response(
             self._client.get(
-                self.path / str(player_id) / "history",
+                self.PATH / str(player_id) / "history",
                 params=self.__class__._build_params(
                     game=game, offset=offset, limit=limit, start=start, to=to
                 ),
@@ -418,7 +407,7 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
     ) -> t.Union[RawAPIPageResponse, ItemPage[Hub]]:
         return self._validate_response(
             self._client.get(
-                self.path / str(player_id) / "hubs",
+                self.PATH / str(player_id) / "hubs",
                 params=self.__class__._build_params(
                     offset=offset, limit=limit
                 ),
@@ -442,13 +431,24 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
     ) -> t.Union[t.List[RawAPIItem], ItemPage[Hub]]:
         return self.__class__._sync_page_iterator.collect(self.hubs, player_id)  # type: ignore[misc]
 
+    @t.overload
+    def stats(
+        self: SyncPlayers[Raw], player_id: t.Union[str, UUID], game: GameID
+    ) -> RawAPIItem: ...
+
+    @t.overload
+    def stats(
+        self: SyncPlayers[Model], player_id: t.Union[str, UUID], game: GameID
+    ) -> ModelNotImplemented: ...
+
     @_validate_player_id
     @validate_call
-    def stats(self, player_id: t.Union[str, UUID], game: GameID) -> t.Any:
-        # NOT IMPLEMENTED YET — Validator is not defined
+    def stats(
+        self, player_id: t.Union[str, UUID], game: GameID
+    ) -> t.Union[RawAPIItem, ModelNotImplemented]:
         return self._validate_response(
             self._client.get(
-                self.path / str(player_id) / "stats" / game, expect_page=True
+                self.PATH / str(player_id) / "stats" / game, expect_page=True
             ),
             None,
         )
@@ -482,7 +482,7 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
     ) -> t.Union[RawAPIPageResponse, ItemPage[GeneralTeam]]:
         return self._validate_response(
             self._client.get(
-                self.path / str(player_id) / "teams",
+                self.PATH / str(player_id) / "teams",
                 params=self.__class__._build_params(
                     offset=offset, limit=limit
                 ),
@@ -538,7 +538,7 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
     ) -> t.Union[RawAPIPageResponse, ItemPage[Tournament]]:
         return self._validate_response(
             self._client.get(
-                self.path / str(player_id) / "tournaments",
+                self.PATH / str(player_id) / "tournaments",
                 params=self.__class__._build_params(
                     offset=offset, limit=limit
                 ),
@@ -568,6 +568,8 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
 
 @t.final
 class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
+    __slots__ = ()
+
     @t.overload
     async def get(
         self: AsyncPlayers[Raw], identifier: t.Union[str, UUID]
@@ -662,7 +664,7 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
     ) -> t.Union[RawAPIPageResponse, ItemPage[BanEntry]]:
         return self._validate_response(
             await self._client.get(
-                self.path / str(player_id) / "bans",
+                self.PATH / str(player_id) / "bans",
                 params=self.__class__._build_params(
                     offset=offset, limit=limit
                 ),
@@ -711,7 +713,7 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
         limit: int = Field(20, ge=1, le=100),
         start: t.Optional[int] = None,
         to: t.Optional[int] = None,
-    ) -> ItemPage[CS2MatchPlayerStats]: ...
+    ) -> ItemPage[AbstractMatchPlayerStats]: ...
 
     @_validate_player_id
     @validate_call
@@ -724,16 +726,17 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
         limit: int = Field(20, ge=1, le=100),
         start: t.Optional[int] = None,
         to: t.Optional[int] = None,
-    ) -> t.Union[RawAPIPageResponse, ItemPage[CS2MatchPlayerStats]]:
-        return self._process_matches_stats_response(
+    ) -> t.Union[RawAPIPageResponse, ItemPage[AbstractMatchPlayerStats]]:
+        return self._process_response_with_mapped_validator(
             await self._client.get(
-                self.path / str(player_id) / "games" / game / "stats",
+                self.PATH / str(player_id) / "games" / game / "stats",
                 params=self.__class__._build_params(
                     offset=offset, limit=limit, start=start, to=to
                 ),
                 expect_page=True,
             ),
             game,
+            **self.__class__._matches_stats_validator_cfg,
         )
 
     @t.overload
@@ -744,11 +747,11 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
     @t.overload
     async def all_matches_stats(
         self: AsyncPlayers[Model], player_id: t.Union[str, UUID], game: GameID
-    ) -> ItemPage[BaseMatchPlayerStats]: ...
+    ) -> ItemPage[AbstractMatchPlayerStats]: ...
 
     async def all_matches_stats(
         self, player_id: t.Union[str, UUID], game: GameID
-    ) -> t.Union[t.List[RawAPIItem], ItemPage[BaseMatchPlayerStats]]:
+    ) -> t.Union[t.List[RawAPIItem], ItemPage[AbstractMatchPlayerStats]]:
         return await self.__class__._async_page_iterator.collect(
             self.matches_stats,  # type: ignore[misc]
             player_id,
@@ -794,7 +797,7 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
     ) -> t.Union[RawAPIPageResponse, ItemPage[Match]]:
         return self._validate_response(
             await self._client.get(
-                self.path / str(player_id) / "history",
+                self.PATH / str(player_id) / "history",
                 params=self.__class__._build_params(
                     game=game, offset=offset, limit=limit, start=start, to=to
                 ),
@@ -852,7 +855,7 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
     ) -> t.Union[RawAPIPageResponse, ItemPage[Hub]]:
         return self._validate_response(
             await self._client.get(
-                self.path / str(player_id) / "hubs",
+                self.PATH / str(player_id) / "hubs",
                 params=self.__class__._build_params(
                     offset=offset, limit=limit
                 ),
@@ -879,15 +882,24 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
             player_id,
         )
 
+    @t.overload
+    async def stats(
+        self: AsyncPlayers[Raw], player_id: t.Union[str, UUID], game: GameID
+    ) -> RawAPIItem: ...
+
+    @t.overload
+    async def stats(
+        self: AsyncPlayers[Model], player_id: t.Union[str, UUID], game: GameID
+    ) -> ModelNotImplemented: ...
+
     @_validate_player_id
     @validate_call
     async def stats(
         self, player_id: t.Union[str, UUID], game: GameID
-    ) -> t.Union[RawAPIItem, t.Any]:
-        # NOT IMPLEMENTED YET — Validator is not defined
+    ) -> t.Union[RawAPIItem, ModelNotImplemented]:
         return self._validate_response(
             await self._client.get(
-                self.path / str(player_id) / "stats" / game, expect_page=True
+                self.PATH / str(player_id) / "stats" / game, expect_page=True
             ),
             None,
         )
@@ -921,7 +933,7 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
     ) -> t.Union[RawAPIPageResponse, ItemPage[GeneralTeam]]:
         return self._validate_response(
             await self._client.get(
-                self.path / str(player_id) / "teams",
+                self.PATH / str(player_id) / "teams",
                 params=self.__class__._build_params(
                     offset=offset, limit=limit
                 ),
@@ -977,7 +989,7 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
     ) -> t.Union[RawAPIPageResponse, ItemPage[Tournament]]:
         return self._validate_response(
             await self._client.get(
-                self.path / str(player_id) / "tournaments",
+                self.PATH / str(player_id) / "tournaments",
                 params=self.__class__._build_params(
                     offset=offset, limit=limit
                 ),

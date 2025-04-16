@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import typing as t
-import warnings
 from abc import ABC
+from warnings import warn
 
-from . import _repr
+from ._repr import representation
 from ._typing import ClientT, ResourceT, Self
 from .constants import BASE_WIKI_URL
 from .http import AsyncClient, SyncClient
@@ -14,7 +14,7 @@ if t.TYPE_CHECKING:
     from types import TracebackType
 
 
-@_repr.representation("client", "resources")
+@representation("client", "resources")
 class BaseFaceit(t.Generic[ClientT, ResourceT], ABC):
     __slots__ = "_client", "_resources"
 
@@ -24,9 +24,8 @@ class BaseFaceit(t.Generic[ClientT, ResourceT], ABC):
     @t.overload
     def __init__(
         self,
-        *,
         api_key: str,
-        **client_kwargs: t.Any,
+        **client_options: t.Any,
     ) -> None: ...
 
     @t.overload
@@ -38,10 +37,10 @@ class BaseFaceit(t.Generic[ClientT, ResourceT], ABC):
 
     def __init__(
         self,
-        *,
         api_key: t.Optional[str] = None,
+        *,
         client: t.Optional[ClientT] = None,
-        **client_kwargs: t.Any,
+        **client_options: t.Any,
     ) -> None:
         if api_key is None and client is None:
             raise ValueError("Either 'api_key' or 'client' must be provided")
@@ -49,9 +48,9 @@ class BaseFaceit(t.Generic[ClientT, ResourceT], ABC):
             raise ValueError("Provide either 'api_key' or 'client', not both")
 
         if client is not None:
-            if client_kwargs:
-                warnings.warn(
-                    "'client_kwargs' are ignored when an existing client "
+            if client_options:
+                warn(
+                    "'client_options' are ignored when an existing client "
                     "instance is provided. Configure your client before "
                     "passing it to this constructor.",
                     UserWarning,
@@ -59,7 +58,9 @@ class BaseFaceit(t.Generic[ClientT, ResourceT], ABC):
                 )
             self._client = client
         else:
-            self._client = self.__class__._client_cls(api_key, **client_kwargs)
+            self._client = self.__class__._client_cls(
+                api_key, **client_options
+            )
 
         self._resources = self.__class__._resources_cls(self._client)
 

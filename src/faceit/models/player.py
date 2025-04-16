@@ -1,4 +1,5 @@
 import typing as t
+from abc import ABC
 from datetime import datetime
 
 from pydantic import BaseModel, Field
@@ -48,8 +49,8 @@ class Player(BaseModel):
     activated_at: datetime
 
 
-class BaseMatchPlayerStats(BaseModel):
-    """Base class for player match statistics models in the inheritance hierarchy.
+class AbstractMatchPlayerStats(BaseModel, ABC):
+    """Abstract class for player match statistics models in the inheritance hierarchy.
 
     Serves as a common type for different game-specific player statistics models.
     Used for type annotations where the return type depends on the `game` parameter
@@ -60,7 +61,7 @@ class BaseMatchPlayerStats(BaseModel):
 
 # Не работает для игроков, игравших последний раз в ~авг. 2024 года
 # Необходимо добавить значения по умолчанию для всех полей, которые могут отсутствовать
-class CS2MatchPlayerStats(BaseMatchPlayerStats):
+class CS2MatchPlayerStats(AbstractMatchPlayerStats):
     game_mode: Annotated[str, Field(alias="Game Mode")]
     region: Annotated[str, Field(alias="Region")]
     kd_ratio: Annotated[float, Field(alias="K/D Ratio")]

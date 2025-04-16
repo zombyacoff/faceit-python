@@ -1,14 +1,24 @@
+from __future__ import annotations
+
 import logging
 import typing as t
 from abc import ABC
+from dataclasses import dataclass
 from enum import auto
+from warnings import warn
 
 from pydantic import ValidationError
 from strenum import LowercaseStrEnum
 
-from faceit import _repr
-from faceit._typing import ClientT, ModelT, RawAPIResponse
+from faceit._typing import (
+    ClientT,
+    ModelT,
+    NotRequired,
+    RawAPIPageResponse,
+    RawAPIResponse,
+)
 from faceit.http import Endpoint
+from faceit.models import ItemPage
 
 from .pagination import (
     AsyncPageIterator,
@@ -16,9 +26,12 @@ from .pagination import (
     TimestampPaginationConfig,
 )
 
-_logger = logging.getLogger(__name__)
+if t.TYPE_CHECKING:
+    _ResponseT = t.TypeVar("_ResponseT", bound=RawAPIResponse)
 
-_ResponseT = t.TypeVar("_ResponseT", bound=RawAPIResponse)
+_KT = t.TypeVar("_KT")
+
+_logger = logging.getLogger(__name__)
 
 
 @t.final
@@ -33,34 +46,113 @@ class RequestPayload(t.TypedDict):
     params: t.Dict[str, t.Any]
 
 
-@_repr.representation("path", "raw")
+@t.final
+class MappedValidatorConfig(t.TypedDict, t.Generic[_KT, ModelT]):
+    validator_map: t.Dict[_KT, t.Type[ModelT]]
+    is_paged: bool
+    key_name: NotRequired[str]
+
+
+@dataclass(eq=False, frozen=True)
 class BaseResource(t.Generic[ClientT], ABC):
-    _resource_path: t.ClassVar[FaceitResourcePath]
+    __slots__ = "_client", "raw"
+
+    _client: ClientT
+    raw: bool
 
     _sync_page_iterator: t.ClassVar = SyncPageIterator
     _async_page_iterator: t.ClassVar = AsyncPageIterator
     _timestamp_cfg: t.ClassVar = TimestampPaginationConfig
 
-    def __init__(self, client: ClientT, /, *, raw: bool) -> None:
-        self._client = client
-        self._raw = raw
-        self._path = Endpoint(self.__class__._resource_path)
+    PATH: t.ClassVar[Endpoint]
 
-    def __init_subclass__(cls, **kwargs: t.Any) -> None:
+    _PARAM_NAME_MAP: t.ClassVar = {
+        "start": "from",
+        "status": "type",
+    }
+
+    def __init_subclass__(
+        cls,
+        *,
+        resource_path: t.Optional[FaceitResourcePath] = None,
+        **kwargs: t.Any,
+    ) -> None:
         super().__init_subclass__(**kwargs)
-        if not hasattr(cls, "_resource_path"):
-            raise NotImplementedError(
-                f"Class {cls.__name__} must define "
-                f"class attribute '_resource_path'"
+        if hasattr(cls, "PATH"):
+            return
+        if resource_path is None:
+            raise TypeError(
+                f"Class {cls.__name__} requires 'path' parameter or a "
+                f"parent with 'PATH' defined."
+            )
+        cls.PATH = Endpoint(resource_path)
+
+    # NOTE: These overloads are necessary as this function directly returns in resource
+    # methods, where typing must be strict for public API. Current implementation
+    # is sufficient, though alternative typing approaches could be considered.
+
+    # TODO: Replace named arguments with a single `config: MappedValidatorConfig`
+    # parameter, but this is currently not possible due to Python 3.8 compatibility
+    # issues with Generic type subscriptions. Once Python 3.8 support is dropped,
+    # this should be refactored.
+
+    @t.overload
+    def _process_response_with_mapped_validator(
+        self,
+        response: RawAPIPageResponse,
+        key: _KT,
+        /,
+        *,
+        validator_map: t.Dict[_KT, t.Type[ModelT]],
+        is_paged: t.Literal[False],
+        key_name: str = ...,
+    ) -> t.Union[ModelT, RawAPIPageResponse]: ...
+
+    @t.overload
+    def _process_response_with_mapped_validator(
+        self,
+        response: RawAPIPageResponse,
+        key: _KT,
+        /,
+        *,
+        validator_map: t.Dict[_KT, t.Type[ModelT]],
+        is_paged: t.Literal[True],
+        key_name: str = ...,
+    ) -> t.Union[ItemPage[ModelT], RawAPIPageResponse]: ...
+
+    def _process_response_with_mapped_validator(
+        self,
+        response: RawAPIPageResponse,
+        key: _KT,
+        /,
+        *,
+        validator_map: t.Dict[_KT, t.Type[ModelT]],
+        is_paged: bool,
+        key_name: str = "key",
+    ) -> t.Union[ModelT, ItemPage[ModelT], RawAPIPageResponse]:
+        _logger.debug(
+            "Processing response with mapped validator for key: %s", key
+        )
+
+        validator = validator_map.get(key)
+        if validator is not None:
+            # Suppressing type checking warning because we're using a
+            # dynamic runtime subscript `ItemPage` is being subscripted
+            # with a variable (`validator`) which mypy cannot statically verify
+            return self._validate_response(
+                response,
+                t.cast(t.Type[ModelT], ItemPage[validator])  # type: ignore[valid-type]
+                if is_paged
+                else validator,
             )
 
-    @property
-    def path(self) -> Endpoint:
-        return self._path
-
-    @property
-    def raw(self) -> bool:
-        return self._raw
+        warn(
+            f"No model defined for {key_name} '{key}'. "
+            f"Consider using the raw response",
+            UserWarning,
+            stacklevel=3,
+        )
+        return response
 
     def _validate_response(
         self, response: _ResponseT, validator: t.Optional[t.Type[ModelT]], /
@@ -75,10 +167,10 @@ class BaseResource(t.Generic[ClientT], ABC):
                 )
         return response
 
-    @staticmethod
-    def _build_params(**params: t.Any) -> t.Dict[str, t.Any]:
+    @classmethod
+    def _build_params(cls, **params: t.Any) -> t.Dict[str, t.Any]:
         return {
-            ("from" if key == "start" else key): value
+            cls._PARAM_NAME_MAP.get(key, key): value
             for key, value in params.items()
             if value is not None
         }

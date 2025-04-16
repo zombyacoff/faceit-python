@@ -1,13 +1,17 @@
-[tool.poetry]
-name = "faceit-api"
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[project]
+name = "faceit"
 version = "0.1.0"
 description = "The Python wrapper for the Faceit API"
-authors = ["zombyacoff <zombyacoff@gmail.com>"]
+license = {text = "Apache-2.0"}
+authors = [
+    {name = "zombyacoff", email = "zombyacoff@gmail.com"}
+]
 readme = "README.md"
-license = "Apache-2.0"
-repository = "https://github.com/zombyacoff/faceit-python"
 keywords = ["faceit", "api", "wrapper"]
-packages = [{include = "faceit", from = "src"}]
 classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.8",
@@ -20,18 +24,25 @@ classifiers = [
     "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
 ]
+requires-python = ">=3.8"
+dependencies = [
+    "annotated-types (>=0.6.0,<1.0.0)",
+    "httpx (>=0.27.0,<1.0.0)",
+    "pydantic (>=2.7.1,<3.0.0)",
+    "pydantic-core (>=2.18.2,<3.0.0)",
+    "strenum (>=0.4.15,<1.0.0)",
+    "tenacity (>=8.2.3,<9.0.0)",
+    "typing-extensions (>=4.11.0,<5.0.0); python_version < '3.13'",
+]
 
-[tool.poetry.dependencies]
-python = "^3.8"
-annotated-types = "^0.6.0"
-httpx = "^0.27.0"
-pydantic = "^2.7.1"
-pydantic-core = "^2.18.2"
-strenum = "^0.4.15"
-tenacity = "^8.2.3"
-typing-extensions = "^4.11.0"
+[project.urls]
+repository = "https://github.com/zombyacoff/faceit-python"
+
+[tool.poetry]
+packages = [{include = "faceit", from = "src"}]
 
 [tool.poetry.group.dev.dependencies]
+mypy = "^1.5.1"
 pytest = "^7.4.0"
 pytest-asyncio = "^0.21.1"
 python-dotenv = "^1.0.0"
@@ -44,7 +55,8 @@ pythonpath = "."
 python_version = "3.8"
 exclude = [
     "_.py",
-    "_async.py"
+    "_async.py",
+    "tests/*"
 ]
 
 [tool.ruff]
@@ -83,6 +95,8 @@ lint.ignore = [
     "TD",
     "TRY003",
 ]
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["ALL"]
 
 [tool.ruff.lint.pyupgrade]
 keep-runtime-typing = true
@@ -95,7 +109,3 @@ docstring-code-format = true
 docstring-code-line-length = 100
 quote-style = "double"
 line-ending = "auto"
-
-[build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"

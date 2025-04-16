@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 import logging
-import sys
 import typing as t
-import warnings
 from dataclasses import dataclass
 from operator import attrgetter
+from warnings import warn
 
 from strenum import StrEnum
 
@@ -239,27 +238,21 @@ ELO_THRESHOLDS: t.Final[t.Dict[GameID, _EloThreshold]] = {
         7: EloRange(1351, 1530), 8: EloRange(1531, 1750), 9: EloRange(1751, 2000),
         10: EloRange(_DEFAULT_TEN_LEVEL_LOWER, CHALLENGER_LEVEL)
     },
-    # These default ELO ranges (level 1: up to 800, subsequent levels: +150) are standard across
-    # most games with few exceptions. CS2 demonstrates one such exception where FACEIT adjusted
-    # boundaries following the transition from CSGO. This implementation accounts for both
-    # standard patterns and known variations in the platform's ranking system
+    # These default ELO ranges (level 1: up to 800, subsequent levels: +150) are
+    # standard across most games with few exceptions. CS2 demonstrates one such
+    # exception where FACEIT adjusted boundaries following the transition from
+    # CSGO. This implementation accounts for both standard patterns and known
+    # variations in the platform's ranking system
     GameID.CSGO: CHALLENGER_CAPPED_ELO_RANGES,
     # TODO: Add more games (e.g. Dota 2)
 }
 # fmt: on
 
 
-_HAS_DATACLASS_SLOTS_SUPPORT = sys.version_info >= (3, 10)
-
-
 @t.final
-@dataclass(**{
-    "frozen": True,
-    **({"slots": True} if _HAS_DATACLASS_SLOTS_SUPPORT else {}),
-})
+@dataclass(frozen=True)
 class SkillLevel:
-    if not _HAS_DATACLASS_SLOTS_SUPPORT:
-        __slots__ = "elo_range", "game_id", "level", "name"
+    __slots__ = "elo_range", "game_id", "level", "name"
 
     level: int
     game_id: GameID
@@ -267,7 +260,6 @@ class SkillLevel:
     name: str
 
     _registry: t.ClassVar[t.Dict[GameID, t.Dict[int, SkillLevel]]] = {}
-    _initialized: t.ClassVar[bool] = False
 
     @property
     def is_highest_level(self) -> bool:
@@ -293,7 +285,7 @@ class SkillLevel:
 
     def progress_percentage(self, elo: int) -> t.Optional[float]:
         if self.is_highest_level:
-            warnings.warn(
+            warn(
                 "Cannot calculate progress percentage for highest level",
                 UserWarning,
                 stacklevel=2,
@@ -301,9 +293,7 @@ class SkillLevel:
             return None
 
         if not self.contains_elo(elo):
-            warnings.warn(
-                f"Elo {elo} is out of range", UserWarning, stacklevel=2
-            )
+            warn(f"Elo {elo} is out of range", UserWarning, stacklevel=2)
             return None
 
         return (
@@ -346,7 +336,7 @@ class SkillLevel:
             return None
 
         if level is not None and elo is not None:
-            warnings.warn(
+            warn(
                 "Both 'level' and 'elo' parameters provided; "
                 "'level' takes precedence",
                 UserWarning,
@@ -376,11 +366,11 @@ class SkillLevel:
             cls._registry.get(game_id, {}).values(), key=attrgetter("level")
         )
 
+    def __int__(self) -> int:
+        return self.level
+
     @classmethod
     def _initialize_skill_levels_registry(cls) -> None:
-        if cls._initialized:
-            return
-
         for game_id, thresholds in ELO_THRESHOLDS.items():
             if game_id not in cls._registry:
                 cls._registry[game_id] = {}
@@ -390,16 +380,15 @@ class SkillLevel:
                     level_num, game_id, elo_range, f"Level {level_num}"
                 )
 
-        cls._initialized = True
 
-
-del _HAS_DATACLASS_SLOTS_SUPPORT
 # Initialize the `SkillLevel` registry when the module is imported.
 # This ensures all skill levels are available immediately without requiring
 # explicit initialization. The registry contains all game skill levels mapped
 # by game_id and level number.
 SkillLevel._initialize_skill_levels_registry()
-# Remove the constructor after initialization to prevent creation of new instances.
+
+# Remove both constructor and initialization method after registry setup.
 # This enforces the registry pattern where all valid `SkillLevel` instances
 # are predefined, ensuring data integrity and preventing misuse of the class.
 del SkillLevel.__init__
+del SkillLevel._initialize_skill_levels_registry

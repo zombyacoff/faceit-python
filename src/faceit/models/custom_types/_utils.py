@@ -11,8 +11,9 @@ def build_validatable_string_type_schema(
         # try to use the object's validate method
         if not hasattr(obj, "validate"):
             raise ValueError(
-                f"No validator provided and {obj.__name__} has no 'validate' method. "
-                f"Either provide a validator function or implement a 'validate' method."
+                f"No validator provided and {obj.__name__} has no 'validate' "
+                f"method. Either provide a validator function or implement a "
+                f"'validate' method."
             )
         validator = obj.validate
     # fmt: off
