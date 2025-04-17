@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import typing as t
 from abc import ABC
-from uuid import UUID  # noqa: TCH003
 
-from pydantic import Field, validate_call
+from pydantic import AfterValidator, Field, validate_call
 
 from faceit._typing import (
+    Annotated,
     APIResponseFormatT,
     ClientT,
     Model,
@@ -14,15 +14,21 @@ from faceit._typing import (
     Raw,
     RawAPIItem,
     RawAPIPageResponse,
+    TypeAlias,
+    ValidUUID,
 )
-from faceit._utils import uuid_validator_alias
+from faceit._utils import create_uuid_validator
 from faceit.constants import EventCategory, ExpandOption, GameID
 from faceit.http import AsyncClient, SyncClient
 from faceit.models import Championship, ItemPage
 
 from ._base import BaseResource, FaceitResourcePath
 
-_championship_id_validator = uuid_validator_alias("championship_id")
+_ChampionshipID: TypeAlias = ValidUUID
+_ChampionshipIDValidator: TypeAlias = Annotated[
+    _ChampionshipID,
+    AfterValidator(create_uuid_validator(arg_name="championship identifier")),
+]
 
 
 class BaseChampionships(
@@ -82,22 +88,21 @@ class SyncChampionships(
     @t.overload
     def get(
         self: SyncChampionships[Raw],
-        championship_id: t.Union[str, UUID],
+        championship_id: _ChampionshipID,
         expanded: ExpandOption = ExpandOption.NONE,
     ) -> RawAPIItem: ...
 
     @t.overload
     def get(
         self: SyncChampionships[Model],
-        championship_id: t.Union[str, UUID],
+        championship_id: _ChampionshipID,
         expanded: ExpandOption = ExpandOption.NONE,
     ) -> ModelNotImplemented: ...
 
-    @_championship_id_validator
     @validate_call
     def get(
         self,
-        championship_id: t.Union[str, UUID],
+        championship_id: _ChampionshipIDValidator,
         expanded: ExpandOption = ExpandOption.NONE,
     ) -> t.Union[RawAPIItem, ModelNotImplemented]:
         return self._validate_response(
@@ -114,7 +119,7 @@ class SyncChampionships(
     @t.overload
     def matches(
         self: SyncChampionships[Raw],
-        championship_id: t.Union[str, UUID],
+        championship_id: _ChampionshipID,
         category: EventCategory = EventCategory.ALL,
         *,
         offset: int = Field(0, ge=0),
@@ -124,18 +129,17 @@ class SyncChampionships(
     @t.overload
     def matches(
         self: SyncChampionships[Model],
-        championship_id: t.Union[str, UUID],
+        championship_id: _ChampionshipID,
         category: EventCategory = EventCategory.ALL,
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
     ) -> ModelNotImplemented: ...
 
-    @_championship_id_validator
     @validate_call
     def matches(
         self,
-        championship_id: t.Union[str, UUID],
+        championship_id: _ChampionshipIDValidator,
         category: EventCategory = EventCategory.ALL,
         *,
         offset: int = Field(0, ge=0),
@@ -155,7 +159,7 @@ class SyncChampionships(
     @t.overload
     def results(
         self: SyncChampionships[Raw],
-        championship_id: t.Union[str, UUID],
+        championship_id: _ChampionshipID,
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
@@ -164,17 +168,16 @@ class SyncChampionships(
     @t.overload
     def results(
         self: SyncChampionships[Model],
-        championship_id: t.Union[str, UUID],
+        championship_id: _ChampionshipID,
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
     ) -> ModelNotImplemented: ...
 
-    @_championship_id_validator
     @validate_call
     def results(
         self,
-        championship_id: t.Union[str, UUID],
+        championship_id: _ChampionshipIDValidator,
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
@@ -193,7 +196,7 @@ class SyncChampionships(
     @t.overload
     def subscriptions(
         self: SyncChampionships[Raw],
-        championship_id: t.Union[str, UUID],
+        championship_id: _ChampionshipID,
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(10, ge=1, le=10),
@@ -202,17 +205,16 @@ class SyncChampionships(
     @t.overload
     def subscriptions(
         self: SyncChampionships[Model],
-        championship_id: t.Union[str, UUID],
+        championship_id: _ChampionshipID,
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(10, ge=1, le=10),
     ) -> ModelNotImplemented: ...
 
-    @_championship_id_validator
     @validate_call
     def subscriptions(
         self,
-        championship_id: t.Union[str, UUID],
+        championship_id: _ChampionshipIDValidator,
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(10, ge=1, le=10),

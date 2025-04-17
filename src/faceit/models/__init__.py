@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import typing as t
+from enum import IntEnum
 from functools import cached_property
 from itertools import chain, starmap
 from random import choice
@@ -43,9 +44,12 @@ _T = t.TypeVar("_T")
 if t.TYPE_CHECKING:
     _R = t.TypeVar("_R")
 
-_PAGINATION_UNSET: t.Final = -1
 
-_PaginationLimit: TypeAlias = Annotated[int, Field(ge=_PAGINATION_UNSET)]
+class _PaginationUnset(IntEnum):
+    UNSET = -1
+
+
+_PaginationLimit: TypeAlias = Annotated[int, Field(ge=_PaginationUnset.UNSET)]
 
 
 @t.final
@@ -72,7 +76,7 @@ class ItemPage(BaseModel, t.Generic[_T], frozen=True):
     _time_from: Annotated[
         _PaginationLimit,
         Field(
-            _PAGINATION_UNSET,
+            _PaginationUnset.UNSET,
             alias="from",
             description=__time_range_description,
         ),
@@ -80,7 +84,9 @@ class ItemPage(BaseModel, t.Generic[_T], frozen=True):
     _time_to: Annotated[
         _PaginationLimit,
         Field(
-            _PAGINATION_UNSET, alias="to", description=__time_range_description
+            _PaginationUnset.UNSET,
+            alias="to",
+            description=__time_range_description,
         ),
     ]
 
@@ -178,10 +184,10 @@ class ItemPage(BaseModel, t.Generic[_T], frozen=True):
     ) -> ItemPage[_R]:
         return cls.model_construct(  # type: ignore[return-value]
             items=items or [],
-            _offset=_PAGINATION_UNSET,
-            _limit=_PAGINATION_UNSET,
-            _time_from=_PAGINATION_UNSET,
-            _time_to=_PAGINATION_UNSET,
+            _offset=_PaginationUnset.UNSET,
+            _limit=_PaginationUnset.UNSET,
+            _time_from=_PaginationUnset.UNSET,
+            _time_to=_PaginationUnset.UNSET,
         )
 
     @classmethod

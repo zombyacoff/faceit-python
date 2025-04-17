@@ -9,9 +9,12 @@ from warnings import warn
 from pydantic import Field, validate_call
 from strenum import StrEnum
 
-if t.TYPE_CHECKING:
-    from ._typing import TypeAlias
+# Type alias moved outside `TYPE_CHECKING`
+# to ensure mypy recognizes it as a type.
+from ._typing import TypeAlias  # noqa: TCH001
 
+if t.TYPE_CHECKING:
+    _ChallengerLevel: TypeAlias = t.Literal["challenger"]
     _EloThreshold: TypeAlias = t.Dict[int, "EloRange"]
 
 _logger = logging.getLogger(__name__)
@@ -173,7 +176,7 @@ class EloRange(t.NamedTuple):
     lower: int
     # `Optional` - because "challenger" (>#1000)
     # might not be present in all disciplines
-    upper: t.Optional[t.Union[int, t.Literal["challenger"]]]
+    upper: t.Optional[t.Union[int, _ChallengerLevel]]
 
     @property
     def is_open_ended(self) -> bool:
@@ -183,12 +186,14 @@ class EloRange(t.NamedTuple):
     def size(self) -> t.Optional[int]:
         if self.is_open_ended:
             return None
-        return t.cast(int, self.upper) - self.lower + 1
+        assert isinstance(self.upper, int)  # noqa: S101
+        return self.upper - self.lower + 1
 
     def contains(self, elo: int) -> bool:
         if self.upper == CHALLENGER_LEVEL or self.upper is None:
             return elo >= self.lower
-        return self.lower <= elo <= t.cast(int, self.upper)
+        assert isinstance(self.upper, int)  # noqa: S101
+        return self.lower <= elo <= self.upper
 
     def __str__(self) -> str:
         if self.is_open_ended:
@@ -223,7 +228,7 @@ _BASE_ELO_RANGES: t.Final = _create_default_elo_tiers()
 
 
 def _append_elite_tier(
-    elite_upper_bound: t.Optional[t.Literal["challenger"]],
+    elite_upper_bound: t.Optional[_ChallengerLevel],
     base_tiers: _EloThreshold = _BASE_ELO_RANGES,
     /,
 ) -> _EloThreshold:
@@ -307,9 +312,10 @@ class SkillLevel:
             warn(f"Elo {elo} is out of range", UserWarning, stacklevel=2)
             return None
 
+        assert isinstance(self.elo_range.upper, int)  # noqa: S101
         return (
             (elo - self.elo_range.lower)
-            / (t.cast(int, self.elo_range.upper) - self.elo_range.lower)
+            / (self.elo_range.upper - self.elo_range.lower)
         ) * 100
 
     # Ignoring forward reference lint error (UP037) due to conflict between

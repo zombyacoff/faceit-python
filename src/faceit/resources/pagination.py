@@ -32,7 +32,7 @@ from faceit.models import ItemPage, PaginationTimeRange
 if t.TYPE_CHECKING:
     from ._base import BaseResource
 
-    _UnixPaginationConfigType: TypeAlias = t.Union[
+    _OptionalTimestampPaginationConfig: TypeAlias = t.Union[
         "TimestampPaginationConfig", t.Literal[False]
     ]
 
@@ -312,7 +312,7 @@ class BasePageIterator(t.Generic[PaginationMethodT, _PageT], ABC):
 
     @staticmethod
     def _validate_unix_config(
-        unix_config: _UnixPaginationConfigType, /
+        unix_config: _OptionalTimestampPaginationConfig, /
     ) -> None:
         if unix_config is not False and not isinstance(unix_config, dict):
             raise ValueError(
@@ -509,7 +509,7 @@ class SyncPageIterator(
         method: SyncUnixPaginationMethod[ItemPage[_T]],
         /,
         *args: t.Any,
-        unix: _UnixPaginationConfigType = ...,
+        unix: _OptionalTimestampPaginationConfig = ...,
         return_format: CollectReturnFormat = ...,
         deduplicate: bool = ...,
         **kwargs: t.Any,
@@ -522,7 +522,7 @@ class SyncPageIterator(
         method: SyncUnixPaginationMethod[RawAPIPageResponse],
         /,
         *args: t.Any,
-        unix: _UnixPaginationConfigType = ...,
+        unix: _OptionalTimestampPaginationConfig = ...,
         return_format: CollectReturnFormat = ...,
         deduplicate: bool = ...,
         **kwargs: t.Any,
@@ -539,7 +539,7 @@ class SyncPageIterator(
         ],
         /,
         *args: t.Any,
-        unix: _UnixPaginationConfigType = False,
+        unix: _OptionalTimestampPaginationConfig = False,
         return_format: CollectReturnFormat = CollectReturnFormat.FIRST,
         deduplicate: bool = True,
         **kwargs: t.Any,
@@ -662,7 +662,7 @@ class AsyncPageIterator(
         method: AsyncUnixPaginationMethod[ItemPage[_T]],
         /,
         *args: t.Any,
-        unix: _UnixPaginationConfigType = ...,
+        unix: _OptionalTimestampPaginationConfig = ...,
         return_format: CollectReturnFormat = ...,
         deduplicate: bool = ...,
         **kwargs: t.Any,
@@ -675,7 +675,7 @@ class AsyncPageIterator(
         method: AsyncUnixPaginationMethod[RawAPIPageResponse],
         /,
         *args: t.Any,
-        unix: _UnixPaginationConfigType = ...,
+        unix: _OptionalTimestampPaginationConfig = ...,
         return_format: CollectReturnFormat = ...,
         deduplicate: bool = ...,
         **kwargs: t.Any,
@@ -692,7 +692,7 @@ class AsyncPageIterator(
         ],
         /,
         *args: t.Any,
-        unix: _UnixPaginationConfigType = False,
+        unix: _OptionalTimestampPaginationConfig = False,
         return_format: CollectReturnFormat = CollectReturnFormat.FIRST,
         deduplicate: bool = True,
         **kwargs: t.Any,

@@ -88,6 +88,7 @@ EmptyString: TypeAlias = t.Literal[""]
 UrlOrEmpty: TypeAlias = t.Union[AnyHttpUrl, EmptyString]
 UUIDOrEmpty: TypeAlias = t.Union[UUID, EmptyString]
 EndpointParam: TypeAlias = t.Union[str, "Endpoint"]
+ValidUUID: TypeAlias = t.Union[UUID, str, bytes]
 
 Raw: TypeAlias = t.Literal[True]
 Model: TypeAlias = t.Literal[False]

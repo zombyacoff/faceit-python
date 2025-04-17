@@ -4,12 +4,12 @@ import logging
 import sys
 import typing as t
 from abc import ABC
-from uuid import UUID  # noqa: TCH003
 from warnings import warn
 
-from pydantic import Field, validate_call
+from pydantic import AfterValidator, Field, validate_call
 
 from faceit._typing import (
+    Annotated,
     APIResponseFormatT,
     ClientT,
     Model,
@@ -17,8 +17,10 @@ from faceit._typing import (
     Raw,
     RawAPIItem,
     RawAPIPageResponse,
+    TypeAlias,
+    ValidUUID,
 )
-from faceit._utils import is_valid_uuid, uuid_validator_alias
+from faceit._utils import create_uuid_validator, is_valid_uuid
 from faceit.constants import GameID
 from faceit.http import AsyncClient, SyncClient
 from faceit.models import (
@@ -42,7 +44,12 @@ from ._base import (
 
 _logger = logging.getLogger(__name__)
 
-_validate_player_id = uuid_validator_alias("player_id")
+_PlayerID: TypeAlias = ValidUUID
+_PlayerIDValidator: TypeAlias = Annotated[
+    _PlayerID,
+    AfterValidator(create_uuid_validator(arg_name="player identifier")),
+]
+_NicknameOrID: TypeAlias = t.Union[str, ValidUUID]
 
 
 class BasePlayers(
@@ -74,7 +81,7 @@ class BasePlayers(
 
     def _process_get_request(
         self,
-        identifier: t.Optional[t.Union[str, UUID]],
+        identifier: t.Optional[_NicknameOrID],
         game: t.Optional[GameID],
         game_player_id: t.Optional[str],
         /,
@@ -121,7 +128,7 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
 
     @t.overload
     def get(
-        self: SyncPlayers[Raw], identifier: t.Union[str, UUID]
+        self: SyncPlayers[Raw], identifier: _NicknameOrID
     ) -> RawAPIItem: ...
 
     @t.overload
@@ -130,18 +137,17 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
     ) -> RawAPIItem: ...
 
     @t.overload
-    def get(
-        self: SyncPlayers[Model], identifier: t.Union[str, UUID]
-    ) -> Player: ...
+    def get(self: SyncPlayers[Model], identifier: _NicknameOrID) -> Player: ...
 
     @t.overload
     def get(
         self: SyncPlayers[Model], *, game: GameID, game_player_id: str
     ) -> Player: ...
 
+    @validate_call
     def get(
         self,
-        identifier: t.Optional[t.Union[str, UUID]] = None,
+        identifier: t.Optional[_NicknameOrID] = None,
         *,
         game: t.Optional[GameID] = None,
         game_player_id: t.Optional[str] = None,
@@ -191,7 +197,7 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
     @t.overload
     def bans(
         self: SyncPlayers[Raw],
-        player_id: t.Union[str, UUID],
+        player_id: _PlayerID,
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
@@ -200,24 +206,25 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
     @t.overload
     def bans(
         self: SyncPlayers[Model],
-        player_id: t.Union[str, UUID],
+        player_id: _PlayerID,
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
     ) -> ItemPage[BanEntry]: ...
 
-    @_validate_player_id
     @validate_call
     def bans(
         self,
-        player_id: t.Union[str, UUID],
+        player_id: _PlayerIDValidator,
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
     ) -> t.Union[RawAPIPageResponse, ItemPage[BanEntry]]:
         return self._validate_response(
             self._client.get(
-                self.PATH / str(player_id) / "bans",  # `str(...)` for `UUID`
+                # `player_id` is validated and normalized;
+                # str() is only for mypy type narrowing.
+                self.PATH / str(player_id) / "bans",
                 params=self.__class__._build_params(
                     offset=offset, limit=limit
                 ),
@@ -228,16 +235,16 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
 
     @t.overload
     def all_bans(
-        self: SyncPlayers[Raw], player_id: t.Union[str, UUID]
+        self: SyncPlayers[Raw], player_id: _PlayerID
     ) -> t.List[RawAPIItem]: ...
 
     @t.overload
     def all_bans(
-        self: SyncPlayers[Model], player_id: t.Union[str, UUID]
+        self: SyncPlayers[Model], player_id: _PlayerID
     ) -> ItemPage[BanEntry]: ...
 
     def all_bans(
-        self, player_id: t.Union[str, UUID]
+        self, player_id: _PlayerID
     ) -> t.Union[t.List[RawAPIItem], ItemPage[BanEntry]]:
         # Mypy can't infer return type when passing generic method to higher-order function
         # Runtime behavior is correct, but static typing is limited by generic invariance
@@ -246,7 +253,7 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
     @t.overload
     def matches_stats(
         self: SyncPlayers[Raw],
-        player_id: t.Union[str, UUID],
+        player_id: _PlayerID,
         game: GameID,
         *,
         offset: int = Field(0, ge=0, le=200),
@@ -258,7 +265,7 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
     @t.overload
     def matches_stats(
         self: SyncPlayers[Model],
-        player_id: t.Union[str, UUID],
+        player_id: _PlayerID,
         game: GameID,
         *,
         offset: int = Field(0, ge=0, le=200),
@@ -267,11 +274,10 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
         to: t.Optional[int] = None,
     ) -> ItemPage[AbstractMatchPlayerStats]: ...
 
-    @_validate_player_id
     @validate_call
     def matches_stats(
         self,
-        player_id: t.Union[str, UUID],
+        player_id: _PlayerIDValidator,
         game: GameID,
         *,
         offset: int = Field(0, ge=0, le=200),
@@ -293,16 +299,16 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
 
     @t.overload
     def all_matches_stats(
-        self: SyncPlayers[Raw], player_id: t.Union[str, UUID], game: GameID
+        self: SyncPlayers[Raw], player_id: _PlayerID, game: GameID
     ) -> t.List[RawAPIItem]: ...
 
     @t.overload
     def all_matches_stats(
-        self: SyncPlayers[Model], player_id: t.Union[str, UUID], game: GameID
+        self: SyncPlayers[Model], player_id: _PlayerID, game: GameID
     ) -> ItemPage[AbstractMatchPlayerStats]: ...
 
     def all_matches_stats(
-        self, player_id: t.Union[str, UUID], game: GameID
+        self, player_id: _PlayerID, game: GameID
     ) -> t.Union[t.List[RawAPIItem], ItemPage[AbstractMatchPlayerStats]]:
         return self.__class__._sync_page_iterator.collect(
             self.matches_stats,  # type: ignore[misc]
@@ -314,7 +320,7 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
     @t.overload
     def history(
         self: SyncPlayers[Raw],
-        player_id: t.Union[str, UUID],
+        player_id: _PlayerID,
         game: GameID,
         *,
         offset: int = Field(0, ge=0, le=1000),
@@ -326,7 +332,7 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
     @t.overload
     def history(
         self: SyncPlayers[Model],
-        player_id: t.Union[str, UUID],
+        player_id: _PlayerID,
         game: GameID,
         *,
         offset: int = Field(0, ge=0, le=1000),
@@ -335,11 +341,10 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
         to: t.Optional[int] = None,
     ) -> ItemPage[Match]: ...
 
-    @_validate_player_id
     @validate_call
     def history(
         self,
-        player_id: t.Union[str, UUID],
+        player_id: _PlayerIDValidator,
         game: GameID,
         *,
         offset: int = Field(0, ge=0, le=1000),
@@ -360,16 +365,16 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
 
     @t.overload
     def all_history(
-        self: SyncPlayers[Raw], player_id: t.Union[str, UUID], game: GameID
+        self: SyncPlayers[Raw], player_id: _PlayerID, game: GameID
     ) -> t.List[RawAPIItem]: ...
 
     @t.overload
     def all_history(
-        self: SyncPlayers[Model], player_id: t.Union[str, UUID], game: GameID
+        self: SyncPlayers[Model], player_id: _PlayerID, game: GameID
     ) -> ItemPage[Match]: ...
 
     def all_history(
-        self, player_id: t.Union[str, UUID], game: GameID
+        self, player_id: _PlayerID, game: GameID
     ) -> t.Union[t.List[RawAPIItem], ItemPage[Match]]:
         return self.__class__._sync_page_iterator.collect(
             self.history,  # type: ignore[misc]
@@ -381,7 +386,7 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
     @t.overload
     def hubs(
         self: SyncPlayers[Raw],
-        player_id: t.Union[str, UUID],
+        player_id: _PlayerID,
         *,
         offset: int = Field(0, ge=0, le=1000),
         limit: int = Field(50, ge=1, le=50),
@@ -390,17 +395,16 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
     @t.overload
     def hubs(
         self: SyncPlayers[Model],
-        player_id: t.Union[str, UUID],
+        player_id: _PlayerID,
         *,
         offset: int = Field(0, ge=0, le=1000),
         limit: int = Field(50, ge=1, le=50),
     ) -> ItemPage[Hub]: ...
 
-    @_validate_player_id
     @validate_call
     def hubs(
         self,
-        player_id: t.Union[str, UUID],
+        player_id: _PlayerIDValidator,
         *,
         offset: int = Field(0, ge=0, le=1000),
         limit: int = Field(50, ge=1, le=50),
@@ -418,33 +422,32 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
 
     @t.overload
     def all_hubs(
-        self: SyncPlayers[Raw], player_id: t.Union[str, UUID]
+        self: SyncPlayers[Raw], player_id: _PlayerID
     ) -> t.List[RawAPIItem]: ...
 
     @t.overload
     def all_hubs(
-        self: SyncPlayers[Model], player_id: t.Union[str, UUID]
+        self: SyncPlayers[Model], player_id: _PlayerID
     ) -> ItemPage[Hub]: ...
 
     def all_hubs(
-        self, player_id: t.Union[str, UUID]
+        self, player_id: _PlayerID
     ) -> t.Union[t.List[RawAPIItem], ItemPage[Hub]]:
         return self.__class__._sync_page_iterator.collect(self.hubs, player_id)  # type: ignore[misc]
 
     @t.overload
     def stats(
-        self: SyncPlayers[Raw], player_id: t.Union[str, UUID], game: GameID
+        self: SyncPlayers[Raw], player_id: _PlayerID, game: GameID
     ) -> RawAPIPageResponse: ...
 
     @t.overload
     def stats(
-        self: SyncPlayers[Model], player_id: t.Union[str, UUID], game: GameID
+        self: SyncPlayers[Model], player_id: _PlayerID, game: GameID
     ) -> ModelNotImplemented: ...
 
-    @_validate_player_id
     @validate_call
     def stats(
-        self, player_id: t.Union[str, UUID], game: GameID
+        self, player_id: _PlayerIDValidator, game: GameID
     ) -> t.Union[RawAPIPageResponse, ModelNotImplemented]:
         return self._validate_response(
             self._client.get(
@@ -456,7 +459,7 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
     @t.overload
     def teams(
         self: SyncPlayers[Raw],
-        player_id: t.Union[str, UUID],
+        player_id: _PlayerID,
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
@@ -465,17 +468,16 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
     @t.overload
     def teams(
         self: SyncPlayers[Model],
-        player_id: t.Union[str, UUID],
+        player_id: _PlayerID,
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
     ) -> ItemPage[GeneralTeam]: ...
 
-    @_validate_player_id
     @validate_call
     def teams(
         self,
-        player_id: t.Union[str, UUID],
+        player_id: _PlayerIDValidator,
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
@@ -493,16 +495,16 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
 
     @t.overload
     def all_teams(
-        self: SyncPlayers[Raw], player_id: t.Union[str, UUID]
+        self: SyncPlayers[Raw], player_id: _PlayerID
     ) -> t.List[RawAPIItem]: ...
 
     @t.overload
     def all_teams(
-        self: SyncPlayers[Model], player_id: t.Union[str, UUID]
+        self: SyncPlayers[Model], player_id: _PlayerID
     ) -> ItemPage[GeneralTeam]: ...
 
     def all_teams(
-        self, player_id: t.Union[str, UUID]
+        self, player_id: _PlayerID
     ) -> t.Union[t.List[RawAPIItem], ItemPage[GeneralTeam]]:
         return self.__class__._sync_page_iterator.collect(
             self.teams,  # type: ignore[misc]
@@ -512,7 +514,7 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
     @t.overload
     def tournaments(
         self: SyncPlayers[Raw],
-        player_id: t.Union[str, UUID],
+        player_id: _PlayerID,
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
@@ -521,17 +523,16 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
     @t.overload
     def tournaments(
         self: SyncPlayers[Model],
-        player_id: t.Union[str, UUID],
+        player_id: _PlayerID,
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
     ) -> ItemPage[Tournament]: ...
 
-    @_validate_player_id
     @validate_call
     def tournaments(
         self,
-        player_id: t.Union[str, UUID],
+        player_id: _PlayerIDValidator,
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
@@ -549,16 +550,16 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
 
     @t.overload
     def all_tournaments(
-        self: SyncPlayers[Raw], player_id: t.Union[str, UUID]
+        self: SyncPlayers[Raw], player_id: _PlayerID
     ) -> t.List[RawAPIItem]: ...
 
     @t.overload
     def all_tournaments(
-        self: SyncPlayers[Model], player_id: t.Union[str, UUID]
+        self: SyncPlayers[Model], player_id: _PlayerID
     ) -> ItemPage[Tournament]: ...
 
     def all_tournaments(
-        self, player_id: t.Union[str, UUID]
+        self, player_id: _PlayerID
     ) -> t.Union[t.List[RawAPIItem], ItemPage[Tournament]]:
         return self.__class__._sync_page_iterator.collect(
             self.tournaments,  # type: ignore[misc]
@@ -572,7 +573,7 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
 
     @t.overload
     async def get(
-        self: AsyncPlayers[Raw], identifier: t.Union[str, UUID]
+        self: AsyncPlayers[Raw], identifier: _NicknameOrID
     ) -> RawAPIItem: ...
 
     @t.overload
@@ -582,7 +583,7 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
 
     @t.overload
     async def get(
-        self: AsyncPlayers[Model], identifier: t.Union[str, UUID]
+        self: AsyncPlayers[Model], identifier: _NicknameOrID
     ) -> Player: ...
 
     @t.overload
@@ -593,7 +594,7 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
     @validate_call
     async def get(
         self,
-        identifier: t.Optional[t.Union[str, UUID]] = None,
+        identifier: t.Optional[_NicknameOrID] = None,
         *,
         game: t.Optional[GameID] = None,
         game_player_id: t.Optional[str] = None,
@@ -638,7 +639,7 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
     @t.overload
     async def bans(
         self: AsyncPlayers[Raw],
-        player_id: t.Union[str, UUID],
+        player_id: _PlayerID,
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
@@ -647,17 +648,16 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
     @t.overload
     async def bans(
         self: AsyncPlayers[Model],
-        player_id: t.Union[str, UUID],
+        player_id: _PlayerID,
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
     ) -> ItemPage[BanEntry]: ...
 
-    @_validate_player_id
     @validate_call
     async def bans(
         self,
-        player_id: t.Union[str, UUID],
+        player_id: _PlayerIDValidator,
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
@@ -675,16 +675,16 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
 
     @t.overload
     async def all_bans(
-        self: AsyncPlayers[Raw], player_id: t.Union[str, UUID]
+        self: AsyncPlayers[Raw], player_id: _PlayerID
     ) -> t.List[RawAPIItem]: ...
 
     @t.overload
     async def all_bans(
-        self: AsyncPlayers[Model], player_id: t.Union[str, UUID]
+        self: AsyncPlayers[Model], player_id: _PlayerID
     ) -> ItemPage[BanEntry]: ...
 
     async def all_bans(
-        self, player_id: t.Union[str, UUID]
+        self, player_id: _PlayerID
     ) -> t.Union[t.List[RawAPIItem], ItemPage[BanEntry]]:
         return await self.__class__._async_page_iterator.collect(
             self.bans,  # type: ignore[misc]
@@ -694,7 +694,7 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
     @t.overload
     async def matches_stats(
         self: AsyncPlayers[Raw],
-        player_id: t.Union[str, UUID],
+        player_id: _PlayerID,
         game: GameID,
         *,
         offset: int = Field(0, ge=0, le=200),
@@ -706,7 +706,7 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
     @t.overload
     async def matches_stats(
         self: AsyncPlayers[Model],
-        player_id: t.Union[str, UUID],
+        player_id: _PlayerID,
         game: GameID,
         *,
         offset: int = Field(0, ge=0, le=200),
@@ -715,11 +715,10 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
         to: t.Optional[int] = None,
     ) -> ItemPage[AbstractMatchPlayerStats]: ...
 
-    @_validate_player_id
     @validate_call
     async def matches_stats(
         self,
-        player_id: t.Union[str, UUID],
+        player_id: _PlayerIDValidator,
         game: GameID,
         *,
         offset: int = Field(0, ge=0, le=200),
@@ -741,16 +740,16 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
 
     @t.overload
     async def all_matches_stats(
-        self: AsyncPlayers[Raw], player_id: t.Union[str, UUID], game: GameID
+        self: AsyncPlayers[Raw], player_id: _PlayerID, game: GameID
     ) -> t.List[RawAPIItem]: ...
 
     @t.overload
     async def all_matches_stats(
-        self: AsyncPlayers[Model], player_id: t.Union[str, UUID], game: GameID
+        self: AsyncPlayers[Model], player_id: _PlayerID, game: GameID
     ) -> ItemPage[AbstractMatchPlayerStats]: ...
 
     async def all_matches_stats(
-        self, player_id: t.Union[str, UUID], game: GameID
+        self, player_id: _PlayerID, game: GameID
     ) -> t.Union[t.List[RawAPIItem], ItemPage[AbstractMatchPlayerStats]]:
         return await self.__class__._async_page_iterator.collect(
             self.matches_stats,  # type: ignore[misc]
@@ -762,7 +761,7 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
     @t.overload
     async def history(
         self: AsyncPlayers[Raw],
-        player_id: t.Union[str, UUID],
+        player_id: _PlayerID,
         game: GameID,
         *,
         offset: int = Field(0, ge=0, le=1000),
@@ -774,7 +773,7 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
     @t.overload
     async def history(
         self: AsyncPlayers[Model],
-        player_id: t.Union[str, UUID],
+        player_id: _PlayerID,
         game: GameID,
         *,
         offset: int = Field(0, ge=0, le=1000),
@@ -783,11 +782,10 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
         to: t.Optional[int] = None,
     ) -> ItemPage[Match]: ...
 
-    @_validate_player_id
     @validate_call
     async def history(
         self,
-        player_id: t.Union[str, UUID],
+        player_id: _PlayerIDValidator,
         game: GameID,
         *,
         offset: int = Field(0, ge=0, le=1000),
@@ -808,16 +806,16 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
 
     @t.overload
     async def all_history(
-        self: AsyncPlayers[Raw], player_id: t.Union[str, UUID], game: GameID
+        self: AsyncPlayers[Raw], player_id: _PlayerID, game: GameID
     ) -> t.List[RawAPIItem]: ...
 
     @t.overload
     async def all_history(
-        self: AsyncPlayers[Model], player_id: t.Union[str, UUID], game: GameID
+        self: AsyncPlayers[Model], player_id: _PlayerID, game: GameID
     ) -> ItemPage[Match]: ...
 
     async def all_history(
-        self, player_id: t.Union[str, UUID], game: GameID
+        self, player_id: _PlayerID, game: GameID
     ) -> t.Union[t.List[RawAPIItem], ItemPage[Match]]:
         return await self.__class__._async_page_iterator.collect(
             self.history,  # type: ignore[misc]
@@ -829,7 +827,7 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
     @t.overload
     async def hubs(
         self: AsyncPlayers[Raw],
-        player_id: t.Union[str, UUID],
+        player_id: _PlayerID,
         *,
         offset: int = Field(0, ge=0, le=1000),
         limit: int = Field(50, ge=1, le=50),
@@ -838,17 +836,16 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
     @t.overload
     async def hubs(
         self: AsyncPlayers[Model],
-        player_id: t.Union[str, UUID],
+        player_id: _PlayerID,
         *,
         offset: int = Field(0, ge=0, le=1000),
         limit: int = Field(50, ge=1, le=50),
     ) -> ItemPage[Hub]: ...
 
-    @_validate_player_id
     @validate_call
     async def hubs(
         self,
-        player_id: t.Union[str, UUID],
+        player_id: _PlayerIDValidator,
         *,
         offset: int = Field(0, ge=0, le=1000),
         limit: int = Field(50, ge=1, le=50),
@@ -866,16 +863,16 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
 
     @t.overload
     async def all_hubs(
-        self: AsyncPlayers[Raw], player_id: t.Union[str, UUID]
+        self: AsyncPlayers[Raw], player_id: _PlayerID
     ) -> t.List[RawAPIItem]: ...
 
     @t.overload
     async def all_hubs(
-        self: AsyncPlayers[Model], player_id: t.Union[str, UUID]
+        self: AsyncPlayers[Model], player_id: _PlayerID
     ) -> ItemPage[Hub]: ...
 
     async def all_hubs(
-        self, player_id: t.Union[str, UUID]
+        self, player_id: _PlayerID
     ) -> t.Union[t.List[RawAPIItem], ItemPage[Hub]]:
         return await self.__class__._async_page_iterator.collect(
             self.hubs,  # type: ignore[misc]
@@ -884,18 +881,17 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
 
     @t.overload
     async def stats(
-        self: AsyncPlayers[Raw], player_id: t.Union[str, UUID], game: GameID
+        self: AsyncPlayers[Raw], player_id: _PlayerID, game: GameID
     ) -> RawAPIPageResponse: ...
 
     @t.overload
     async def stats(
-        self: AsyncPlayers[Model], player_id: t.Union[str, UUID], game: GameID
+        self: AsyncPlayers[Model], player_id: _PlayerID, game: GameID
     ) -> ModelNotImplemented: ...
 
-    @_validate_player_id
     @validate_call
     async def stats(
-        self, player_id: t.Union[str, UUID], game: GameID
+        self, player_id: _PlayerIDValidator, game: GameID
     ) -> t.Union[RawAPIPageResponse, ModelNotImplemented]:
         return self._validate_response(
             await self._client.get(
@@ -907,7 +903,7 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
     @t.overload
     async def teams(
         self: AsyncPlayers[Raw],
-        player_id: t.Union[str, UUID],
+        player_id: _PlayerID,
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
@@ -916,17 +912,16 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
     @t.overload
     async def teams(
         self: AsyncPlayers[Model],
-        player_id: t.Union[str, UUID],
+        player_id: _PlayerID,
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
     ) -> ItemPage[GeneralTeam]: ...
 
-    @_validate_player_id
     @validate_call
     async def teams(
         self,
-        player_id: t.Union[str, UUID],
+        player_id: _PlayerIDValidator,
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
@@ -944,16 +939,16 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
 
     @t.overload
     async def all_teams(
-        self: AsyncPlayers[Raw], player_id: t.Union[str, UUID]
+        self: AsyncPlayers[Raw], player_id: _PlayerID
     ) -> t.List[RawAPIItem]: ...
 
     @t.overload
     async def all_teams(
-        self: AsyncPlayers[Model], player_id: t.Union[str, UUID]
+        self: AsyncPlayers[Model], player_id: _PlayerID
     ) -> ItemPage[GeneralTeam]: ...
 
     async def all_teams(
-        self, player_id: t.Union[str, UUID]
+        self, player_id: _PlayerID
     ) -> t.Union[t.List[RawAPIItem], ItemPage[GeneralTeam]]:
         return await self.__class__._async_page_iterator.collect(
             self.teams,  # type: ignore[misc]
@@ -963,7 +958,7 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
     @t.overload
     async def tournaments(
         self: AsyncPlayers[Raw],
-        player_id: t.Union[str, UUID],
+        player_id: _PlayerID,
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
@@ -972,17 +967,16 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
     @t.overload
     async def tournaments(
         self: AsyncPlayers[Model],
-        player_id: t.Union[str, UUID],
+        player_id: _PlayerID,
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
     ) -> ItemPage[Tournament]: ...
 
-    @_validate_player_id
     @validate_call
     async def tournaments(
         self,
-        player_id: t.Union[str, UUID],
+        player_id: _PlayerIDValidator,
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
@@ -1000,16 +994,16 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
 
     @t.overload
     async def all_tournaments(
-        self: AsyncPlayers[Raw], player_id: t.Union[str, UUID]
+        self: AsyncPlayers[Raw], player_id: _PlayerID
     ) -> t.List[RawAPIItem]: ...
 
     @t.overload
     async def all_tournaments(
-        self: AsyncPlayers[Model], player_id: t.Union[str, UUID]
+        self: AsyncPlayers[Model], player_id: _PlayerID
     ) -> ItemPage[Tournament]: ...
 
     async def all_tournaments(
-        self, player_id: t.Union[str, UUID]
+        self, player_id: _PlayerID
     ) -> t.Union[t.List[RawAPIItem], ItemPage[Tournament]]:
         return await self.__class__._async_page_iterator.collect(
             self.tournaments,  # type: ignore[misc]

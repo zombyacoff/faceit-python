@@ -5,7 +5,7 @@ from abc import ABC
 from warnings import warn
 
 from ._repr import representation
-from ._typing import ClientT, ResourceT, Self
+from ._typing import ClientT, ResourceT, Self, ValidUUID
 from .constants import BASE_WIKI_URL
 from .http import AsyncClient, SyncClient
 from .resources import AsyncResources, SyncResources
@@ -24,7 +24,7 @@ class BaseFaceit(t.Generic[ClientT, ResourceT], ABC):
     @t.overload
     def __init__(
         self,
-        api_key: str,
+        api_key: ValidUUID,
         **client_options: t.Any,
     ) -> None: ...
 
@@ -37,7 +37,7 @@ class BaseFaceit(t.Generic[ClientT, ResourceT], ABC):
 
     def __init__(
         self,
-        api_key: t.Optional[str] = None,
+        api_key: t.Optional[ValidUUID] = None,
         *,
         client: t.Optional[ClientT] = None,
         **client_options: t.Any,

@@ -24,9 +24,9 @@ from tenacity import (
 )
 
 from faceit._repr import representation
-from faceit._utils import validate_uuid_args
+from faceit._utils import create_uuid_validator
 from faceit.constants import BASE_WIKI_URL, FaceitStrEnum
-from faceit.exceptions import FaceitAPIError
+from faceit.exceptions import APIError
 
 from ._helpers import Endpoint
 
@@ -39,6 +39,7 @@ if t.TYPE_CHECKING:
         RawAPIPageResponse,
         RawAPIResponse,
         Self,
+        ValidUUID,
     )
 
 _logger = logging.getLogger(__name__)
@@ -88,31 +89,22 @@ class BaseAPIClient(t.Generic[_HttpxClientT], ABC):
 
     _client: _HttpxClientT  # Type hint for the HTTP client that subclasses must initialize
 
-    # NOTE: The API key must be a valid UUID
-    # Type hint remains as `str` for clarity, though other
-    # convertible types (e.g., `UUID`, `bytes`) are accepted
-    @validate_uuid_args(
-        "api_key",
-        error_message=f"Invalid FACEIT API key format: '{{value}}'. "
-        f"Please visit the official wiki for API key information: "
-        f"{BASE_WIKI_URL}/getting-started/authentication/api-keys",
+    __api_key_validator: t.ClassVar[t.Callable[[ValidUUID], str]] = (
+        create_uuid_validator(
+            f"Invalid FACEIT API key format: '{{value}}'. "
+            f"Please visit the official wiki for API key information: "
+            f"{BASE_WIKI_URL}/getting-started/authentication/api-keys"
+        )
     )
+
     def __init__(
         self,
-        api_key: str,
+        api_key: ValidUUID,
         base_url: str = DEFAULT_BASE_URL,
         retry_args: t.Optional[t.Dict[str, t.Any]] = None,
     ) -> None:
         self.base_url = base_url.rstrip("/")
-        # Handle edge case where `api_key` is `bytes` (passes UUID validation)
-        # Convert to string instead of raising an exception
-        self._api_key = (
-            # Cast needed: signature declares `api_key` as str for API clarity,
-            # but we accept `bytes` too which type checkers can't narrow automatically
-            t.cast(bytes, api_key).decode()
-            if isinstance(api_key, bytes)
-            else str(api_key)
-        )
+        self._api_key = self.__class__.__api_key_validator(api_key)
         self.retry_args = {
             **self.__class__.DEFAULT_RETRY_ARGS,
             **(retry_args or {}),
@@ -176,14 +168,14 @@ class BaseAPIClient(t.Generic[_HttpxClientT], ABC):
                 response.url,
                 response.text,
             )
-            raise FaceitAPIError(response.status_code, response.text) from e
+            raise APIError(response.status_code, response.text) from e
         except (ValueError, httpx.DecodingError):
             _logger.exception(
                 "Invalid JSON response from %s: %s",
                 response.url,
                 response.text,
             )
-            raise FaceitAPIError(
+            raise APIError(
                 response.status_code, "Invalid JSON response"
             ) from None
 
@@ -200,7 +192,7 @@ class BaseAPIClient(t.Generic[_HttpxClientT], ABC):
 
     @abstractmethod
     def close(self) -> None:
-        pass
+        raise NotImplementedError
 
     def __del__(self) -> None:
         if not self.is_closed:
@@ -212,7 +204,7 @@ class _BaseSyncClient(BaseAPIClient[httpx.Client]):
 
     def __init__(
         self,
-        api_key: str,
+        api_key: ValidUUID,
         *,
         base_url: str = BaseAPIClient.DEFAULT_BASE_URL,
         timeout: float = BaseAPIClient.DEFAULT_TIMEOUT,
@@ -297,7 +289,7 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
 
     def __init__(
         self,
-        api_key: str,
+        api_key: ValidUUID,
         *,
         base_url: str = BaseAPIClient.DEFAULT_BASE_URL,
         timeout: float = BaseAPIClient.DEFAULT_TIMEOUT,

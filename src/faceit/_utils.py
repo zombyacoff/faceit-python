@@ -4,8 +4,7 @@ import hashlib
 import json
 import typing as t
 from datetime import datetime, timezone
-from functools import lru_cache, reduce, wraps
-from inspect import signature
+from functools import lru_cache, reduce
 from uuid import UUID
 
 if t.TYPE_CHECKING:
@@ -22,6 +21,18 @@ if t.TYPE_CHECKING:
 
 def lazy_import(func: t.Callable[[], _T]) -> t.Callable[[], _T]:
     return lru_cache(maxsize=1)(func)
+
+
+def raise_unsupported_operand_error(
+    sign: str,
+    self_name: str,
+    other_name: str,
+    /,
+) -> t.NoReturn:
+    raise TypeError(
+        f"unsupported operand type(s) for {sign}: "
+        f"'{self_name}' and '{other_name}'"
+    )
 
 
 def deep_get(
@@ -74,7 +85,7 @@ def get_hashable_representation(obj: t.Any, /) -> int:
 # NOTE: Some API methods return Unix timestamps in milliseconds
 
 
-def convert_to_unix(
+def to_unix(
     value: t.Optional[datetime], /, *, millis: bool = False
 ) -> t.Optional[int]:
     if value is None:
@@ -84,7 +95,7 @@ def convert_to_unix(
     raise ValueError(f"Expected datetime or None, got {type(value).__name__}")
 
 
-def convert_from_unix(
+def from_unix(
     value: t.Optional[int], /, *, millis: bool = False
 ) -> t.Optional[datetime]:
     if value is None:
@@ -101,67 +112,51 @@ def convert_from_unix(
 # library's internal logic to distinguish between different resource types
 # (e.g., nickname vs ID) and supports the expected behavior of various
 # resource handlers
+
+_UUID_BYTES: t.Final = 16
+
+
+def to_uuid(value: t.Union[str, bytes], /) -> UUID:
+    if isinstance(value, str):
+        return UUID(value)
+    if not isinstance(value, bytes):
+        raise TypeError("Expected str or bytes for UUID conversion")
+    try:
+        return UUID(value.decode())
+    except UnicodeDecodeError as e:
+        if len(value) == _UUID_BYTES:
+            return UUID(bytes=value)
+        raise ValueError(
+            f"Byte value must be a UTF-8 encoded "
+            f"UUID string or {_UUID_BYTES} bytes"
+        ) from e
+
+
 def is_valid_uuid(value: t.Any, /) -> bool:
     if isinstance(value, UUID):
         return True
     if not isinstance(value, (str, bytes)):
         return False
     try:
-        UUID(value if isinstance(value, str) else value.decode())
-    except (ValueError, AttributeError):
+        to_uuid(value)
+    except (AttributeError, ValueError):
         return False
     return True
 
 
-def validate_uuid_args(
-    *arg_names: str,
-    error_message: str = "Invalid {arg_name}: {value}. Must be a valid UUID.",
-) -> t.Callable[[t.Callable[_P, _T]], t.Callable[_P, _T]]:
-    def decorator(func: t.Callable[_P, _T]) -> t.Callable[_P, _T]:
-        sig = signature(func)
-
-        @wraps(func)
-        def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _T:
-            bound_args = sig.bind(*args, **kwargs).arguments
-
-            for arg_name in arg_names:
-                if arg_name not in bound_args:
-                    continue
-
-                value = bound_args[arg_name]
-
-                if value is None:
-                    continue
-
-                if not is_valid_uuid(value):
-                    raise ValueError(
-                        error_message.format(arg_name=arg_name, value=value)
-                    )
-
-            return func(*args, **kwargs)
-
-        return wrapper
-
-    return decorator
-
-
-def uuid_validator_alias(
-    param_name: str,
+def create_uuid_validator(
+    error_message: str = "Invalid {arg_name}: {value}. Expected a valid UUID.",
     /,
-) -> t.Callable[[t.Callable[_P, _T]], t.Callable[_P, _T]]:
-    def decorator(func: t.Callable[_P, _T]) -> t.Callable[_P, _T]:
-        return validate_uuid_args(param_name)(func)
+    *,
+    arg_name: str = "value",
+) -> t.Callable[[t.Any], str]:
+    def validator(value: t.Any, /) -> str:
+        if not is_valid_uuid(value):
+            message = error_message.format(arg_name=arg_name, value=value)
+            raise ValueError(message)
+        if isinstance(value, (UUID, str)):
+            return str(value)
+        assert isinstance(value, bytes)  # noqa: S101
+        return str(to_uuid(value))
 
-    return decorator
-
-
-def raise_unsupported_operand_error(
-    sign: str,
-    self_name: str,
-    other_name: str,
-    /,
-) -> t.NoReturn:
-    raise TypeError(
-        f"unsupported operand type(s) for {sign}: "
-        f"'{self_name}' and '{other_name}'"
-    )
+    return validator

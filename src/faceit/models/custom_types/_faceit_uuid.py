@@ -25,7 +25,7 @@ class _BaseFaceitUUIDValidator(ABC):
     @classmethod
     @abstractmethod
     def validate(cls, value: str, /) -> Self:
-        pass
+        raise NotImplementedError
 
     @classmethod
     def _remove_prefix_and_suffix(cls, value: str, /) -> str:

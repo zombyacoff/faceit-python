@@ -19,7 +19,7 @@ import pytest
 from tenacity import stop_after_attempt
 
 from faceit.constants import BASE_WIKI_URL
-from faceit.exceptions import FaceitAPIError
+from faceit.exceptions import APIError
 from faceit.http._client import (
     AsyncClient,
     BaseAPIClient,
@@ -202,7 +202,7 @@ class TestBaseAPIClient:
 
     def test_handle_response_http_error(self, error_response):
         """Test HTTP error response handling."""
-        with pytest.raises(FaceitAPIError) as excinfo:
+        with pytest.raises(APIError) as excinfo:
             BaseAPIClient._handle_response(error_response)
         assert excinfo.value.status_code == 400
         assert excinfo.value.message == "Bad Request"
@@ -214,7 +214,7 @@ class TestBaseAPIClient:
 
     def test_handle_response_invalid_json(self, invalid_json_response):
         """Test handling of responses with invalid JSON."""
-        with pytest.raises(FaceitAPIError) as excinfo:
+        with pytest.raises(APIError) as excinfo:
             BaseAPIClient._handle_response(invalid_json_response)
         assert excinfo.value.status_code == 200
         assert "Invalid JSON response" in excinfo.value.message
