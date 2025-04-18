@@ -7,13 +7,12 @@ regarding edge cases and integration with `Pydantic`.
 """
 
 import pytest
-from pydantic import BaseModel, ValidationError
-
-from faceit.models.custom_types._faceit_uuid import (
+from faceit.models._custom_types import (
     FaceitID,
-    FaceitTeamID,
     FaceitMatchID,
+    FaceitTeamID,
 )
+from pydantic import BaseModel, ValidationError
 
 
 class TestFaceitID:

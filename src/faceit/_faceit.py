@@ -5,10 +5,10 @@ from abc import ABC
 from warnings import warn
 
 from ._repr import representation
+from ._resources import AsyncResources, SyncResources
 from ._typing import ClientT, ResourceT, Self, ValidUUID
 from .constants import BASE_WIKI_URL
 from .http import AsyncClient, SyncClient
-from .resources import AsyncResources, SyncResources
 
 if t.TYPE_CHECKING:
     from types import TracebackType

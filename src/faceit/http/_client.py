@@ -14,6 +14,7 @@ from weakref import WeakSet
 
 import httpx
 from pydantic import PositiveInt, validate_call
+from strenum import StrEnum
 from tenacity import (
     AsyncRetrying,
     RetryCallState,
@@ -25,7 +26,7 @@ from tenacity import (
 
 from faceit._repr import representation
 from faceit._utils import create_uuid_validator
-from faceit.constants import BASE_WIKI_URL, FaceitStrEnum
+from faceit.constants import BASE_WIKI_URL
 from faceit.exceptions import APIError
 
 from ._helpers import Endpoint
@@ -48,7 +49,7 @@ _HttpxClientT = t.TypeVar("_HttpxClientT", httpx.Client, httpx.AsyncClient)
 
 
 @t.final
-class SupportedMethod(FaceitStrEnum):
+class SupportedMethod(StrEnum):
     GET = auto()
     POST = auto()
 

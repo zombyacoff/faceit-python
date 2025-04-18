@@ -4,7 +4,7 @@ from pydantic import BaseModel
 
 from faceit._typing import UrlOrEmpty, UUIDOrEmpty
 
-from .custom_types import FaceitID, NullableList, ResponseContainer
+from ._custom_types import FaceitID, NullableList, ResponseContainer
 
 
 class JoinChecks(BaseModel):

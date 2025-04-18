@@ -13,7 +13,6 @@ from ._typing import TypeAlias  # noqa: TCH001
 
 if t.TYPE_CHECKING:
     _EloThreshold: TypeAlias = t.Dict[int, "EloRange"]
-    _ChallengerLevel: TypeAlias = t.Literal["challenger"]
 
 _logger = logging.getLogger(__name__)
 
@@ -21,31 +20,36 @@ BASE_WIKI_URL: t.Final = "https://docs.faceit.com"
 
 RAW_RESPONSE_ITEMS_KEY: t.Final = "items"
 
-# Maybe it's worth creating a `ChallengerLevel` class that would determine
-# ELO up to #1000 (by game->region, but region complicates this task;
-# we can think about it, but it seems to me that this is not possible, unfortunately...)
-CHALLENGER_LEVEL: t.Final = "challenger"
-"""Elite tier reserved for #1000 players per game/region.
+MIN_ELO: t.Final = 100
+"""Minimum ELO value across all FACEIT games.
 
-This rank represents a dynamic threshold based on leaderboard position rather
-than a fixed ELO value. Due to its relative nature, determining Challenger
-status requires additional processing (leaderboard position analysis by region)
-beyond standard ELO calculations. In our implementation, players with actual
-Challenger status will be classified as level 10 for system consistency.
-
-The constant is primarily defined for completeness in representing FACEIT's
-full ranking system and may be utilized in future enhancements for precise
-leaderboard position tracking.
+Players cannot drop below this threshold regardless of consecutive losses.
 """
 
 
-class FaceitStrEnum(StrEnum):
-    @classmethod
-    def values(cls) -> t.List[str]:
-        return [member.value for member in cls]
+class HighTierLevel(StrEnum):
+    ABSENT = "absent"
+    """Indicates the absence of a defined top-tier rank in this discipline.
+
+    Used when there is no distinct elite or highest rank in the ranking structure.
+    """
+
+    CHALLENGER = "challenger"
+    """Elite tier reserved for top 1000 players per game/region.
+
+    This rank represents a dynamic threshold based on leaderboard position rather
+    than a fixed ELO value. Due to its relative nature, determining Challenger
+    status requires additional processing (leaderboard position analysis by region)
+    beyond standard ELO calculations. In our implementation, players with actual
+    Challenger status will be classified as level 10 for system consistency.
+
+    The constant is primarily defined for completeness in representing FACEIT's
+    full ranking system and may be utilized in future enhancements for precise
+    leaderboard position tracking.
+    """
 
 
-class GameID(FaceitStrEnum):
+class GameID(StrEnum):
     APEX = "apex"
     BATTALION = "battalion"
     BRAWL_STARS = "brawl_stars"
@@ -148,20 +152,20 @@ class GameID(FaceitStrEnum):
     WOW = "wow"
 
 
-class EventCategory(FaceitStrEnum):
+class EventCategory(StrEnum):
     ALL = "all"
     UPCOMING = "upcoming"
     ONGOING = "ongoing"
     PAST = "past"
 
 
-class ExpandOption(FaceitStrEnum):
+class ExpandOption(StrEnum):
     NONE = ""
     ORGANIZER = "organizer"
     GAME = "game"
 
 
-class Region(FaceitStrEnum):
+class Region(StrEnum):
     EU = "EU"
     US = "US"
     SEA = "SEA"
@@ -172,13 +176,11 @@ class Region(FaceitStrEnum):
 @t.final
 class EloRange(t.NamedTuple):
     lower: int
-    # `Optional` - because "challenger" (>#1000)
-    # might not be present in all disciplines
-    upper: t.Optional[t.Union[int, _ChallengerLevel]]
+    upper: t.Union[int, HighTierLevel]
 
     @property
     def is_open_ended(self) -> bool:
-        return self.upper == CHALLENGER_LEVEL or self.upper is None
+        return self.upper in HighTierLevel
 
     @property
     def size(self) -> t.Optional[int]:
@@ -188,7 +190,7 @@ class EloRange(t.NamedTuple):
         return self.upper - self.lower + 1
 
     def contains(self, elo: int) -> bool:
-        if self.upper == CHALLENGER_LEVEL or self.upper is None:
+        if self.upper in HighTierLevel:
             return elo >= self.lower
         assert isinstance(self.upper, int)  # noqa: S101
         return self.lower <= elo <= self.upper
@@ -198,12 +200,6 @@ class EloRange(t.NamedTuple):
             return f"{self.lower}+"
         return f"{self.lower}-{self.upper}"
 
-
-MIN_ELO: t.Final = 100
-"""Minimum ELO value across all FACEIT games.
-
-Players cannot drop below this threshold regardless of consecutive losses.
-"""
 
 _DEFAULT_FIRST_ELO_RANGE: t.Final = EloRange(MIN_ELO, 800)
 _DEFAULT_TEN_LEVEL_LOWER: t.Final = 2001
@@ -226,7 +222,7 @@ _BASE_ELO_RANGES: t.Final = _create_default_elo_tiers()
 
 
 def _append_elite_tier(
-    elite_upper_bound: t.Optional[_ChallengerLevel],
+    elite_upper_bound: HighTierLevel,
     base_tiers: _EloThreshold = _BASE_ELO_RANGES,
     /,
 ) -> _EloThreshold:
@@ -236,10 +232,12 @@ def _append_elite_tier(
     }
 
 
-CHALLENGER_CAPPED_ELO_RANGES: t.Final = _append_elite_tier(CHALLENGER_LEVEL)
+CHALLENGER_CAPPED_ELO_RANGES: t.Final = _append_elite_tier(
+    HighTierLevel.CHALLENGER
+)
 # Pre-generating this range configuration for future implementation needs
 # Exposed as a constant for both internal use and potential library consumers
-OPEN_ENDED_ELO_RANGES: t.Final = _append_elite_tier(None)
+OPEN_ENDED_ELO_RANGES: t.Final = _append_elite_tier(HighTierLevel.ABSENT)
 
 # fmt: off
 ELO_THRESHOLDS: t.Final[t.Dict[GameID, _EloThreshold]] = {
@@ -247,7 +245,7 @@ ELO_THRESHOLDS: t.Final[t.Dict[GameID, _EloThreshold]] = {
         1: EloRange(MIN_ELO, 500), 2: EloRange(501, 750), 3: EloRange(751, 900),
         4: EloRange(901, 1050), 5: EloRange(1051, 1200), 6: EloRange(1201, 1350),
         7: EloRange(1351, 1530), 8: EloRange(1531, 1750), 9: EloRange(1751, 2000),
-        10: EloRange(_DEFAULT_TEN_LEVEL_LOWER, CHALLENGER_LEVEL)
+        10: EloRange(_DEFAULT_TEN_LEVEL_LOWER, HighTierLevel.CHALLENGER)
     },
     # These default ELO ranges (level 1: up to 800, subsequent levels: +150) are
     # standard across most games with few exceptions. CS2 demonstrates one such
@@ -281,11 +279,23 @@ class SkillLevel:
         return self.elo_range.size
 
     @property
+    def next_level(self) -> t.Optional[SkillLevel]:
+        if self.is_highest_level:
+            return None
+        return self.get_level(self.game_id, self.level + 1)
+
+    @property
+    def previous_level(self) -> t.Optional[SkillLevel]:
+        if self.level <= 1:
+            return None
+        return self.get_level(self.game_id, self.level - 1)
+
+    @property
     def elo_needed_for_next_level(self) -> t.Optional[int]:
         if self.is_highest_level:
             return None
 
-        next_level = self.get_next_level()
+        next_level = self.next_level
         if next_level is None:
             return None
 
@@ -315,16 +325,6 @@ class SkillLevel:
             (elo - self.elo_range.lower)
             / (self.elo_range.upper - self.elo_range.lower)
         ) * 100
-
-    def get_next_level(self) -> t.Optional[SkillLevel]:
-        if self.is_highest_level:
-            return None
-        return self.get_level(self.game_id, self.level + 1)
-
-    def get_previous_level(self) -> t.Optional[SkillLevel]:
-        if self.level <= 1:
-            return None
-        return self.get_level(self.game_id, self.level - 1)
 
     @t.overload
     @classmethod

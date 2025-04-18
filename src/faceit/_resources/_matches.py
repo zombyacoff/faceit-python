@@ -16,7 +16,7 @@ from faceit._typing import (
     TypeAlias,
 )
 from faceit.http import AsyncClient, SyncClient
-from faceit.models.custom_types import FaceitMatchID
+from faceit.models._custom_types import FaceitMatchID
 
 from ._base import BaseResource, FaceitResourcePath, ModelPlaceholder
 

@@ -4,11 +4,10 @@ import logging
 import typing as t
 from abc import ABC
 from dataclasses import dataclass
-from enum import auto
 from warnings import warn
 
 from pydantic import ValidationError
-from strenum import LowercaseStrEnum
+from strenum import StrEnum
 
 from faceit._typing import (
     ClientT,
@@ -20,7 +19,7 @@ from faceit._typing import (
 from faceit.http import Endpoint
 from faceit.models import ItemPage
 
-from .pagination import (
+from ._pagination import (
     AsyncPageIterator,
     SyncPageIterator,
     TimestampPaginationConfig,
@@ -29,9 +28,9 @@ from .pagination import (
 if t.TYPE_CHECKING:
     _ResponseT = t.TypeVar("_ResponseT", bound=RawAPIResponse)
 
-_KT = t.TypeVar("_KT")
-
 _logger = logging.getLogger(__name__)
+
+_KT = t.TypeVar("_KT")
 
 # Temporary placeholder type for unimplemented models.
 # Serves as a stub during development and should be replaced with
@@ -53,10 +52,10 @@ class MappedValidatorConfig(t.TypedDict, t.Generic[_KT, ModelT]):
 
 
 @t.final
-class FaceitResourcePath(LowercaseStrEnum):
-    CHAMPIONSHIPS = auto()
-    MATCHES = auto()
-    PLAYERS = auto()
+class FaceitResourcePath(StrEnum):
+    CHAMPIONSHIPS = "championships"
+    MATCHES = "matches"
+    PLAYERS = "players"
 
 
 @dataclass(eq=False, frozen=True)

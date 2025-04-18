@@ -1,10 +1,8 @@
 import pytest
-from faceit._repr import representation, _UNINITIALIZED_MARKER
+from faceit._repr import _UNINITIALIZED_MARKER, representation
 
 
 def test_basic_representation():
-    """Test basic functionality of the representation decorator."""
-
     @representation("name", "age")
     class Person:
         def __init__(self, name, age):
@@ -17,8 +15,6 @@ def test_basic_representation():
 
 
 def test_representation_with_use_str():
-    """Test representation decorator with use_str=True."""
-
     @representation("name", "age", use_str=True)
     class Person:
         def __init__(self, name, age):
@@ -34,25 +30,22 @@ def test_representation_with_use_str():
 
 
 def test_representation_with_missing_fields():
-    """Test representation when some fields are missing."""
-
     @representation("name", "age", "email")
     class Person:
         def __init__(self, name, age):
             self.name = name
             self.age = age
-            # email is not initialized
+            # `email` is not initialized
 
     person = Person("John", 30)
     assert repr(person) == f"Person({repr(_UNINITIALIZED_MARKER)})"
 
 
 def test_representation_with_use_str_but_no_str_method():
-    """Test that TypeError is raised when use_str=True but no __str__ method is defined."""
     with pytest.raises(TypeError) as excinfo:
 
         @representation("name", "age", use_str=True)
-        class Person:
+        class _:
             def __init__(self, name, age):
                 self.name = name
                 self.age = age
@@ -61,8 +54,6 @@ def test_representation_with_use_str_but_no_str_method():
 
 
 def test_representation_preserves_existing_str():
-    """Test that existing __str__ method is preserved."""
-
     @representation("name", "age")
     class Person:
         def __init__(self, name, age):
@@ -78,8 +69,6 @@ def test_representation_preserves_existing_str():
 
 
 def test_representation_with_empty_fields():
-    """Test representation with no fields specified."""
-
     @representation()
     class Empty:
         pass

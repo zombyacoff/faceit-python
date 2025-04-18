@@ -49,8 +49,6 @@ pytest-asyncio = "^0.21.1"
 python-dotenv = "^1.0.0"
 ruff = "^0.4.8"
 
-[tool.pytest.ini_options]
-pythonpath = "."
 
 [tool.mypy]
 python_version = "3.8"
@@ -60,14 +58,13 @@ exclude = [
     "tests/*"
 ]
 
+[tool.pytest.ini_options]
+pythonpath = "."
+
 [tool.ruff]
 line-length = 79
 preview = true
 target-version = "py38"
-exclude = [
-    "_.py",
-    "_async.py"
-]
 lint.select = ["ALL"]
 lint.ignore = [
     "ANN401",
@@ -96,8 +93,11 @@ lint.ignore = [
     "TD",
     "TRY003",
 ]
+
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["ALL"]
+"_.py" = ["ALL"]
+"_async.py" = ["ALL"]
 
 [tool.ruff.lint.pyupgrade]
 keep-runtime-typing = true

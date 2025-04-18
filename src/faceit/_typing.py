@@ -56,9 +56,9 @@ else:
     )
 
 if t.TYPE_CHECKING:
+    from ._resources import BaseResources
     from .http import Endpoint
     from .http._client import BaseAPIClient
-    from .resources import BaseResources
 
 __all__ = (
     "Annotated",

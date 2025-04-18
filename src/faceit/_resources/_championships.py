@@ -25,7 +25,7 @@ from faceit.models import Championship, ItemPage
 from ._base import BaseResource, FaceitResourcePath, ModelPlaceholder
 
 if t.TYPE_CHECKING:
-    from faceit.resources.pagination import (
+    from faceit._resources._pagination import (
         AsyncPageIterator,
         SyncPageIterator,
     )

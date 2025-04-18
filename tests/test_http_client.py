@@ -15,20 +15,16 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import httpx
 import pytest
-from tenacity import stop_after_attempt
-
 from faceit.constants import BASE_WIKI_URL
 from faceit.exceptions import APIError
+from faceit.http import AsyncClient, Endpoint, SupportedMethod, SyncClient
 from faceit.http._client import (
-    AsyncClient,
     BaseAPIClient,
-    SupportedMethod,
-    SyncClient,
     _BaseAsyncClient,
     _BaseSyncClient,
     _is_ssl_error,
 )
-from faceit.http._helpers import Endpoint
+from tenacity import stop_after_attempt
 
 
 @pytest.fixture

@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field, field_validator
 from faceit._typing import Annotated, UrlOrEmpty
 from faceit.constants import GameID
 
-from .custom_types import FaceitID, LangFormattedAnyHttpUrl
+from ._custom_types import FaceitID, LangFormattedAnyHttpUrl
 
 _RESULT_MAP: t.Final = {"faction1": "first", "faction2": "second"}
 

@@ -32,7 +32,8 @@ from faceit._utils import (
     lazy_import,
 )
 from faceit.constants import RAW_RESPONSE_ITEMS_KEY
-from faceit.models import ItemPage, PaginationTimeRange
+from faceit.models import ItemPage
+from faceit.models._page import PaginationTimeRange
 
 if t.TYPE_CHECKING:
     # `PositiveInt` is used for self-documentation, not for validation
@@ -428,8 +429,7 @@ class BasePageIterator(t.Generic[PaginationMethodT, _PageT], ABC):
 del _ITERATOR_SLOTS
 
 
-@t.final
-class SyncPageIterator(
+class _BaseSyncPageIterator(
     BasePageIterator[
         t.Union[
             SyncPaginationMethod[_PageT], SyncUnixPaginationMethod[_PageT]
@@ -441,6 +441,30 @@ class SyncPageIterator(
     __slots__ = ()
 
     _STOP_ITERATION_EXC: t.ClassVar = StopIteration
+
+    def _fetch_page(self) -> t.Optional[_PageT]:
+        return (
+            self._method.call(
+                *self._method.args,
+                **self._method.kwargs,
+                limit=self._pagination_limits.limit,
+                offset=self._offset,
+            )
+            or None
+        )
+
+    def __iter__(self) -> Self:
+        return self
+
+    def __next__(self) -> _PageT:
+        if self._exhausted:
+            raise self.__class__._STOP_ITERATION_EXC
+        return self._handle_iteration_state(self._fetch_page())
+
+
+@t.final
+class SyncPageIterator(_BaseSyncPageIterator[_PageT]):
+    __slots__ = ()
 
     @t.overload
     def collect(
@@ -459,17 +483,6 @@ class SyncPageIterator(
         ],
     ) -> t.Union[ItemPage[_T], t.List[RawAPIItem]]:
         return self.__class__.gather_from_iterator(self)
-
-    def _fetch_page(self) -> t.Optional[_PageT]:
-        return (
-            self._method.call(
-                *self._method.args,
-                **self._method.kwargs,
-                limit=self._pagination_limits.limit,
-                offset=self._offset,
-            )
-            or None
-        )
 
     @classmethod
     def unix(
@@ -622,17 +635,8 @@ class SyncPageIterator(
             deduplicate,
         )
 
-    def __iter__(self) -> Self:
-        return self
 
-    def __next__(self) -> _PageT:
-        if self._exhausted:
-            raise self.__class__._STOP_ITERATION_EXC
-        return self._handle_iteration_state(self._fetch_page())
-
-
-@t.final
-class AsyncPageIterator(
+class _BasyAsyncPageIterator(
     BasePageIterator[
         t.Union[
             AsyncPaginationMethod[_PageT], AsyncUnixPaginationMethod[_PageT]
@@ -644,6 +648,30 @@ class AsyncPageIterator(
     __slots__ = ()
 
     _STOP_ITERATION_EXC: t.ClassVar = StopAsyncIteration
+
+    async def _fetch_page(self) -> t.Optional[_PageT]:
+        return (
+            await self._method.call(
+                *self._method.args,
+                **self._method.kwargs,
+                limit=self._pagination_limits.limit,
+                offset=self._offset,
+            )
+            or None
+        )
+
+    def __aiter__(self) -> Self:
+        return self
+
+    async def __anext__(self) -> _PageT:
+        if self._exhausted:
+            raise self.__class__._STOP_ITERATION_EXC
+        return self._handle_iteration_state(await self._fetch_page())
+
+
+@t.final
+class AsyncPageIterator(_BasyAsyncPageIterator[_PageT]):
+    __slots__ = ()
 
     @t.overload
     async def collect(
@@ -662,17 +690,6 @@ class AsyncPageIterator(
         ],
     ) -> t.Union[ItemPage[_T], t.List[RawAPIItem]]:
         return await self.__class__.gather_from_iterator(self)
-
-    async def _fetch_page(self) -> t.Optional[_PageT]:
-        return (
-            await self._method.call(
-                *self._method.args,
-                **self._method.kwargs,
-                limit=self._pagination_limits.limit,
-                offset=self._offset,
-            )
-            or None
-        )
 
     @classmethod
     async def unix(
@@ -828,11 +845,3 @@ class AsyncPageIterator(
             return_format,
             deduplicate,
         )
-
-    def __aiter__(self) -> Self:
-        return self
-
-    async def __anext__(self) -> _PageT:
-        if self._exhausted:
-            raise self.__class__._STOP_ITERATION_EXC
-        return self._handle_iteration_state(await self._fetch_page())

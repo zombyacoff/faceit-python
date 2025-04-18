@@ -7,21 +7,42 @@ from faceit._typing import ClientT, Model, Raw
 from faceit.http import AsyncClient, SyncClient
 
 from ._base import BaseResource
-from ._championships import AsyncChampionships, SyncChampionships
-from ._matches import AsyncMatches, SyncMatches
-from ._players import AsyncPlayers, SyncPlayers
+from ._championships import (
+    AsyncChampionships,
+    BaseChampionships,
+    SyncChampionships,
+)
+from ._matches import AsyncMatches, BaseMatches, SyncMatches
+from ._pagination import (
+    AsyncPageIterator,
+    BasePageIterator,
+    CollectReturnFormat,
+    SyncPageIterator,
+    TimestampPaginationConfig,
+    check_pagination_support,
+)
+from ._players import AsyncPlayers, BasePlayers, SyncPlayers
 
 __all__ = (
     "AsyncChampionships",
     "AsyncMatches",
+    "AsyncPageIterator",
     "AsyncPlayers",
     "AsyncResources",
+    "BaseChampionships",
+    "BaseMatches",
+    "BasePageIterator",
+    "BasePlayers",
     "BaseResource",
     "BaseResources",
+    "CollectReturnFormat",
     "SyncChampionships",
     "SyncMatches",
+    "SyncPageIterator",
     "SyncPlayers",
     "SyncResources",
+    "TimestampPaginationConfig",
+    "check_pagination_support",
 )
 
 

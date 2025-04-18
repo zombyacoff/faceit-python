@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 from faceit._typing import Annotated, UrlOrEmpty
 from faceit.constants import GameID, Region
 
-from .custom_types import (
+from ._custom_types import (
     FaceitID,
     FaceitMatchID,
     LangFormattedAnyHttpUrl,
