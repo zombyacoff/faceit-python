@@ -18,7 +18,7 @@ from faceit._typing import (
 from faceit.http import AsyncClient, SyncClient
 from faceit.models.custom_types import FaceitMatchID
 
-from ._base import BaseResource, FaceitResourcePath
+from ._base import BaseResource, FaceitResourcePath, ModelPlaceholder
 
 _MatchID: TypeAlias = str
 _MatchIDValidator: TypeAlias = Annotated[
@@ -51,7 +51,7 @@ class SyncMatches(BaseMatches[SyncClient], t.Generic[APIResponseFormatT]):
     ) -> t.Union[RawAPIItem, ModelNotImplemented]:
         return self._validate_response(
             self._client.get(self.PATH / match_id, expect_item=True),
-            None,
+            ModelPlaceholder,
         )
 
     @t.overload
@@ -68,7 +68,7 @@ class SyncMatches(BaseMatches[SyncClient], t.Generic[APIResponseFormatT]):
     ) -> t.Union[RawAPIItem, ModelNotImplemented]:
         return self._validate_response(
             self._client.get(self.PATH / match_id / "stats", expect_item=True),
-            None,
+            ModelPlaceholder,
         )
 
 
@@ -91,7 +91,7 @@ class AsyncMatches(BaseMatches[AsyncClient], t.Generic[APIResponseFormatT]):
     ) -> t.Union[RawAPIItem, ModelNotImplemented]:
         return self._validate_response(
             await self._client.get(self.PATH / match_id, expect_item=True),
-            None,
+            ModelPlaceholder,
         )
 
     @t.overload
@@ -112,5 +112,5 @@ class AsyncMatches(BaseMatches[AsyncClient], t.Generic[APIResponseFormatT]):
             await self._client.get(
                 self.PATH / match_id / "stats", expect_item=True
             ),
-            None,
+            ModelPlaceholder,
         )

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import typing as t
-from enum import IntEnum
 from functools import cached_property
 from itertools import chain, starmap
 from random import choice
@@ -9,7 +8,7 @@ from random import choice
 from pydantic import BaseModel, Field, field_validator
 
 from faceit._typing import Annotated, Self, TypeAlias
-from faceit._utils import get_nested_property
+from faceit._utils import UnsetValue, get_nested_property
 from faceit.constants import RAW_RESPONSE_ITEMS_KEY
 
 from ._championship import Championship
@@ -45,11 +44,7 @@ if t.TYPE_CHECKING:
     _R = t.TypeVar("_R")
 
 
-class _PaginationUnset(IntEnum):
-    UNSET = -1
-
-
-_PaginationLimit: TypeAlias = Annotated[int, Field(ge=_PaginationUnset.UNSET)]
+_PaginationLimit: TypeAlias = Annotated[int, Field(ge=UnsetValue.UNSET)]
 
 
 @t.final
@@ -76,7 +71,7 @@ class ItemPage(BaseModel, t.Generic[_T], frozen=True):
     _time_from: Annotated[
         _PaginationLimit,
         Field(
-            _PaginationUnset.UNSET,
+            UnsetValue.UNSET,
             alias="from",
             description=__time_range_description,
         ),
@@ -84,7 +79,7 @@ class ItemPage(BaseModel, t.Generic[_T], frozen=True):
     _time_to: Annotated[
         _PaginationLimit,
         Field(
-            _PaginationUnset.UNSET,
+            UnsetValue.UNSET,
             alias="to",
             description=__time_range_description,
         ),
@@ -184,10 +179,10 @@ class ItemPage(BaseModel, t.Generic[_T], frozen=True):
     ) -> ItemPage[_R]:
         return cls.model_construct(  # type: ignore[return-value]
             items=items or [],
-            _offset=_PaginationUnset.UNSET,
-            _limit=_PaginationUnset.UNSET,
-            _time_from=_PaginationUnset.UNSET,
-            _time_to=_PaginationUnset.UNSET,
+            _offset=UnsetValue.UNSET,
+            _limit=UnsetValue.UNSET,
+            _time_from=UnsetValue.UNSET,
+            _time_to=UnsetValue.UNSET,
         )
 
     @classmethod

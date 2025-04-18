@@ -76,8 +76,7 @@ class FaceitID(UUID, BaseFaceitID):
         if is_valid_uuid(value):
             return cls(value)
         raise ValueError(
-            f"Invalid {cls.__name__}: "
-            f"'{value}' is not a valid UUID format."
+            f"Invalid {cls.__name__}: '{value}' is not a valid UUID format."
         )
 
 

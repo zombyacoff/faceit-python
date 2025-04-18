@@ -4,6 +4,7 @@ import hashlib
 import json
 import typing as t
 from datetime import datetime, timezone
+from enum import IntEnum
 from functools import lru_cache, reduce
 from uuid import UUID
 
@@ -17,6 +18,10 @@ if t.TYPE_CHECKING:
 # we've chosen to implement them directly to minimize external dependencies
 # This approach reduces project complexity and potential version conflicts
 # while maintaining full control over the implementation details
+
+
+class UnsetValue(IntEnum):
+    UNSET = -1
 
 
 def lazy_import(func: t.Callable[[], _T]) -> t.Callable[[], _T]:
@@ -152,8 +157,9 @@ def create_uuid_validator(
 ) -> t.Callable[[t.Any], str]:
     def validator(value: t.Any, /) -> str:
         if not is_valid_uuid(value):
-            message = error_message.format(arg_name=arg_name, value=value)
-            raise ValueError(message)
+            raise ValueError(
+                error_message.format(arg_name=arg_name, value=value)
+            )
         if isinstance(value, (UUID, str)):
             return str(value)
         assert isinstance(value, bytes)  # noqa: S101

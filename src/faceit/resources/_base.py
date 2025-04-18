@@ -33,6 +33,11 @@ _KT = t.TypeVar("_KT")
 
 _logger = logging.getLogger(__name__)
 
+# Temporary placeholder type for unimplemented models.
+# Serves as a stub during development and should be replaced with
+# concrete models as implementation progresses.
+ModelPlaceholder: None = None
+
 
 @t.final
 class RequestPayload(t.TypedDict):

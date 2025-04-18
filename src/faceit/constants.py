@@ -9,13 +9,11 @@ from warnings import warn
 from pydantic import Field, validate_call
 from strenum import StrEnum
 
-# Type alias moved outside `TYPE_CHECKING`
-# to ensure mypy recognizes it as a type.
 from ._typing import TypeAlias  # noqa: TCH001
 
 if t.TYPE_CHECKING:
-    _ChallengerLevel: TypeAlias = t.Literal["challenger"]
     _EloThreshold: TypeAlias = t.Dict[int, "EloRange"]
+    _ChallengerLevel: TypeAlias = t.Literal["challenger"]
 
 _logger = logging.getLogger(__name__)
 
@@ -318,15 +316,12 @@ class SkillLevel:
             / (self.elo_range.upper - self.elo_range.lower)
         ) * 100
 
-    # Ignoring forward reference lint error (UP037) due to conflict between
-    # pydantic's validate_call decorator and type annotations. The forward reference
-    # is necessary here for proper type hinting of the class's own type.
-    def get_next_level(self) -> t.Optional["SkillLevel"]:  # noqa: UP037
+    def get_next_level(self) -> t.Optional[SkillLevel]:
         if self.is_highest_level:
             return None
         return self.get_level(self.game_id, self.level + 1)
 
-    def get_previous_level(self) -> t.Optional["SkillLevel"]:  # noqa: UP037
+    def get_previous_level(self) -> t.Optional[SkillLevel]:
         if self.level <= 1:
             return None
         return self.get_level(self.game_id, self.level - 1)
@@ -334,24 +329,25 @@ class SkillLevel:
     @t.overload
     @classmethod
     def get_level(
-        cls, game_id: GameID, level: int = Field(ge=1, le=10)
-    ) -> t.Optional["SkillLevel"]: ...  # noqa: UP037
+        cls,
+        game_id: GameID,
+        level: int = Field(ge=1, le=10),
+    ) -> t.Optional[SkillLevel]: ...
 
     @t.overload
     @classmethod
     def get_level(
         cls, game_id: GameID, *, elo: int = Field(ge=MIN_ELO)
-    ) -> t.Optional["SkillLevel"]: ...  # noqa: UP037
+    ) -> t.Optional[SkillLevel]: ...
 
     @classmethod
-    @validate_call
     def get_level(
         cls,
         game_id: GameID,
         level: t.Optional[int] = Field(None, ge=1, le=10),
         *,
         elo: t.Optional[int] = Field(None, ge=MIN_ELO),
-    ) -> t.Optional["SkillLevel"]:  # noqa: UP037
+    ) -> t.Optional[SkillLevel]:
         if game_id not in cls._registry:
             warn(
                 f"Game '{game_id}' is not supported", UserWarning, stacklevel=2
@@ -384,8 +380,7 @@ class SkillLevel:
         raise ValueError("Either level or elo must be specified")
 
     @classmethod
-    @validate_call
-    def get_all_levels(cls, game_id: GameID, /) -> t.List["SkillLevel"]:  # noqa: UP037
+    def get_all_levels(cls, game_id: GameID, /) -> t.List[SkillLevel]:
         return sorted(
             cls._registry.get(game_id, {}).values(), key=attrgetter("level")
         )
@@ -406,11 +401,20 @@ class SkillLevel:
         }
 
 
+# We must wrap `get_level` and `get_all_levels` with `validate_call` after class creation
+# because using `@validate_call` directly on classmethods with forward references
+# (e.g., return type "SkillLevel") causes `NameError: the class is not yet defined`
+# when Pydantic tries to resolve type annotations. Wrapping after definition
+# ensures all references are resolvable and avoids import-time errors.
+SkillLevel.get_level = validate_call(SkillLevel.get_level)  # type: ignore[method-assign]
+SkillLevel.get_all_levels = validate_call(SkillLevel.get_all_levels)  # type: ignore[method-assign]
+
 # Initialize the `SkillLevel` registry when the module is imported.
 # This ensures all skill levels are available immediately without requiring
 # explicit initialization. The registry contains all game skill levels mapped
 # by game_id and level number.
 SkillLevel._initialize_skill_levels_registry()
+
 # Remove both constructor and initialization method after registry setup.
 # This enforces the registry pattern where all valid `SkillLevel` instances
 # are predefined, ensuring data integrity and preventing misuse of the class.

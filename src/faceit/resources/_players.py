@@ -39,17 +39,27 @@ from ._base import (
     BaseResource,
     FaceitResourcePath,
     MappedValidatorConfig,
+    ModelPlaceholder,
     RequestPayload,
 )
 
 _logger = logging.getLogger(__name__)
 
+# Type alias for player ID.
+# Improves code self-documentation and keeps resource modules consistent.
+# Allows flexible substitution (e.g., `ValidUUID`, `str`) as in other modules.
 _PlayerID: TypeAlias = ValidUUID
+# Pydantic validator for `player_id`.
+# Centralizes validation and normalization at the parameter level,
+# so resource methods always receive a valid, normalized ID.
+# Also matches `validate_call` usage for pagination params, reducing boilerplate.
 _PlayerIDValidator: TypeAlias = Annotated[
     _PlayerID,
     AfterValidator(create_uuid_validator(arg_name="player identifier")),
 ]
-_NicknameOrID: TypeAlias = t.Union[str, ValidUUID]
+# Alias for FACEIT ID (`UUID`, `bytes`, `str`) or nickname (`str`).
+# Used for clarity when both forms are accepted by resource methods.
+_NicknameOrPlayerID: TypeAlias = t.Union[str, ValidUUID]
 
 
 class BasePlayers(
@@ -81,7 +91,7 @@ class BasePlayers(
 
     def _process_get_request(
         self,
-        identifier: t.Optional[_NicknameOrID],
+        player_lookup_key: t.Optional[_NicknameOrPlayerID],
         game: t.Optional[GameID],
         game_player_id: t.Optional[str],
         /,
@@ -90,10 +100,10 @@ class BasePlayers(
             game=game, game_player_id=game_player_id
         )
 
-        if identifier is None:
+        if player_lookup_key is None:
             if game is None or game_player_id is None:
                 raise ValueError(
-                    "When 'identifier' is not provided,"
+                    "When 'player_lookup_key' is not provided,"
                     "both 'game' AND 'game_player_id' must be specified"
                 )
             _logger.debug(
@@ -105,20 +115,21 @@ class BasePlayers(
 
         if game is not None or game_player_id is not None:
             warn(
-                "When 'identifier' is provided, "
-                "'game' and 'game_player_id' should not be specified",
+                "When 'player_lookup_key' is provided, "
+                "'game' and 'game_player_id' should not be specified. "
+                "The value of 'player_lookup_key' will take precedence.",
                 UserWarning,
                 stacklevel=3,
             )
 
-        if is_valid_uuid(identifier):
-            _logger.debug("Fetching player by UUID: %s", identifier)
+        if is_valid_uuid(player_lookup_key):
+            _logger.debug("Fetching player by UUID: %s", player_lookup_key)
             return RequestPayload(
-                endpoint=self.PATH / str(identifier), params=params
+                endpoint=self.PATH / str(player_lookup_key), params=params
             )
 
-        _logger.debug("Fetching player by nickname: %s", identifier)
-        params["nickname"] = str(identifier)
+        _logger.debug("Fetching player by nickname: %s", player_lookup_key)
+        params["nickname"] = str(player_lookup_key)
         return RequestPayload(endpoint=self.PATH, params=params)
 
 
@@ -128,7 +139,7 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
 
     @t.overload
     def get(
-        self: SyncPlayers[Raw], identifier: _NicknameOrID
+        self: SyncPlayers[Raw], player_lookup_key: _NicknameOrPlayerID
     ) -> RawAPIItem: ...
 
     @t.overload
@@ -137,7 +148,9 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
     ) -> RawAPIItem: ...
 
     @t.overload
-    def get(self: SyncPlayers[Model], identifier: _NicknameOrID) -> Player: ...
+    def get(
+        self: SyncPlayers[Model], player_lookup_key: _NicknameOrPlayerID
+    ) -> Player: ...
 
     @t.overload
     def get(
@@ -147,7 +160,7 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
     @validate_call
     def get(
         self,
-        identifier: t.Optional[_NicknameOrID] = None,
+        player_lookup_key: t.Optional[_NicknameOrPlayerID] = None,
         *,
         game: t.Optional[GameID] = None,
         game_player_id: t.Optional[str] = None,
@@ -155,7 +168,7 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
         """Fetch player data either by identifier or by game-specific parameters.
 
         Args:
-            identifier: Player's FACEIT UUID or nickname
+            player_lookup_key: Player's FACEIT UUID or nickname
             game: Game identifier (required if using game_player_id)
             game_player_id: Game-specific player ID (requires game parameter)
 
@@ -181,7 +194,9 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
         """
         return self._validate_response(
             self._client.get(
-                **self._process_get_request(identifier, game, game_player_id),
+                **self._process_get_request(
+                    player_lookup_key, game, game_player_id
+                ),
                 expect_item=True,
             ),
             Player,
@@ -246,9 +261,9 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
     def all_bans(
         self, player_id: _PlayerID
     ) -> t.Union[t.List[RawAPIItem], ItemPage[BanEntry]]:
-        # Mypy can't infer return type when passing generic method to higher-order function
-        # Runtime behavior is correct, but static typing is limited by generic invariance
-        return self.__class__._sync_page_iterator.collect(self.bans, player_id)  # type: ignore[misc]
+        return self.__class__._sync_page_iterator.gather_pages(
+            self.bans, player_id
+        )
 
     @t.overload
     def matches_stats(
@@ -310,8 +325,8 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
     def all_matches_stats(
         self, player_id: _PlayerID, game: GameID
     ) -> t.Union[t.List[RawAPIItem], ItemPage[AbstractMatchPlayerStats]]:
-        return self.__class__._sync_page_iterator.collect(
-            self.matches_stats,  # type: ignore[misc]
+        return self.__class__._sync_page_iterator.gather_pages(
+            self.matches_stats,
             player_id,
             game,
             unix=self.__class__._matches_stats_timestamp_cfg,
@@ -376,8 +391,8 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
     def all_history(
         self, player_id: _PlayerID, game: GameID
     ) -> t.Union[t.List[RawAPIItem], ItemPage[Match]]:
-        return self.__class__._sync_page_iterator.collect(
-            self.history,  # type: ignore[misc]
+        return self.__class__._sync_page_iterator.gather_pages(
+            self.history,
             player_id,
             game,
             unix=self.__class__._history_timestamp_cfg,
@@ -433,7 +448,9 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
     def all_hubs(
         self, player_id: _PlayerID
     ) -> t.Union[t.List[RawAPIItem], ItemPage[Hub]]:
-        return self.__class__._sync_page_iterator.collect(self.hubs, player_id)  # type: ignore[misc]
+        return self.__class__._sync_page_iterator.gather_pages(
+            self.hubs, player_id
+        )
 
     @t.overload
     def stats(
@@ -453,7 +470,7 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
             self._client.get(
                 self.PATH / str(player_id) / "stats" / game, expect_page=True
             ),
-            None,
+            ModelPlaceholder,
         )
 
     @t.overload
@@ -506,9 +523,8 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
     def all_teams(
         self, player_id: _PlayerID
     ) -> t.Union[t.List[RawAPIItem], ItemPage[GeneralTeam]]:
-        return self.__class__._sync_page_iterator.collect(
-            self.teams,  # type: ignore[misc]
-            player_id,
+        return self.__class__._sync_page_iterator.gather_pages(
+            self.teams, player_id
         )
 
     @t.overload
@@ -561,9 +577,8 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
     def all_tournaments(
         self, player_id: _PlayerID
     ) -> t.Union[t.List[RawAPIItem], ItemPage[Tournament]]:
-        return self.__class__._sync_page_iterator.collect(
-            self.tournaments,  # type: ignore[misc]
-            player_id,
+        return self.__class__._sync_page_iterator.gather_pages(
+            self.tournaments, player_id
         )
 
 
@@ -573,7 +588,7 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
 
     @t.overload
     async def get(
-        self: AsyncPlayers[Raw], identifier: _NicknameOrID
+        self: AsyncPlayers[Raw], player_lookup_key: _NicknameOrPlayerID
     ) -> RawAPIItem: ...
 
     @t.overload
@@ -583,7 +598,7 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
 
     @t.overload
     async def get(
-        self: AsyncPlayers[Model], identifier: _NicknameOrID
+        self: AsyncPlayers[Model], player_lookup_key: _NicknameOrPlayerID
     ) -> Player: ...
 
     @t.overload
@@ -594,7 +609,7 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
     @validate_call
     async def get(
         self,
-        identifier: t.Optional[_NicknameOrID] = None,
+        player_lookup_key: t.Optional[_NicknameOrPlayerID] = None,
         *,
         game: t.Optional[GameID] = None,
         game_player_id: t.Optional[str] = None,
@@ -602,7 +617,7 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
         """Fetch player data either by identifier or by game-specific parameters asynchronously.
 
         Args:
-            identifier: Player's FACEIT UUID or nickname
+            player_lookup_key: Player's FACEIT UUID or nickname
             game: Game identifier (required if using game_player_id)
             game_player_id: Game-specific player ID (requires game parameter)
 
@@ -628,7 +643,9 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
         """
         return self._validate_response(
             await self._client.get(
-                **self._process_get_request(identifier, game, game_player_id),
+                **self._process_get_request(
+                    player_lookup_key, game, game_player_id
+                ),
                 expect_item=True,
             ),
             Player,
@@ -686,9 +703,8 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
     async def all_bans(
         self, player_id: _PlayerID
     ) -> t.Union[t.List[RawAPIItem], ItemPage[BanEntry]]:
-        return await self.__class__._async_page_iterator.collect(
-            self.bans,  # type: ignore[misc]
-            player_id,
+        return await self.__class__._async_page_iterator.gather_pages(
+            self.bans, player_id
         )
 
     @t.overload
@@ -751,8 +767,8 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
     async def all_matches_stats(
         self, player_id: _PlayerID, game: GameID
     ) -> t.Union[t.List[RawAPIItem], ItemPage[AbstractMatchPlayerStats]]:
-        return await self.__class__._async_page_iterator.collect(
-            self.matches_stats,  # type: ignore[misc]
+        return await self.__class__._async_page_iterator.gather_pages(
+            self.matches_stats,
             player_id,
             game,
             unix=self.__class__._matches_stats_timestamp_cfg,
@@ -817,8 +833,8 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
     async def all_history(
         self, player_id: _PlayerID, game: GameID
     ) -> t.Union[t.List[RawAPIItem], ItemPage[Match]]:
-        return await self.__class__._async_page_iterator.collect(
-            self.history,  # type: ignore[misc]
+        return await self.__class__._async_page_iterator.gather_pages(
+            self.history,
             player_id,
             game,
             unix=self.__class__._history_timestamp_cfg,
@@ -874,9 +890,8 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
     async def all_hubs(
         self, player_id: _PlayerID
     ) -> t.Union[t.List[RawAPIItem], ItemPage[Hub]]:
-        return await self.__class__._async_page_iterator.collect(
-            self.hubs,  # type: ignore[misc]
-            player_id,
+        return await self.__class__._async_page_iterator.gather_pages(
+            self.hubs, player_id
         )
 
     @t.overload
@@ -897,7 +912,7 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
             await self._client.get(
                 self.PATH / str(player_id) / "stats" / game, expect_page=True
             ),
-            None,
+            ModelPlaceholder,
         )
 
     @t.overload
@@ -950,9 +965,8 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
     async def all_teams(
         self, player_id: _PlayerID
     ) -> t.Union[t.List[RawAPIItem], ItemPage[GeneralTeam]]:
-        return await self.__class__._async_page_iterator.collect(
-            self.teams,  # type: ignore[misc]
-            player_id,
+        return await self.__class__._async_page_iterator.gather_pages(
+            self.teams, player_id
         )
 
     @t.overload
@@ -1005,7 +1019,6 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
     async def all_tournaments(
         self, player_id: _PlayerID
     ) -> t.Union[t.List[RawAPIItem], ItemPage[Tournament]]:
-        return await self.__class__._async_page_iterator.collect(
-            self.tournaments,  # type: ignore[misc]
-            player_id,
+        return await self.__class__._async_page_iterator.gather_pages(
+            self.tournaments, player_id
         )

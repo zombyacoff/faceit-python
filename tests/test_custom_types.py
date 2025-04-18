@@ -6,7 +6,6 @@ properly cover the expected behavior of the custom types, especially
 regarding edge cases and integration with `Pydantic`.
 """
 
-import uuid
 import pytest
 from pydantic import BaseModel, ValidationError
 
@@ -17,16 +16,10 @@ from faceit.models.custom_types._faceit_uuid import (
 )
 
 
-@pytest.fixture
-def valid_api_key():
-    """Generate a valid UUID for API key tests."""
-    return str(uuid.uuid4())
-
-
 class TestFaceitID:
-    def test_valid_uuid(self, valid_api_key):
+    def test_valid_uuid(self, valid_uuid):
         # Test with a valid UUID string
-        valid_uuid = valid_api_key
+        valid_uuid = valid_uuid
         faceit_id = FaceitID.validate(valid_uuid)
         assert isinstance(faceit_id, FaceitID)
         assert str(faceit_id) == valid_uuid
@@ -40,10 +33,10 @@ class TestFaceitID:
         with pytest.raises(AttributeError):
             FaceitID(123)
 
-    def test_suffix_handling(self, valid_api_key):
+    def test_suffix_handling(self, valid_uuid):
         # Test that the 'gui' suffix is NOT automatically handled
         # We need to manually remove it before validation
-        valid_uuid = valid_api_key
+        valid_uuid = valid_uuid
         suffixed_uuid = f"{valid_uuid}gui"
 
         # This should work
@@ -62,18 +55,18 @@ class TestFaceitID:
 
 
 class TestFaceitTeamID:
-    def test_valid_team_id(self, valid_api_key):
+    def test_valid_team_id(self, valid_uuid):
         # Test with a valid team ID (prefix + UUID)
-        valid_uuid = valid_api_key
+        valid_uuid = valid_uuid
         valid_team_id = f"team-{valid_uuid}"
 
         team_id = FaceitTeamID.validate(valid_team_id)
         assert isinstance(team_id, FaceitTeamID)
         assert str(team_id) == valid_team_id
 
-    def test_missing_prefix(self, valid_api_key):
+    def test_missing_prefix(self, valid_uuid):
         # Test with a UUID without the required prefix
-        valid_uuid = valid_api_key
+        valid_uuid = valid_uuid
 
         with pytest.raises(ValueError, match="must start with 'team-'"):
             FaceitTeamID.validate(valid_uuid)
@@ -83,9 +76,9 @@ class TestFaceitTeamID:
         with pytest.raises(ValueError, match="contains invalid UUID part"):
             FaceitTeamID.validate("team-not-a-valid-uuid")
 
-    def test_suffix_handling(self, valid_api_key):
+    def test_suffix_handling(self, valid_uuid):
         # Test that the 'gui' suffix is NOT automatically handled
-        valid_uuid = valid_api_key
+        valid_uuid = valid_uuid
         valid_team_id = f"team-{valid_uuid}"
         suffixed_team_id = f"{valid_team_id}gui"
 
@@ -105,18 +98,18 @@ class TestFaceitTeamID:
 
 
 class TestFaceitMatchID:
-    def test_valid_match_id(self, valid_api_key):
+    def test_valid_match_id(self, valid_uuid):
         # Test with a valid match ID (prefix + UUID)
-        valid_uuid = valid_api_key
+        valid_uuid = valid_uuid
         valid_match_id = f"1-{valid_uuid}"
 
         match_id = FaceitMatchID.validate(valid_match_id)
         assert isinstance(match_id, FaceitMatchID)
         assert str(match_id) == valid_match_id
 
-    def test_missing_prefix(self, valid_api_key):
+    def test_missing_prefix(self, valid_uuid):
         # Test with a UUID without the required prefix
-        valid_uuid = valid_api_key
+        valid_uuid = valid_uuid
 
         with pytest.raises(ValueError, match="must start with '1-'"):
             FaceitMatchID.validate(valid_uuid)
@@ -126,9 +119,9 @@ class TestFaceitMatchID:
         with pytest.raises(ValueError, match="contains invalid UUID part"):
             FaceitMatchID.validate("1-not-a-valid-uuid")
 
-    def test_suffix_handling(self, valid_api_key):
+    def test_suffix_handling(self, valid_uuid):
         # Test that the 'gui' suffix is NOT automatically handled
-        valid_uuid = valid_api_key
+        valid_uuid = valid_uuid
         valid_match_id = f"1-{valid_uuid}"
         suffixed_match_id = f"{valid_match_id}gui"
 
@@ -149,12 +142,12 @@ class TestFaceitMatchID:
 
 # Test Pydantic integration
 class TestPydanticIntegration:
-    def test_faceit_id_in_model(self, valid_api_key):
+    def test_faceit_id_in_model(self, valid_uuid):
         class UserModel(BaseModel):
             id: FaceitID
 
         # Valid UUID
-        valid_uuid = valid_api_key
+        valid_uuid = valid_uuid
         user = UserModel(id=valid_uuid)
         assert isinstance(user.id, FaceitID)
         assert str(user.id) == valid_uuid
@@ -170,12 +163,12 @@ class TestPydanticIntegration:
         with pytest.raises(ValidationError):
             UserModel(id="not-a-uuid")
 
-    def test_faceit_team_id_in_model(self, valid_api_key):
+    def test_faceit_team_id_in_model(self, valid_uuid):
         class TeamModel(BaseModel):
             id: FaceitTeamID
 
         # Valid team ID
-        valid_uuid = valid_api_key
+        valid_uuid = valid_uuid
         valid_team_id = f"team-{valid_uuid}"
         team = TeamModel(id=valid_team_id)
         assert isinstance(team.id, FaceitTeamID)
@@ -196,12 +189,12 @@ class TestPydanticIntegration:
         with pytest.raises(ValidationError):
             TeamModel(id="team-not-a-valid-uuid")
 
-    def test_faceit_match_id_in_model(self, valid_api_key):
+    def test_faceit_match_id_in_model(self, valid_uuid):
         class MatchModel(BaseModel):
             id: FaceitMatchID
 
         # Valid match ID
-        valid_uuid = valid_api_key
+        valid_uuid = valid_uuid
         valid_match_id = f"1-{valid_uuid}"
         match = MatchModel(id=valid_match_id)
         assert isinstance(match.id, FaceitMatchID)

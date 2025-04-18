@@ -10,7 +10,6 @@ resource leaks in the test environment.
 
 import asyncio
 import ssl
-import uuid
 from time import time
 from unittest.mock import AsyncMock, Mock, patch
 
@@ -30,13 +29,6 @@ from faceit.http._client import (
     _is_ssl_error,
 )
 from faceit.http._helpers import Endpoint
-
-
-# Fixtures
-@pytest.fixture
-def valid_api_key():
-    """Generate a valid UUID for API key tests."""
-    return str(uuid.uuid4())
 
 
 @pytest.fixture
@@ -92,7 +84,7 @@ def invalid_json_response():
 
 
 @pytest.fixture
-def async_client_factory(valid_api_key):
+def async_client_factory(valid_uuid):
     """Factory fixture that creates AsyncClient instances."""
     clients = []
 
@@ -103,7 +95,7 @@ def async_client_factory(valid_api_key):
             mock_instance.aclose = AsyncMock()
             mock_client.return_value = mock_instance
 
-            client = AsyncClient(valid_api_key)
+            client = AsyncClient(valid_uuid)
             clients.append(client)
             return client
 
@@ -119,11 +111,11 @@ def async_client_factory(valid_api_key):
 class TestBaseAPIClient:
     """Tests for the BaseAPIClient class."""
 
-    def test_init_with_valid_api_key(self, valid_api_key):
+    def test_init_with_valid_api_key(self, valid_uuid):
         """Test initialization with a valid API key."""
         # We need to use a concrete subclass for testing
-        client = SyncClient(valid_api_key)
-        assert client._api_key == valid_api_key
+        client = SyncClient(valid_uuid)
+        assert client._api_key == valid_uuid
         assert client.base_url == BaseAPIClient.DEFAULT_BASE_URL
         assert client.retry_args is not None
         client.close()  # Ensure proper cleanup
@@ -135,64 +127,64 @@ class TestBaseAPIClient:
         assert "Invalid FACEIT API key format" in str(excinfo.value)
         assert BASE_WIKI_URL in str(excinfo.value)
 
-    def test_init_with_bytes_api_key(self, valid_api_key):
+    def test_init_with_bytes_api_key(self, valid_uuid):
         """Test initialization with a bytes API key."""
-        bytes_key = valid_api_key.encode()
+        bytes_key = valid_uuid.encode()
         client = SyncClient(bytes_key)
-        assert client._api_key == valid_api_key
+        assert client._api_key == valid_uuid
         client.close()  # Ensure proper cleanup
 
-    def test_api_key_property(self, valid_api_key):
+    def test_api_key_property(self, valid_uuid):
         """Test that the api_key property masks the actual key."""
-        client = SyncClient(valid_api_key)
+        client = SyncClient(valid_uuid)
         masked_key = client.api_key
-        assert masked_key != valid_api_key
-        assert masked_key.startswith(valid_api_key[:4])
-        assert masked_key.endswith(valid_api_key[-4:])
+        assert masked_key != valid_uuid
+        assert masked_key.startswith(valid_uuid[:4])
+        assert masked_key.endswith(valid_uuid[-4:])
         assert "..." in masked_key
         client.close()  # Ensure proper cleanup
 
-    def test_base_headers(self, valid_api_key):
+    def test_base_headers(self, valid_uuid):
         """Test that base headers are correctly constructed."""
-        client = SyncClient(valid_api_key)
+        client = SyncClient(valid_uuid)
         headers = client._base_headers
         assert headers["Accept"] == "application/json"
-        assert headers["Authorization"] == f"Bearer {valid_api_key}"
+        assert headers["Authorization"] == f"Bearer {valid_uuid}"
         client.close()  # Ensure proper cleanup
 
-    def test_create_endpoint(self, valid_api_key):
+    def test_create_endpoint(self, valid_uuid):
         """Test endpoint creation."""
-        client = SyncClient(valid_api_key)
+        client = SyncClient(valid_uuid)
         endpoint = client.create_endpoint("users", "123")
         assert isinstance(endpoint, Endpoint)
         assert str(endpoint) == f"{client.base_url}/users/123"
         client.close()  # Ensure proper cleanup
 
-    def test_prepare_request_with_string(self, valid_api_key):
+    def test_prepare_request_with_string(self, valid_uuid):
         """Test request preparation with a string endpoint."""
-        client = SyncClient(valid_api_key)
+        client = SyncClient(valid_uuid)
         url, headers = client._prepare_request("users/123")
         assert url == f"{client.base_url}/users/123"
         assert headers == client._base_headers
         client.close()  # Ensure proper cleanup
 
-    def test_prepare_request_with_endpoint(self, valid_api_key):
+    def test_prepare_request_with_endpoint(self, valid_uuid):
         """Test request preparation with an Endpoint object."""
-        client = SyncClient(valid_api_key)
+        client = SyncClient(valid_uuid)
         endpoint = Endpoint("users", "123")
         url, headers = client._prepare_request(endpoint)
         assert url == f"{client.base_url}/users/123"
         assert headers == client._base_headers
         client.close()  # Ensure proper cleanup
 
-    def test_prepare_request_with_custom_headers(self, valid_api_key):
+    def test_prepare_request_with_custom_headers(self, valid_uuid):
         """Test request preparation with custom headers."""
-        client = SyncClient(valid_api_key)
+        client = SyncClient(valid_uuid)
         custom_headers = {"X-Custom": "Value"}
         url, headers = client._prepare_request("users/123", custom_headers)
         assert url == f"{client.base_url}/users/123"
         assert headers["X-Custom"] == "Value"
-        assert headers["Authorization"] == f"Bearer {valid_api_key}"
+        assert headers["Authorization"] == f"Bearer {valid_uuid}"
         client.close()  # Ensure proper cleanup
 
     def test_handle_response_success(self, mock_response):
@@ -225,61 +217,61 @@ class TestSyncClient:
     """Tests for the SyncClient class."""
 
     @patch("httpx.Client")
-    def test_init(self, mock_client, valid_api_key):
+    def test_init(self, mock_client, valid_uuid):
         """Test SyncClient initialization."""
         mock_instance = Mock()
         mock_instance.is_closed = False
         mock_client.return_value = mock_instance
 
-        client = SyncClient(valid_api_key)
+        client = SyncClient(valid_uuid)
         assert isinstance(client, SyncClient)
         mock_client.assert_called_once()
         client.close()  # Ensure proper cleanup
 
     @patch("httpx.Client")
-    def test_close(self, mock_client, valid_api_key):
+    def test_close(self, mock_client, valid_uuid):
         """Test client close method."""
         mock_instance = Mock()
         mock_instance.is_closed = False
         mock_client.return_value = mock_instance
 
-        client = SyncClient(valid_api_key)
+        client = SyncClient(valid_uuid)
         client.close()
         mock_instance.close.assert_called_once()
 
     @patch("httpx.Client")
-    def test_context_manager(self, mock_client, valid_api_key):
+    def test_context_manager(self, mock_client, valid_uuid):
         """Test client as context manager."""
         mock_instance = Mock()
         mock_instance.is_closed = False
         mock_client.return_value = mock_instance
 
-        with SyncClient(valid_api_key) as client:
+        with SyncClient(valid_uuid) as client:
             assert isinstance(client, SyncClient)
         mock_instance.close.assert_called_once()
 
     @patch.object(_BaseSyncClient, "request")
-    def test_get_method(self, mock_request, valid_api_key):
+    def test_get_method(self, mock_request, valid_uuid):
         """Test get method."""
         with patch("httpx.Client") as mock_client:
             mock_instance = Mock()
             mock_instance.is_closed = False
             mock_client.return_value = mock_instance
 
-            client = SyncClient(valid_api_key)
+            client = SyncClient(valid_uuid)
             client.get("users/123")
             mock_request.assert_called_with(SupportedMethod.GET, "users/123")
             client.close()  # Ensure proper cleanup
 
     @patch.object(_BaseSyncClient, "request")
-    def test_post_method(self, mock_request, valid_api_key):
+    def test_post_method(self, mock_request, valid_uuid):
         """Test post method."""
         with patch("httpx.Client") as mock_client:
             mock_instance = Mock()
             mock_instance.is_closed = False
             mock_client.return_value = mock_instance
 
-            client = SyncClient(valid_api_key)
+            client = SyncClient(valid_uuid)
             client.post("users", json={"name": "test"})
             mock_request.assert_called_with(
                 SupportedMethod.POST, "users", json={"name": "test"}
@@ -287,9 +279,7 @@ class TestSyncClient:
             client.close()  # Ensure proper cleanup
 
     @patch("httpx.Client")
-    def test_request_with_retry(
-        self, mock_client, valid_api_key, mock_response
-    ):
+    def test_request_with_retry(self, mock_client, valid_uuid, mock_response):
         """Test request with retry logic."""
         mock_instance = Mock()
         mock_instance.is_closed = False
@@ -297,7 +287,7 @@ class TestSyncClient:
         mock_client.return_value = mock_instance
 
         client = SyncClient(
-            valid_api_key, retry_args={"stop": stop_after_attempt(1)}
+            valid_uuid, retry_args={"stop": stop_after_attempt(1)}
         )
         result = client.request(SupportedMethod.GET, "users/123")
         assert result == {"data": "test_data"}
@@ -305,7 +295,7 @@ class TestSyncClient:
         client.close()  # Ensure proper cleanup
 
     @patch("httpx.Client")
-    def test_request_with_timeout(self, mock_client, valid_api_key):
+    def test_request_with_timeout(self, mock_client, valid_uuid):
         """Test request with timeout."""
         mock_instance = Mock()
         mock_instance.is_closed = False
@@ -313,7 +303,7 @@ class TestSyncClient:
         mock_client.return_value = mock_instance
 
         client = SyncClient(
-            valid_api_key, retry_args={"stop": stop_after_attempt(1)}
+            valid_uuid, retry_args={"stop": stop_after_attempt(1)}
         )
         with pytest.raises(httpx.TimeoutException):
             client.request(SupportedMethod.GET, "users/123")
@@ -362,21 +352,21 @@ class TestAsyncClient:
 
     @pytest.mark.asyncio
     @patch("httpx.AsyncClient")
-    async def test_context_manager(self, mock_client, valid_api_key):
+    async def test_context_manager(self, mock_client, valid_uuid):
         """Test client as async context manager."""
         mock_instance = Mock()
         mock_instance.is_closed = False
         mock_instance.aclose = AsyncMock()
         mock_client.return_value = mock_instance
 
-        async with AsyncClient(valid_api_key) as client:
+        async with AsyncClient(valid_uuid) as client:
             assert isinstance(client, AsyncClient)
         mock_instance.aclose.assert_called_once()
 
     @pytest.mark.asyncio
     @patch("httpx.AsyncClient")
     async def test_request_with_retry(
-        self, mock_client, valid_api_key, mock_response
+        self, mock_client, valid_uuid, mock_response
     ):
         """Test request with retry logic."""
         mock_instance = Mock()
@@ -386,7 +376,7 @@ class TestAsyncClient:
         mock_client.return_value = mock_instance
 
         async with AsyncClient(
-            valid_api_key, retry_args={"stop": stop_after_attempt(1)}
+            valid_uuid, retry_args={"stop": stop_after_attempt(1)}
         ) as client:
             result = await client.request(SupportedMethod.GET, "users/123")
             assert result == {"data": "test_data"}
@@ -394,7 +384,7 @@ class TestAsyncClient:
 
     @pytest.mark.asyncio
     @patch("httpx.AsyncClient")
-    async def test_request_with_timeout(self, mock_client, valid_api_key):
+    async def test_request_with_timeout(self, mock_client, valid_uuid):
         """Test request with timeout."""
         mock_instance = Mock()
         mock_instance.is_closed = False
@@ -405,14 +395,14 @@ class TestAsyncClient:
         mock_client.return_value = mock_instance
 
         async with AsyncClient(
-            valid_api_key, retry_args={"stop": stop_after_attempt(1)}
+            valid_uuid, retry_args={"stop": stop_after_attempt(1)}
         ) as client:
             with pytest.raises(httpx.TimeoutException):
                 await client.request(SupportedMethod.GET, "users/123")
 
     @pytest.mark.asyncio
     @patch("httpx.AsyncClient")
-    async def test_close_all(self, mock_client, valid_api_key):
+    async def test_close_all(self, mock_client, valid_uuid):
         """Test close_all class method."""
         mock_instance = Mock()
         mock_instance.is_closed = False
@@ -422,7 +412,7 @@ class TestAsyncClient:
         # Create multiple clients and track them for cleanup
         clients = []
         try:
-            clients = [AsyncClient(valid_api_key) for _ in range(3)]
+            clients = [AsyncClient(valid_uuid) for _ in range(3)]
             await AsyncClient.close_all()
 
             # Each client should have aclose called once
@@ -433,14 +423,14 @@ class TestAsyncClient:
                 if not client.is_closed:
                     await client.aclose()
 
-    def test_close_raises_error(self, valid_api_key):
+    def test_close_raises_error(self, valid_uuid):
         """Test that close method raises TypeError."""
         with patch("httpx.AsyncClient") as mock_client:
             mock_instance = Mock()
             mock_instance.is_closed = True
             mock_client.return_value = mock_instance
 
-            client = AsyncClient(valid_api_key)
+            client = AsyncClient(valid_uuid)
             try:
                 with pytest.raises(TypeError) as excinfo:
                     client.close()
@@ -535,7 +525,7 @@ class TestSSLErrorHandling:
     @patch("httpx.AsyncClient")
     @patch("faceit.http._client._logger")  # Mock the logger to avoid real logs
     async def test_register_ssl_error(
-        self, mock_logger, mock_client, valid_api_key
+        self, mock_logger, mock_client, valid_uuid
     ):
         """Test _register_ssl_error method."""
         mock_instance = Mock()
@@ -543,7 +533,7 @@ class TestSSLErrorHandling:
         mock_instance.aclose = AsyncMock()
         mock_client.return_value = mock_instance
 
-        async with AsyncClient(valid_api_key) as client:
+        async with AsyncClient(valid_uuid) as client:
             # Save the original update_rate_limit method
             original_update_rate_limit = AsyncClient.update_rate_limit
 
@@ -610,7 +600,7 @@ class TestSSLErrorHandling:
     @patch("httpx.AsyncClient")
     @patch("faceit.http._client._logger")  # Mock the logger to avoid real logs
     async def test_check_connection_recovery(
-        self, mock_logger, mock_client, valid_api_key
+        self, mock_logger, mock_client, valid_uuid
     ):
         """Test _check_connection_recovery method."""
         mock_instance = Mock()
@@ -618,7 +608,7 @@ class TestSSLErrorHandling:
         mock_instance.aclose = AsyncMock()
         mock_client.return_value = mock_instance
 
-        async with AsyncClient(valid_api_key) as client:
+        async with AsyncClient(valid_uuid) as client:
             # Save the original update_rate_limit method
             original_update_rate_limit = AsyncClient.update_rate_limit
 
@@ -713,7 +703,7 @@ class TestRetryLogic:
         assert not retry_predicate(ValueError("Random error"))
 
     @pytest.mark.asyncio
-    async def test_ssl_before_sleep(self, valid_api_key):
+    async def test_ssl_before_sleep(self, valid_uuid):
         """Test the SSL before_sleep callback."""
         with patch("httpx.AsyncClient") as mock_client, patch(
             "faceit.http._client._logger"
@@ -732,7 +722,7 @@ class TestRetryLogic:
             }
 
             async with AsyncClient(
-                valid_api_key, retry_args=custom_retry_args
+                valid_uuid, retry_args=custom_retry_args
             ) as client:
                 # Create a more complete mock for RetryCallState
                 retry_state = Mock()
