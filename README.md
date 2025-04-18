@@ -1,9 +1,14 @@
 # FACEIT Python API Library
 
-A fully type-safe, high-level Python wrapper for the [FACEIT REST API v4](https://docs.faceit.com/docs).
+[![python](https://img.shields.io/badge/python-3.8%2B-3776ab?style=flat-square&labelColor=ffffff&color=3776ab)](https://www.python.org/)
+[![pypi](https://img.shields.io/pypi/v/faceit?style=flat-square&labelColor=ffffff&color=6c757d)](https://pypi.org/project/faceit/)
+
+A fully type-safe, high-level Python wrapper for the [FACEIT REST API](https://docs.faceit.com/docs).
 Provides a seamless, pythonic interface for interacting with FACEIT data — with both synchronous and asynchronous clients, strict type checking, and powerful pagination.
 
-> **Python version:** `>=3.8`
+### Requirements
+
+- Python 3.8 or higher
 
 ## Features
 
@@ -36,8 +41,12 @@ with faceit.Faceit("YOUR_API_KEY") as f:
     print(f"Total CS2 matches for s1mple: {len(matches)}")
     # Example: find a match by attribute
     some_match = matches.find("id", "some_match_id")
-    print(some_match)
+    print(f"First match with the given ID: {some_match or 'No match found'}")
 ```
+
+## Examples
+
+See additional usage examples in the [`examples/`](examples/) directory.
 
 ## Usage Notes
 
@@ -53,36 +62,34 @@ This project was created out of necessity during the development of a product re
 Existing solutions did not offer the level of type safety, convenience, and abstraction needed for robust, maintainable code.
 The goal is to provide a solution approaching enterprise-level quality, while remaining accessible and useful for a wide range of users.
 
-## Examples
-
-See additional usage examples in the [`examples/`](examples/) directory.
-
 ## Project Status & Roadmap
 
-> **Note:**  
-> This library is in **early development**.  
-> Many endpoints, models, and features are not yet implemented.  
-> Webhooks, chat API, and some advanced features are not available yet.  
-> Inline code documentation is minimal, and the Sphinx documentation site is not yet ready.  
-> Expect breaking changes and incomplete coverage.  
+> [!WARNING]
+>
+> This library is currently in **early development**.
+> Many endpoints, models, and features are not yet implemented.
+> Webhooks, chat API, and some advanced features are not available yet.
+> Inline code documentation is minimal, and the Sphinx documentation site is not yet ready.
+> Expect breaking changes and incomplete coverage.
+>
 > **Contributions and feedback are highly welcome!**
 
-Planned improvements:
+### Planned Improvements
 
-- More endpoints and models
-- Webhooks and chat API support
+- Support for more endpoints and models
+- Webhooks and chat API integration
 - Complete documentation and usage guides
-
-## Contributing
-
-Contributions, bug reports, and feature requests are welcome!
-Please open an issue or pull request on GitHub.
-If you want to help with models, documentation, or testing, see the [CONTRIBUTING.md](CONTRIBUTING.md) (coming soon).
 
 ## About
 
 This library is designed to provide a **high-level, pythonic interface** that abstracts away the complexities of the FACEIT API.
 With advanced pagination, strict typing, and pydantic models, you can focus on your logic, not on API details.
+
+## Contributing
+
+Contributions, bug reports, and feature requests are welcome!
+Please open an issue or pull request on GitHub.
+If you want to help with models, documentation, or testing, see the [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 

@@ -312,12 +312,12 @@ class SkillLevel:
             warn(
                 "Cannot calculate progress percentage for highest level",
                 UserWarning,
-                stacklevel=2,
+                stacklevel=4,
             )
             return None
 
         if not self.contains_elo(elo):
-            warn(f"Elo {elo} is out of range", UserWarning, stacklevel=2)
+            warn(f"Elo {elo} is out of range", UserWarning, stacklevel=4)
             return None
 
         assert isinstance(self.elo_range.upper, int)  # noqa: S101
@@ -350,7 +350,7 @@ class SkillLevel:
     ) -> t.Optional[SkillLevel]:
         if game_id not in cls._registry:
             warn(
-                f"Game '{game_id}' is not supported", UserWarning, stacklevel=2
+                f"Game '{game_id}' is not supported", UserWarning, stacklevel=4
             )
             return None
 
@@ -359,7 +359,7 @@ class SkillLevel:
                 "Both 'level' and 'elo' parameters provided; "
                 "'level' takes precedence",
                 UserWarning,
-                stacklevel=2,
+                stacklevel=4,
             )
 
         if level is not None:

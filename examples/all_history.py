@@ -7,4 +7,4 @@ with faceit.Faceit("YOUR_API_KEY") as f:
     print(f"Total CS2 matches for s1mple: {len(matches)}")
     # Example: find a match by attribute
     some_match = matches.find("id", "some_match_id")
-    print(some_match)
+    print(f"First match with the given ID: {some_match or 'No match found'}")

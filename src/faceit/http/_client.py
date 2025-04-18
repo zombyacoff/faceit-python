@@ -532,7 +532,7 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
                     f"Request limit of {new_limit} exceeds "
                     f"maximum allowed ({cls.MAX_CONCURRENT_REQUESTS})",
                     UserWarning,
-                    stacklevel=2,
+                    stacklevel=4,
                 )
                 new_limit = cls.MAX_CONCURRENT_REQUESTS
 

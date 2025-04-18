@@ -119,7 +119,7 @@ class BasePlayers(
                 "'game' and 'game_player_id' should not be specified. "
                 "The value of 'player_lookup_key' will take precedence.",
                 UserWarning,
-                stacklevel=3,
+                stacklevel=5,
             )
 
         if is_valid_uuid(player_lookup_key):

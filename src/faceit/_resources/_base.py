@@ -145,7 +145,11 @@ class BaseResource(t.Generic[ClientT], ABC):
                 f"No model defined for {key_name} '{key}'. "
                 f"Consider using the raw response.",
                 UserWarning,
-                stacklevel=3,
+                # `stacklevel=5` is required due to additional stack frames
+                # introduced by Pydantic's `@validate_call` decorator.
+                # This ensures the warning points to the user's code,
+                # not internal validation layers.
+                stacklevel=5,
             )
             return response
 
@@ -165,7 +169,14 @@ class BaseResource(t.Generic[ClientT], ABC):
         validator: t.Optional[t.Type[ModelT]],
         /,
     ) -> t.Union[_ResponseT, ModelT]:
-        if validator is not None and not self.raw:
+        if validator is None:
+            warn(
+                "No model defined for this response. Validation and model parsing are "
+                "unavailable. Use the raw version for explicit, unprocessed data.",
+                UserWarning,
+                stacklevel=5,
+            )
+        elif not self.raw:
             try:
                 return validator.model_validate(response)
             except ValidationError:

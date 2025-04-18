@@ -462,6 +462,39 @@ class _BaseSyncPageIterator(
         return self._handle_iteration_state(self._fetch_page())
 
 
+class _BasyAsyncPageIterator(
+    BasePageIterator[
+        t.Union[
+            AsyncPaginationMethod[_PageT], AsyncUnixPaginationMethod[_PageT]
+        ],
+        _PageT,
+    ],
+    t.AsyncIterator[_PageT],
+):
+    __slots__ = ()
+
+    _STOP_ITERATION_EXC: t.ClassVar = StopAsyncIteration
+
+    async def _fetch_page(self) -> t.Optional[_PageT]:
+        return (
+            await self._method.call(
+                *self._method.args,
+                **self._method.kwargs,
+                limit=self._pagination_limits.limit,
+                offset=self._offset,
+            )
+            or None
+        )
+
+    def __aiter__(self) -> Self:
+        return self
+
+    async def __anext__(self) -> _PageT:
+        if self._exhausted:
+            raise self.__class__._STOP_ITERATION_EXC
+        return self._handle_iteration_state(await self._fetch_page())
+
+
 @t.final
 class SyncPageIterator(_BaseSyncPageIterator[_PageT]):
     __slots__ = ()
@@ -634,39 +667,6 @@ class SyncPageIterator(_BaseSyncPageIterator[_PageT]):
             return_format,
             deduplicate,
         )
-
-
-class _BasyAsyncPageIterator(
-    BasePageIterator[
-        t.Union[
-            AsyncPaginationMethod[_PageT], AsyncUnixPaginationMethod[_PageT]
-        ],
-        _PageT,
-    ],
-    t.AsyncIterator[_PageT],
-):
-    __slots__ = ()
-
-    _STOP_ITERATION_EXC: t.ClassVar = StopAsyncIteration
-
-    async def _fetch_page(self) -> t.Optional[_PageT]:
-        return (
-            await self._method.call(
-                *self._method.args,
-                **self._method.kwargs,
-                limit=self._pagination_limits.limit,
-                offset=self._offset,
-            )
-            or None
-        )
-
-    def __aiter__(self) -> Self:
-        return self
-
-    async def __anext__(self) -> _PageT:
-        if self._exhausted:
-            raise self.__class__._STOP_ITERATION_EXC
-        return self._handle_iteration_state(await self._fetch_page())
 
 
 @t.final
