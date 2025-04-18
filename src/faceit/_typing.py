@@ -4,18 +4,7 @@ from uuid import UUID
 
 from pydantic import AnyHttpUrl, BaseModel, Field
 
-if sys.version_info >= (3, 13):
-    from typing import (
-        Annotated,
-        Doc,
-        NotRequired,
-        ParamSpec,
-        Required,
-        Self,
-        TypeAlias,
-        TypeGuard,
-    )
-elif sys.version_info >= (3, 11):
+if sys.version_info >= (3, 11):
     from typing import (
         Annotated,
         NotRequired,
@@ -26,16 +15,14 @@ elif sys.version_info >= (3, 11):
         TypeGuard,
     )
 
-    from typing_extensions import Doc
 elif sys.version_info >= (3, 10):
     from typing import Annotated, ParamSpec, TypeAlias, TypeGuard
 
-    from typing_extensions import Doc, NotRequired, Required, Self
+    from typing_extensions import NotRequired, Required, Self
 elif sys.version_info >= (3, 9):
     from typing import Annotated
 
     from typing_extensions import (
-        Doc,
         NotRequired,
         ParamSpec,
         Required,
@@ -46,7 +33,6 @@ elif sys.version_info >= (3, 9):
 else:
     from typing_extensions import (
         Annotated,
-        Doc,
         NotRequired,
         ParamSpec,
         Required,
@@ -60,11 +46,14 @@ if t.TYPE_CHECKING:
     from .http import Endpoint
     from .http._client import BaseAPIClient
 
+# NOTE:
+# We plan to migrate to using the `Doc` annotation for documentation
+# as soon as it is officially supported in Python (i.e., after PEP 727 is accepted
+# and implemented in type checkers and major IDEs such as VSCode and PyCharm).
+# Until then, we will continue to rely on traditional docstrings and comments.
+
 __all__ = (
     "Annotated",
-    # Will transition to this documentation style when VSCode and other IDEs
-    # provide proper support for PEP 727 Doc annotations
-    "Doc",
     "NotRequired",
     "ParamSpec",
     "Required",
