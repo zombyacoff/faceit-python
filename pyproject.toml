@@ -95,6 +95,7 @@ lint.ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
+"examples/*" = ["ALL"]
 "tests/*" = ["ALL"]
 "_.py" = ["ALL"]
 "_async.py" = ["ALL"]
