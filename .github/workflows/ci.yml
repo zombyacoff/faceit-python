@@ -30,7 +30,11 @@ jobs:
         with:
           path: |
             ~/.cache/pypoetry
+            .venv
           key: poetry-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Clear Poetry cache (debug)
+        run: poetry cache clear pypi --all
 
       - name: Configure Poetry to use in-project virtualenv
         run: poetry config virtualenvs.in-project true
