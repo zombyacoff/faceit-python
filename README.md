@@ -7,13 +7,13 @@ Provides a seamless, pythonic interface for interacting with FACEIT data — wit
 
 ## Features
 
-- **High-level, idiomatic API** – Work with FACEIT as if it were a native Python service, not just raw HTTP.
-- **Full type safety** – 100% compatible with [mypy](https://mypy-lang.org/) and other type checkers.
-- **Sync \& async support** – Built on [httpx](https://www.python-httpx.org/); use whichever style fits your project.
-- **Pydantic models** – All data models inherit from [pydantic.BaseModel](https://docs.pydantic.dev/latest/usage/models/), providing robust validation and convenient methods.
-- **Advanced pagination** – Both cursor-based and unix-time-based iterators are included.
-- **Flexible data access** – Choose between raw data and fully parsed models (`resources.raw_players` vs `resources.players`).
-- **Page collection utilities** – Paginated responses in model mode are wrapped in an `ItemPage` collection, supporting convenient methods like `.map()`, `.filter()`, `.find()`, and more.
+- **High-level, idiomatic API** – Work with FACEIT as if it were a native Python service.
+- **Full type safety** – Compatible with [mypy](https://mypy-lang.org/) and other type checkers.
+- **Sync & async support** – Built on [httpx](https://www.python-httpx.org/).
+- **Pydantic models** – All data models inherit from [pydantic.BaseModel](https://docs.pydantic.dev/latest/usage/models/).
+- **Advanced pagination** – Both cursor-based and unix-time-based iterators.
+- **Flexible data access** – Choose between raw data and parsed models (`resources.raw_players` / `resources.players`).
+- **Page collection utilities** – Paginated responses in model mode are wrapped in an `ItemPage` collection with convenient methods: `.map()`, `.filter()`, `.find()`, etc.
 
 ## Installation
 
@@ -41,12 +41,11 @@ with faceit.Faceit("YOUR_API_KEY") as f:
 
 ## Usage Notes
 
-- All data models are implemented using [pydantic](https://docs.pydantic.dev/latest/usage/models/), providing validation, serialization, and methods like `.model_dump()` and `.model_dump_json()`.
 - Both synchronous (`faceit.Faceit`) and asynchronous (`faceit.AsyncFaceit`) clients are available.
-- You can either pass your API key directly or provide a pre-configured HTTP client (`faceit.SyncClient` or `faceit.AsyncClient`) to the constructor. Additional HTTP client options are supported.
-- Paginated queries return an `ItemPage` collection in model mode, supporting convenient operations such as `map`, `filter`, and attribute-based search.
-- Both raw and model-based data access are supported (e.g., `resources.raw_players` for raw dictionaries, `resources.players` for validated models).
-- The library is strictly type-annotated and fully compatible with [mypy](https://mypy-lang.org/).
+- You can pass your API key directly or provide a pre-configured HTTP client (`faceit.SyncClient` or `faceit.AsyncClient`).
+- Paginated queries in model mode return an `ItemPage` collection with utility methods.
+- Both raw and model-based data access are supported.
+- The library is strictly type-annotated.
 
 ## Motivation
 
@@ -56,16 +55,16 @@ The goal is to provide a solution approaching enterprise-level quality, while re
 
 ## Examples
 
-Additional usage examples are available in the [`examples/`](examples/) directory.
+See additional usage examples in the [`examples/`](examples/) directory.
 
 ## Project Status & Roadmap
 
-> [!NOTE]
-> This library is in **early development**.
-> Many endpoints, models, and features are not yet implemented.
-> Webhooks, chat API, and some advanced features are not available yet.
-> Inline code documentation is minimal, and the Sphinx documentation site is not yet ready.
-> Expect breaking changes and incomplete coverage.
+> **Note:**  
+> This library is in **early development**.  
+> Many endpoints, models, and features are not yet implemented.  
+> Webhooks, chat API, and some advanced features are not available yet.  
+> Inline code documentation is minimal, and the Sphinx documentation site is not yet ready.  
+> Expect breaking changes and incomplete coverage.  
 > **Contributions and feedback are highly welcome!**
 
 Planned improvements:
@@ -82,12 +81,12 @@ If you want to help with models, documentation, or testing, see the [CONTRIBUTIN
 
 ## About
 
-This library is not just a thin HTTP wrapper — it is designed to provide a **high-level, pythonic interface** that abstracts away the complexities of the FACEIT API.
+This library is designed to provide a **high-level, pythonic interface** that abstracts away the complexities of the FACEIT API.
 With advanced pagination, strict typing, and pydantic models, you can focus on your logic, not on API details.
 
 ## License
 
-Apache 2.0 License
+Apache 2.0 License  
 Copyright © 2025 Alexey Svidersky (zombyacoff)
 
 See [LICENSE](LICENSE) for details.
