@@ -3,47 +3,28 @@ from abc import ABC
 from dataclasses import dataclass
 from functools import cached_property
 
-from faceit._typing import ClientT, Model, Raw
-from faceit.http import AsyncClient, SyncClient
+from faceit._typing import ClientT as ClientT
+from faceit._typing import Model as Model
+from faceit._typing import Raw as Raw
+from faceit.http import AsyncClient as AsyncClient
+from faceit.http import SyncClient as SyncClient
 
-from ._base import BaseResource
-from ._championships import (
-    AsyncChampionships,
-    BaseChampionships,
-    SyncChampionships,
-)
-from ._matches import AsyncMatches, BaseMatches, SyncMatches
-from ._pagination import (
-    AsyncPageIterator,
-    BasePageIterator,
-    CollectReturnFormat,
-    SyncPageIterator,
-    TimestampPaginationConfig,
-    check_pagination_support,
-)
-from ._players import AsyncPlayers, BasePlayers, SyncPlayers
-
-__all__ = (
-    "AsyncChampionships",
-    "AsyncMatches",
-    "AsyncPageIterator",
-    "AsyncPlayers",
-    "AsyncResources",
-    "BaseChampionships",
-    "BaseMatches",
-    "BasePageIterator",
-    "BasePlayers",
-    "BaseResource",
-    "BaseResources",
-    "CollectReturnFormat",
-    "SyncChampionships",
-    "SyncMatches",
-    "SyncPageIterator",
-    "SyncPlayers",
-    "SyncResources",
-    "TimestampPaginationConfig",
-    "check_pagination_support",
-)
+from ._base import BaseResource as BaseResource
+from ._championships import AsyncChampionships as AsyncChampionships
+from ._championships import BaseChampionships as BaseChampionships
+from ._championships import SyncChampionships as SyncChampionships
+from ._matches import AsyncMatches as AsyncMatches
+from ._matches import BaseMatches as BaseMatches
+from ._matches import SyncMatches as SyncMatches
+from ._pagination import AsyncPageIterator as AsyncPageIterator
+from ._pagination import BasePageIterator as BasePageIterator
+from ._pagination import CollectReturnFormat as CollectReturnFormat
+from ._pagination import SyncPageIterator as SyncPageIterator
+from ._pagination import TimestampPaginationConfig as TimestampPaginationConfig
+from ._pagination import check_pagination_support as check_pagination_support
+from ._players import AsyncPlayers as AsyncPlayers
+from ._players import BasePlayers as BasePlayers
+from ._players import SyncPlayers as SyncPlayers
 
 
 @dataclass(eq=False, frozen=True)

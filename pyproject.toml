@@ -45,6 +45,7 @@ ruff = "^0.4.8"
 
 [tool.mypy]
 python_version = "3.8"
+no_implicit_reexport = true
 exclude = [
     "_.py",
     "_async.py",
@@ -58,6 +59,7 @@ pythonpath = "."
 line-length = 79
 preview = true
 target-version = "py38"
+exclude = ["types.py"]
 lint.select = ["ALL"]
 lint.ignore = [
     "ANN401",
@@ -90,6 +92,8 @@ lint.ignore = [
 [tool.ruff.lint.per-file-ignores]
 "examples/*" = ["ALL"]
 "tests/*" = ["ALL"]
+"types.py" = ["F401", "PLC041"]
+"__init__.py" = ["F401", "PLC041"]
 "_.py" = ["ALL"]
 "_async.py" = ["ALL"]
 

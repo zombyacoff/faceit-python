@@ -24,7 +24,6 @@ from faceit._utils import create_uuid_validator, is_valid_uuid
 from faceit.constants import GameID
 from faceit.http import AsyncClient, SyncClient
 from faceit.models import (
-    AbstractMatchPlayerStats,
     BanEntry,
     CS2MatchPlayerStats,
     GeneralTeam,
@@ -34,6 +33,7 @@ from faceit.models import (
     Player,
     Tournament,
 )
+from faceit.models._player import AbstractMatchPlayerStats
 
 from ._base import (
     BaseResource,
