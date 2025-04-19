@@ -1,7 +1,4 @@
 import typing as t
-from abc import ABC
-from dataclasses import dataclass
-from functools import cached_property
 
 from faceit._typing import ClientT as ClientT
 from faceit._typing import Model as Model
@@ -9,6 +6,8 @@ from faceit._typing import Raw as Raw
 from faceit.http import AsyncClient as AsyncClient
 from faceit.http import SyncClient as SyncClient
 
+from ._aggregator_factory import BaseResources as BaseResources
+from ._aggregator_factory import resource_aggregator as _aggregator
 from ._base import BaseResource as BaseResource
 from ._championships import AsyncChampionships as AsyncChampionships
 from ._championships import BaseChampionships as BaseChampionships
@@ -25,62 +24,51 @@ from ._pagination import check_pagination_support as check_pagination_support
 from ._players import AsyncPlayers as AsyncPlayers
 from ._players import BasePlayers as BasePlayers
 from ._players import SyncPlayers as SyncPlayers
-
-
-@dataclass(eq=False, frozen=True)
-class BaseResources(t.Generic[ClientT], ABC):
-    _client: ClientT
+from ._rankings import AsyncRankings as AsyncRankings
+from ._rankings import BaseRankings as BaseRankings
+from ._rankings import SyncRankings as SyncRankings
+from ._teams import AsyncTeams as AsyncTeams
+from ._teams import BaseTeams as BaseTeams
+from ._teams import SyncTeams as SyncTeams
 
 
 @t.final
+@_aggregator(
+    SyncMatches, SyncPlayers, SyncChampionships, SyncTeams, SyncRankings
+)
 class SyncResources(BaseResources[SyncClient]):
-    @cached_property
-    def raw_championships(self) -> SyncChampionships[Raw]:
-        return SyncChampionships(self._client, raw=True)
+    championships: SyncChampionships[Model]
+    raw_championships: SyncChampionships[Raw]
 
-    @cached_property
-    def championships(self) -> SyncChampionships[Model]:
-        return SyncChampionships(self._client, raw=False)
+    matches: SyncMatches[Model]
+    raw_matches: SyncMatches[Raw]
 
-    @cached_property
-    def raw_matches(self) -> SyncMatches[Raw]:
-        return SyncMatches(self._client, raw=True)
+    players: SyncPlayers[Model]
+    raw_players: SyncPlayers[Raw]
 
-    @cached_property
-    def matches(self) -> SyncMatches[Model]:
-        return SyncMatches(self._client, raw=False)
+    teams: SyncTeams[Model]
+    raw_teams: SyncTeams[Raw]
 
-    @cached_property
-    def raw_players(self) -> SyncPlayers[Raw]:
-        return SyncPlayers(self._client, raw=True)
-
-    @cached_property
-    def players(self) -> SyncPlayers[Model]:
-        return SyncPlayers(self._client, raw=False)
+    rankings: SyncRankings[Model]
+    raw_rankings: SyncRankings[Raw]
 
 
 @t.final
+@_aggregator(
+    AsyncMatches, AsyncPlayers, AsyncChampionships, AsyncTeams, AsyncRankings
+)
 class AsyncResources(BaseResources[AsyncClient]):
-    @cached_property
-    def raw_championships(self) -> AsyncChampionships[Raw]:
-        return AsyncChampionships(self._client, raw=True)
+    matches: AsyncMatches[Model]
+    raw_matches: AsyncMatches[Raw]
 
-    @cached_property
-    def championships(self) -> AsyncChampionships[Model]:
-        return AsyncChampionships(self._client, raw=False)
+    players: AsyncPlayers[Model]
+    raw_players: AsyncPlayers[Raw]
 
-    @cached_property
-    def raw_matches(self) -> AsyncMatches[Raw]:
-        return AsyncMatches(self._client, raw=True)
+    championships: AsyncChampionships[Model]
+    raw_championships: AsyncChampionships[Raw]
 
-    @cached_property
-    def matches(self) -> AsyncMatches[Model]:
-        return AsyncMatches(self._client, raw=False)
+    teams: AsyncTeams[Model]
+    raw_teams: AsyncTeams[Raw]
 
-    @cached_property
-    def raw_players(self) -> AsyncPlayers[Raw]:
-        return AsyncPlayers(self._client, raw=True)
-
-    @cached_property
-    def players(self) -> AsyncPlayers[Model]:
-        return AsyncPlayers(self._client, raw=False)
+    rankings: AsyncRankings[Model]
+    raw_rankings: AsyncRankings[Raw]

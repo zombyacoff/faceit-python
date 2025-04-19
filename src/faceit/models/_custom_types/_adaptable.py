@@ -2,8 +2,16 @@ from __future__ import annotations
 
 import typing as t
 
-from pydantic import AnyHttpUrl, GetCoreSchemaHandler, RootModel
+from pydantic import (
+    AfterValidator,
+    AnyHttpUrl,
+    GetCoreSchemaHandler,
+    RootModel,
+)
 from pydantic_core import core_schema
+from pydantic_extra_types.country import CountryAlpha2
+
+from faceit._typing import Annotated, TypeAlias
 
 from ._utils import build_validatable_string_type_schema
 
@@ -11,6 +19,15 @@ _T = t.TypeVar("_T")
 
 if t.TYPE_CHECKING:
     _R = t.TypeVar("_R")
+
+# TODO: Integrate this type alias into all data models in the future
+Country: TypeAlias = Annotated[
+    CountryAlpha2, AfterValidator(lambda x: t.cast(str, x).lower())
+]
+"""
+Type alias for country codes that are always validated and converted to lowercase.
+Used because Faceit API requires country codes to be in lowercase.
+"""
 
 
 @t.final
@@ -64,7 +81,7 @@ class LangFormattedAnyHttpUrl:
 
     @classmethod
     def __get_pydantic_core_schema__(
-        cls, source_type: t.Any, handler: GetCoreSchemaHandler
+        cls, source_type: t.Type[t.Any], handler: GetCoreSchemaHandler
     ) -> core_schema.CoreSchema:
         del source_type, handler
         return build_validatable_string_type_schema(cls)
@@ -74,7 +91,7 @@ class LangFormattedAnyHttpUrl:
 class NullableList(t.List[_T]):
     @classmethod
     def __get_pydantic_core_schema__(
-        cls, source_type: t.Any, handler: GetCoreSchemaHandler
+        cls, source_type: t.Type[t.Any], handler: GetCoreSchemaHandler
     ) -> core_schema.CoreSchema:
         return core_schema.no_info_before_validator_function(
             lambda value: value or [],

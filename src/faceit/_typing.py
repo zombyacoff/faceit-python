@@ -46,8 +46,7 @@ if t.TYPE_CHECKING:
     from .http import Endpoint
     from .http._client import BaseAPIClient
 
-# NOTE:
-# We plan to migrate to using the `Doc` annotation for documentation
+# NOTE: We plan to migrate to using the `Doc` annotation for documentation
 # as soon as it is officially supported in Python (i.e., after PEP 727 is accepted
 # and implemented in type checkers and major IDEs such as VSCode and PyCharm).
 # Until then, we will continue to rely on traditional docstrings and comments.
@@ -68,7 +67,7 @@ _T_co = t.TypeVar("_T_co", covariant=True)
 
 ModelT = t.TypeVar("ModelT", bound=BaseModel)
 ClientT = t.TypeVar("ClientT", bound="BaseAPIClient")
-ResourceT = t.TypeVar("ResourceT", bound="BaseResources")
+ResourcesT = t.TypeVar("ResourcesT", bound="BaseResources")
 
 APIResponseFormatT = t.TypeVar("APIResponseFormatT", "Raw", "Model")
 PaginationMethodT = t.TypeVar("PaginationMethodT", bound="BaseMethodProtocol")
@@ -79,8 +78,8 @@ UUIDOrEmpty: TypeAlias = t.Union[UUID, EmptyString]
 EndpointParam: TypeAlias = t.Union[str, "Endpoint"]
 ValidUUID: TypeAlias = t.Union[UUID, str, bytes]
 
-Raw: TypeAlias = t.Literal[True]
-Model: TypeAlias = t.Literal[False]
+Raw = t.NewType("Raw", type)
+Model = t.NewType("Model", type)
 
 # Placeholder type that signals developers to implement a proper model
 # for a resource method. Acts as a temporary stub during development.

@@ -4,8 +4,7 @@ import typing as t
 from abc import ABC, abstractmethod
 from uuid import UUID
 
-from faceit._repr import representation
-from faceit._utils import is_valid_uuid
+from faceit._utils import is_valid_uuid, representation
 
 from ._utils import build_validatable_string_type_schema
 
@@ -24,7 +23,7 @@ class _BaseFaceitUUIDValidator(ABC):
 
     @classmethod
     @abstractmethod
-    def validate(cls, value: str, /) -> Self:
+    def _validate(cls, value: str, /) -> Self:
         raise NotImplementedError
 
     @classmethod
@@ -50,12 +49,12 @@ class _BaseFaceitUUIDValidator(ABC):
 
     @classmethod
     def __get_pydantic_core_schema__(
-        cls, source_type: t.Any, handler: GetCoreSchemaHandler
+        cls, source_type: t.Type[t.Any], handler: GetCoreSchemaHandler
     ) -> CoreSchema:
         del source_type, handler
         return build_validatable_string_type_schema(
             UUID,
-            lambda value: cls.validate(cls._remove_prefix_and_suffix(value)),
+            lambda value: cls._validate(cls._remove_prefix_and_suffix(value)),
         )
 
 
@@ -72,7 +71,7 @@ class FaceitID(UUID, BaseFaceitID):
     __slots__ = ()
 
     @classmethod
-    def validate(cls, value: str, /) -> Self:
+    def _validate(cls, value: str, /) -> Self:
         if is_valid_uuid(value):
             return cls(value)
         raise ValueError(
@@ -91,7 +90,7 @@ class _FaceitIDWithUniquePrefix(str, BaseFaceitID, ABC):
         cls.UNIQUE_PREFIX = prefix
 
     @classmethod
-    def validate(cls, value: str, /) -> Self:
+    def _validate(cls, value: str, /) -> Self:
         if not value.startswith(cls.UNIQUE_PREFIX):
             raise ValueError(
                 f"Invalid {cls.__name__}: "

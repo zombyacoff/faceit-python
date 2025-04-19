@@ -1,23 +1,41 @@
+"""Utility functions and helpers for internal use.
+
+While similar utility functions likely exist in third-party libraries,
+we've chosen to implement them directly to minimize external dependencies.
+This approach reduces project complexity and potential version conflicts
+while maintaining full control over the implementation details.
+
+Some API methods return Unix timestamps in milliseconds.
+
+We maintain our own `UUID` validation implementation despite potentially more
+efficient alternatives. This specific implementation is crucial for the
+library's internal logic to distinguish between different resource types
+(e.g., nickname vs ID) and supports the expected behavior of various
+resource handlers.
+"""
+
 from __future__ import annotations
 
-import hashlib
 import json
+import reprlib
 import typing as t
+from contextlib import suppress
 from datetime import datetime, timezone
 from enum import IntEnum
 from functools import lru_cache, reduce
+from hashlib import sha256
 from uuid import UUID
 
 if t.TYPE_CHECKING:
-    from ._typing import ParamSpec
+    from ._typing import TypeAlias
 
     _T = t.TypeVar("_T")
-    _P = ParamSpec("_P")
+    _ClassT = t.TypeVar("_ClassT", bound=t.Type)
 
-# NOTE: While similar utility functions likely exist in third-party libraries,
-# we've chosen to implement them directly to minimize external dependencies
-# This approach reduces project complexity and potential version conflicts
-# while maintaining full control over the implementation details
+_ReprMethod: TypeAlias = t.Callable[[], str]
+
+_UUID_BYTES: t.Final = 16
+_UNINITIALIZED_MARKER: t.Final = "uninitialized"
 
 
 class UnsetValue(IntEnum):
@@ -68,26 +86,26 @@ def get_nested_property(
         return default
 
 
-def get_hashable_representation(obj: t.Any, /) -> int:
-    try:
+def _fallback_hash(obj: str, /) -> int:
+    return int.from_bytes(
+        sha256(obj.encode()).digest()[:8], "big", signed=True
+    )
+
+
+def _get_hashable_representation(obj: t.Any, /) -> int:
+    with suppress(TypeError):
         return hash(obj)
-    except TypeError:
-        try:
-            return int.from_bytes(
-                hashlib.sha256(
-                    json.dumps(obj, sort_keys=True, default=str).encode()
-                ).digest()[:8],
-                "big",
-                signed=True,
-            )
-        except (TypeError, ValueError):
-            # For objects that can't be JSON serialized,
-            # use their string representation
-            # This is less precise but safer than pickle
-            return hash(str(obj))
+    try:
+        obj_str = json.dumps(obj, sort_keys=True, default=str)
+    except (TypeError, AttributeError):
+        obj_str = str(obj)
+    return _fallback_hash(obj_str)
 
 
-# NOTE: Some API methods return Unix timestamps in milliseconds
+def deduplicate_unhashable(values: t.Iterable[_T], /) -> t.List[_T]:
+    return list(
+        {_get_hashable_representation(item): item for item in values}.values()
+    )
 
 
 def to_unix(
@@ -110,15 +128,6 @@ def from_unix(
             value / (1000 if millis else 1), tz=timezone.utc
         )
     raise ValueError(f"Expected int or None, got {type(value).__name__}")
-
-
-# We maintain our own `UUID` validation implementation despite potentially more
-# efficient alternatives. This specific implementation is crucial for the
-# library's internal logic to distinguish between different resource types
-# (e.g., nickname vs ID) and supports the expected behavior of various
-# resource handlers
-
-_UUID_BYTES: t.Final = 16
 
 
 def to_uuid(value: t.Union[str, bytes], /) -> UUID:
@@ -166,3 +175,48 @@ def create_uuid_validator(
         return str(to_uuid(value))
 
     return validator
+
+
+def _format_fields(
+    obj: t.Any, fields: t.Tuple[str, ...], joiner: str = " ", /
+) -> str:
+    return (
+        joiner.join(
+            f"{field}={reprlib.repr(getattr(obj, field))}" for field in fields
+        )
+        if all(hasattr(obj, field) for field in fields)
+        else repr(_UNINITIALIZED_MARKER)
+    )
+
+
+def _apply_representation(
+    cls: _ClassT, fields: t.Tuple[str, ...], use_str: bool, /
+) -> _ClassT:
+    has_str = getattr(cls, "__str__", None) is not object.__str__
+
+    if use_str and not has_str:
+        raise TypeError(f"Class {cls.__name__} must define __str__ method")
+
+    def repr_(self: _ClassT) -> str:
+        str_args = (
+            f"'{self}'" if use_str else _format_fields(self, fields, ", ")
+        )
+        return f"{self.__class__.__name__}({str_args})"
+
+    def str_(self: _ClassT) -> str:
+        return _format_fields(self, fields)
+
+    cls.__repr__ = t.cast(_ReprMethod, repr_)
+    if not has_str:
+        cls.__str__ = t.cast(_ReprMethod, str_)
+
+    return cls
+
+
+def representation(
+    *fields: str, use_str: bool = False
+) -> t.Callable[[_ClassT], _ClassT]:
+    def decorator(cls: _ClassT) -> _ClassT:
+        return _apply_representation(cls, fields, use_str)
+
+    return decorator

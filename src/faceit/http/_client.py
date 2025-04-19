@@ -24,8 +24,7 @@ from tenacity import (
     wait_random_exponential,
 )
 
-from faceit._repr import representation
-from faceit._utils import create_uuid_validator
+from faceit._utils import create_uuid_validator, representation
 from faceit.constants import BASE_WIKI_URL
 from faceit.exceptions import APIError
 
@@ -56,7 +55,7 @@ class SupportedMethod(StrEnum):
 
 @representation("api_key", "base_url", "retry_args")
 class BaseAPIClient(t.Generic[_HttpxClientT], ABC):
-    __slots__ = "_api_key", "base_url", "retry_args"
+    __slots__ = ("_api_key", "base_url", "retry_args")
 
     DEFAULT_BASE_URL: t.ClassVar = "https://open.faceit.com/data/v4"
     DEFAULT_TIMEOUT: t.ClassVar[float] = 10
@@ -182,13 +181,13 @@ class BaseAPIClient(t.Generic[_HttpxClientT], ABC):
 
     @classmethod
     def _warn_unclosed_client(cls) -> None:
-        async_ = "Async" in cls.__name__
+        is_async = "Async" in cls.__name__
         _logger.warning(
             "Unclosed client session detected. Resources may be leaked. "
             "Either use %swith statement (context manager) or explicitly "
             "call %sclose() to properly close the session.",
-            "async " if async_ else "",
-            "await client.a" if async_ else "client.",
+            "async " if is_async else "",
+            "await client.a" if is_async else "client.",
         )
 
     @abstractmethod
@@ -260,7 +259,7 @@ def _is_ssl_error(exception: BaseException, /) -> bool:
 # it was found that such errors often pop up even with a small
 # number of concurrent requests, probably problems on the FACEIT API side
 class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
-    __slots__ = "__weakref__", "_client"
+    __slots__ = ("__weakref__", "_client")
 
     _instances: t.ClassVar[WeakSet[_BaseAsyncClient]] = WeakSet()
 

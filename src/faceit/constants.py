@@ -53,7 +53,6 @@ class GameID(StrEnum):
     APEX = "apex"
     BATTALION = "battalion"
     BRAWL_STARS = "brawl_stars"
-    # BRAWL_STARS_AUTO = "brawl_stars_auto" deprecated
     CALL_OF_DUTY_MOBILE = "call-of-duty-mobile"
     CSGO = "csgo"
     CS2 = "cs2"
@@ -63,7 +62,6 @@ class GameID(StrEnum):
     COD_WZ = "cod-wz"
     CLASH_OF_CLANS = "clash-of-clans"
     CLASH_ROYALE = "clash_royale"
-    # CLASH_ROYALE_AUTO = "clash_royale_auto" deprecated
     DEADLOCK = "deadlock"
     DESTINY2 = "destiny2"
     DESTINY2_PARENT = "destiny2_parent"
@@ -121,7 +119,6 @@ class GameID(StrEnum):
     OVERWATCH2 = "ow2"
     PUBG = "pubg"
     PUBGMOBILE = "pubgmobile"
-    # PUBGMOBILE_AUTO = "pubgmobile-auto" deprecated
     QUAKE_CHAMPIONS = "quake_champions"
     RAINBOW6 = "rainbow_6"
     RL_XBOX_PC = "rl_XBOX_PC"
@@ -139,7 +136,7 @@ class GameID(StrEnum):
     TEMPERIA = "temperia"
     TRACKMANIA = "trackmania"
     UFC5 = "ufc-5"
-    VALORANT = "valorant"  # 4O4 ?
+    VALORANT = "valorant"
     WARFACE = "warface"
     WARFACE_ALPHA = "warface_alpha"
     WARFACE_EU = "warface_eu"
@@ -261,7 +258,7 @@ ELO_THRESHOLDS: t.Final[t.Dict[GameID, _EloThreshold]] = {
 @t.final
 @dataclass(frozen=True)
 class SkillLevel:
-    __slots__ = "elo_range", "game_id", "level", "name"
+    __slots__ = ("elo_range", "game_id", "level", "name")
 
     level: int
     game_id: GameID

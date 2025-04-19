@@ -22,6 +22,7 @@ from ._resources import check_pagination_support as check_pagination_support
 from .constants import EventCategory as EventCategory
 from .constants import ExpandOption as ExpandOption
 from .constants import GameID as GameID
+from .constants import Region as Region
 from .constants import SkillLevel as SkillLevel
 from .http import AsyncClient as AsyncClient
 from .http import SyncClient as SyncClient

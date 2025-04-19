@@ -1,5 +1,5 @@
 import pytest
-from faceit._repr import _UNINITIALIZED_MARKER, representation
+from faceit._utils import _UNINITIALIZED_MARKER, representation
 
 
 def test_basic_representation():

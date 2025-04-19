@@ -4,9 +4,9 @@ import typing as t
 from abc import ABC
 from warnings import warn
 
-from ._repr import representation
 from ._resources import AsyncResources, SyncResources
-from ._typing import ClientT, ResourceT, Self, ValidUUID
+from ._typing import ClientT, ResourcesT, Self, ValidUUID
+from ._utils import representation
 from .constants import BASE_WIKI_URL
 from .http import AsyncClient, SyncClient
 
@@ -15,11 +15,11 @@ if t.TYPE_CHECKING:
 
 
 @representation("client", "resources")
-class BaseFaceit(t.Generic[ClientT, ResourceT], ABC):
-    __slots__ = "_client", "_resources"
+class BaseFaceit(t.Generic[ClientT, ResourcesT], ABC):
+    __slots__ = ("_client", "_resources")
 
     _client_cls: t.Type[ClientT]
-    _resources_cls: t.Type[ResourceT]
+    _resources_cls: t.Type[ResourcesT]
 
     @t.overload
     def __init__(
@@ -69,7 +69,7 @@ class BaseFaceit(t.Generic[ClientT, ResourceT], ABC):
         return self._client
 
     @property
-    def resources(self) -> ResourceT:
+    def resources(self) -> ResourcesT:
         return self._resources
 
     def __str__(self) -> str:

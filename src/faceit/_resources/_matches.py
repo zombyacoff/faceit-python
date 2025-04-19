@@ -21,8 +21,11 @@ from faceit.models._custom_types import FaceitMatchID
 from ._base import BaseResource, FaceitResourcePath, ModelPlaceholder
 
 _MatchID: TypeAlias = str
+# We use `AfterValidator` with the `_MatchID` type alias instead of `FaceitMatchID` directly
+# to avoid mypy complaints. Mypy cannot fully recognize our custom type as compatible
+# with str, so this approach ensures proper type checking and validation.
 _MatchIDValidator: TypeAlias = Annotated[
-    _MatchID, AfterValidator(FaceitMatchID.validate)
+    _MatchID, AfterValidator(FaceitMatchID._validate)
 ]
 
 

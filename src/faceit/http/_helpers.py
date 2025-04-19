@@ -2,8 +2,7 @@ from __future__ import annotations
 
 import typing as t
 
-from faceit._repr import representation
-from faceit._utils import raise_unsupported_operand_error
+from faceit._utils import raise_unsupported_operand_error, representation
 
 if t.TYPE_CHECKING:
     from faceit._typing import EndpointParam, Self
@@ -12,7 +11,7 @@ if t.TYPE_CHECKING:
 @t.final
 @representation(use_str=True)
 class Endpoint:
-    __slots__ = "base_path", "path_parts"
+    __slots__ = ("base_path", "path_parts")
 
     def __init__(
         self, *path_parts: str, base_path: t.Optional[str] = None

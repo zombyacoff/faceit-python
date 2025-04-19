@@ -12,7 +12,6 @@ from annotated_types import Le
 from pydantic.fields import FieldInfo
 from strenum import LowercaseStrEnum
 
-from faceit._repr import representation
 from faceit._typing import (
     AsyncPaginationMethod,
     AsyncUnixPaginationMethod,
@@ -27,9 +26,10 @@ from faceit._typing import (
 )
 from faceit._utils import (
     UnsetValue,
+    deduplicate_unhashable,
     deep_get,
-    get_hashable_representation,
     lazy_import,
+    representation,
 )
 from faceit.constants import RAW_RESPONSE_ITEMS_KEY
 from faceit.models import ItemPage
@@ -206,10 +206,6 @@ class BasePageIterator(t.Generic[PaginationMethodT, _PageT], ABC):
                 f"with offset and limit parameters."
             )
         self._method = (
-            # Handle type subscription differently based on Python version
-            # In Python 3.9+, Generic types became subscriptable
-            # (`_MethodCall[PaginationMethodT]`)
-            # For Python 3.8 and below, we must use the unsubscripted type
             _MethodCall[PaginationMethodT]
             if sys.version_info >= (3, 9)
             else _MethodCall
@@ -398,11 +394,7 @@ class BasePageIterator(t.Generic[PaginationMethodT, _PageT], ABC):
     def _deduplicate_collection(
         cls, collection: t.Union[ItemPage, t.List[RawAPIItem]], /
     ) -> t.Union[ItemPage, t.List[RawAPIItem]]:
-        unique_items = list(
-            {
-                get_hashable_representation(item): item for item in collection
-            }.values()
-        )
+        unique_items = deduplicate_unhashable(collection)
         return (
             collection.with_items(unique_items)
             if isinstance(collection, ItemPage)

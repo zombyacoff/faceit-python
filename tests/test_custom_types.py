@@ -19,14 +19,14 @@ class TestFaceitID:
     def test_valid_uuid(self, valid_uuid):
         # Test with a valid UUID string
         valid_uuid = valid_uuid
-        faceit_id = FaceitID.validate(valid_uuid)
+        faceit_id = FaceitID._validate(valid_uuid)
         assert isinstance(faceit_id, FaceitID)
         assert str(faceit_id) == valid_uuid
 
     def test_invalid_uuid(self):
         # Test with an invalid UUID string
         with pytest.raises(ValueError, match="Invalid FaceitID:"):
-            FaceitID.validate("not-a-uuid")
+            FaceitID._validate("not-a-uuid")
 
         # Test with a non-string, non-UUID value
         with pytest.raises(AttributeError):
@@ -39,16 +39,16 @@ class TestFaceitID:
         suffixed_uuid = f"{valid_uuid}gui"
 
         # This should work
-        faceit_id = FaceitID.validate(valid_uuid)
+        faceit_id = FaceitID._validate(valid_uuid)
 
         # This should fail because the suffix makes it an invalid UUID
         with pytest.raises(ValueError, match="is not a valid UUID format"):
-            FaceitID.validate(suffixed_uuid)
+            FaceitID._validate(suffixed_uuid)
 
         # Manual handling of suffix
         if suffixed_uuid.endswith("gui"):
             cleaned_uuid = suffixed_uuid[:-3]
-            faceit_id_from_cleaned = FaceitID.validate(cleaned_uuid)
+            faceit_id_from_cleaned = FaceitID._validate(cleaned_uuid)
             assert isinstance(faceit_id_from_cleaned, FaceitID)
             assert str(faceit_id_from_cleaned) == valid_uuid
 
@@ -59,7 +59,7 @@ class TestFaceitTeamID:
         valid_uuid = valid_uuid
         valid_team_id = f"team-{valid_uuid}"
 
-        team_id = FaceitTeamID.validate(valid_team_id)
+        team_id = FaceitTeamID._validate(valid_team_id)
         assert isinstance(team_id, FaceitTeamID)
         assert str(team_id) == valid_team_id
 
@@ -68,12 +68,12 @@ class TestFaceitTeamID:
         valid_uuid = valid_uuid
 
         with pytest.raises(ValueError, match="must start with 'team-'"):
-            FaceitTeamID.validate(valid_uuid)
+            FaceitTeamID._validate(valid_uuid)
 
     def test_invalid_uuid_part(self):
         # Test with an invalid UUID part
         with pytest.raises(ValueError, match="contains invalid UUID part"):
-            FaceitTeamID.validate("team-not-a-valid-uuid")
+            FaceitTeamID._validate("team-not-a-valid-uuid")
 
     def test_suffix_handling(self, valid_uuid):
         # Test that the 'gui' suffix is NOT automatically handled
@@ -82,16 +82,16 @@ class TestFaceitTeamID:
         suffixed_team_id = f"{valid_team_id}gui"
 
         # This should work
-        team_id = FaceitTeamID.validate(valid_team_id)
+        team_id = FaceitTeamID._validate(valid_team_id)
 
         # This should fail because the suffix makes the UUID part invalid
         with pytest.raises(ValueError, match="contains invalid UUID part"):
-            FaceitTeamID.validate(suffixed_team_id)
+            FaceitTeamID._validate(suffixed_team_id)
 
         # Manual handling of suffix
         if suffixed_team_id.endswith("gui"):
             cleaned_team_id = suffixed_team_id[:-3]
-            team_id_from_cleaned = FaceitTeamID.validate(cleaned_team_id)
+            team_id_from_cleaned = FaceitTeamID._validate(cleaned_team_id)
             assert isinstance(team_id_from_cleaned, FaceitTeamID)
             assert str(team_id_from_cleaned) == valid_team_id
 
@@ -102,7 +102,7 @@ class TestFaceitMatchID:
         valid_uuid = valid_uuid
         valid_match_id = f"1-{valid_uuid}"
 
-        match_id = FaceitMatchID.validate(valid_match_id)
+        match_id = FaceitMatchID._validate(valid_match_id)
         assert isinstance(match_id, FaceitMatchID)
         assert str(match_id) == valid_match_id
 
@@ -111,12 +111,12 @@ class TestFaceitMatchID:
         valid_uuid = valid_uuid
 
         with pytest.raises(ValueError, match="must start with '1-'"):
-            FaceitMatchID.validate(valid_uuid)
+            FaceitMatchID._validate(valid_uuid)
 
     def test_invalid_uuid_part(self):
         # Test with an invalid UUID part
         with pytest.raises(ValueError, match="contains invalid UUID part"):
-            FaceitMatchID.validate("1-not-a-valid-uuid")
+            FaceitMatchID._validate("1-not-a-valid-uuid")
 
     def test_suffix_handling(self, valid_uuid):
         # Test that the 'gui' suffix is NOT automatically handled
@@ -125,16 +125,16 @@ class TestFaceitMatchID:
         suffixed_match_id = f"{valid_match_id}gui"
 
         # This should work
-        match_id = FaceitMatchID.validate(valid_match_id)
+        match_id = FaceitMatchID._validate(valid_match_id)
 
         # This should fail because the suffix makes the UUID part invalid
         with pytest.raises(ValueError, match="contains invalid UUID part"):
-            FaceitMatchID.validate(suffixed_match_id)
+            FaceitMatchID._validate(suffixed_match_id)
 
         # Manual handling of suffix
         if suffixed_match_id.endswith("gui"):
             cleaned_match_id = suffixed_match_id[:-3]
-            match_id_from_cleaned = FaceitMatchID.validate(cleaned_match_id)
+            match_id_from_cleaned = FaceitMatchID._validate(cleaned_match_id)
             assert isinstance(match_id_from_cleaned, FaceitMatchID)
             assert str(match_id_from_cleaned) == valid_match_id
 
