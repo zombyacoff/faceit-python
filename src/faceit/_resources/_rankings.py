@@ -11,6 +11,7 @@ from faceit._typing import (
     Model,
     ModelNotImplemented,
     Raw,
+    RawAPIItem,
     RawAPIPageResponse,
 )
 from faceit.constants import GameID, Region  # noqa: TCH001
@@ -33,7 +34,7 @@ class SyncRankings(BaseRankings[SyncClient], t.Generic[APIResponseFormatT]):
     __slots__ = ()
 
     @t.overload
-    def world(
+    def unbounded(
         self: SyncRankings[Raw],
         game: GameID,
         region: Region,
@@ -44,7 +45,7 @@ class SyncRankings(BaseRankings[SyncClient], t.Generic[APIResponseFormatT]):
     ) -> t.Union[RawAPIPageResponse]: ...
 
     @t.overload
-    def world(
+    def unbounded(
         self: SyncRankings[Model],
         game: GameID,
         region: Region,
@@ -55,7 +56,7 @@ class SyncRankings(BaseRankings[SyncClient], t.Generic[APIResponseFormatT]):
     ) -> ModelNotImplemented: ...
 
     @validate_call
-    def world(
+    def unbounded(
         self,
         game: GameID,
         region: Region,
@@ -73,6 +74,29 @@ class SyncRankings(BaseRankings[SyncClient], t.Generic[APIResponseFormatT]):
                 expect_page=True,
             ),
             ModelPlaceholder,
+        )
+
+    @t.overload
+    def all_unbounded(
+        self: SyncRankings[Raw],
+        game: GameID,
+        region: Region,
+        country: t.Optional[Country] = None,
+    ) -> t.List[RawAPIItem]: ...
+
+    @t.overload
+    def all_unbounded(
+        self: SyncRankings[Model],
+        game: GameID,
+        region: Region,
+        country: t.Optional[Country] = None,
+    ) -> ModelNotImplemented: ...
+
+    def all_unbounded(
+        self, game: GameID, region: Region, country: t.Optional[Country] = None
+    ) -> t.Union[t.List[RawAPIItem], ModelNotImplemented]:
+        return self.__class__._sync_page_iterator.gather_pages(
+            self.unbounded, game, region, country
         )
 
     @t.overload
@@ -123,3 +147,114 @@ class SyncRankings(BaseRankings[SyncClient], t.Generic[APIResponseFormatT]):
 
 class AsyncRankings(BaseRankings[AsyncClient], t.Generic[APIResponseFormatT]):
     __slots__ = ()
+
+    @t.overload
+    async def unbounded(
+        self: AsyncRankings[Raw],
+        game: GameID,
+        region: Region,
+        country: t.Optional[Country] = None,
+        *,
+        offset: int = Field(0, ge=0),
+        limit: int = Field(20, ge=1, le=100),
+    ) -> t.Union[RawAPIPageResponse]: ...
+
+    @t.overload
+    async def unbounded(
+        self: AsyncRankings[Model],
+        game: GameID,
+        region: Region,
+        country: t.Optional[Country] = None,
+        *,
+        offset: int = Field(0, ge=0),
+        limit: int = Field(20, ge=1, le=100),
+    ) -> ModelNotImplemented: ...
+
+    @validate_call
+    async def unbounded(
+        self,
+        game: GameID,
+        region: Region,
+        country: t.Optional[Country] = None,
+        *,
+        offset: int = Field(0, ge=0),
+        limit: int = Field(20, ge=1, le=100),
+    ) -> t.Union[RawAPIPageResponse, ModelNotImplemented]:
+        return self._validate_response(
+            await self._client.get(
+                self.PATH / "games" / game / "regions" / region,
+                params=self.__class__._build_params(
+                    country=country, offset=offset, limit=limit
+                ),
+                expect_page=True,
+            ),
+            ModelPlaceholder,
+        )
+
+    @t.overload
+    async def all_unbounded(
+        self: AsyncRankings[Raw],
+        game: GameID,
+        region: Region,
+        country: t.Optional[Country] = None,
+    ) -> t.List[RawAPIItem]: ...
+
+    @t.overload
+    async def all_unbounded(
+        self: AsyncRankings[Model],
+        game: GameID,
+        region: Region,
+        country: t.Optional[Country] = None,
+    ) -> ModelNotImplemented: ...
+
+    async def all_unbounded(
+        self, game: GameID, region: Region, country: t.Optional[Country] = None
+    ) -> t.Union[t.List[RawAPIItem], ModelNotImplemented]:
+        return self.__class__._async_page_iterator.gather_pages(
+            self.unbounded, game, region, country
+        )
+
+    @t.overload
+    async def user(
+        self: AsyncRankings[Raw],
+        game: GameID,
+        region: Region,
+        player_id: PlayerID,
+        country: t.Optional[Country] = None,
+        *,
+        limit: int = Field(20, ge=1, le=100),
+    ) -> t.Union[RawAPIPageResponse]: ...
+
+    @t.overload
+    async def user(
+        self: AsyncRankings[Model],
+        game: GameID,
+        region: Region,
+        player_id: PlayerID,
+        country: t.Optional[Country] = None,
+        *,
+        limit: int = Field(20, ge=1, le=100),
+    ) -> t.Union[ModelNotImplemented]: ...
+
+    @validate_call
+    async def user(
+        self,
+        game: GameID,
+        region: Region,
+        player_id: PlayerIDValidator,
+        country: t.Optional[Country] = None,
+        *,
+        limit: int = Field(20, ge=1, le=100),
+    ) -> t.Union[RawAPIPageResponse, ModelNotImplemented]:
+        # fmt: off
+        return self._validate_response(
+            await self._client.get(
+                self.PATH / "games" / game / "regions" / region / "players" / str(player_id),
+                params=self.__class__._build_params(
+                    country=country, limit=limit
+                ),
+                expect_page=True
+            ),
+            ModelPlaceholder,
+        )
+        # fmt: on

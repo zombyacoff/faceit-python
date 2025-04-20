@@ -265,7 +265,14 @@ class BasePageIterator(t.Generic[PaginationMethodT, _PageT], ABC):
 
         self._page_index += 1
 
-        is_page_smaller_than_limit = len(page) < self._pagination_limits.limit
+        is_page_smaller_than_limit = (
+            len(
+                page
+                if isinstance(page, ItemPage)
+                else page[RAW_RESPONSE_ITEMS_KEY]
+            )
+            < self._pagination_limits.limit
+        )
         is_offset_exceeded = (
             False
             if self._pagination_limits.offset == UnsetValue.UNSET
@@ -413,7 +420,7 @@ class BasePageIterator(t.Generic[PaginationMethodT, _PageT], ABC):
         # fmt: off
         return cls(method, *args, **{
             **kwargs,
-            **({"to": timestamp + 1} if timestamp is not None else {}),
+            **({} if timestamp is None else {"to": timestamp + 1}),
         })
         # fmt: on
 
@@ -541,6 +548,8 @@ class SyncPageIterator(_BaseSyncPageIterator[_PageT]):
 
             current_timestamp = new_timestamp
 
+    # TODO: PAGES LIMIT
+
     @t.overload
     @classmethod
     def gather_pages(
@@ -612,7 +621,10 @@ class SyncPageIterator(_BaseSyncPageIterator[_PageT]):
         cls._validate_unix_config(unix)
         if unix is False:
             casted_method = t.cast(
-                "t.Union[SyncPaginationMethod[_PageT], SyncUnixPaginationMethod[_PageT]]",
+                t.Union[
+                    SyncPaginationMethod[_PageT],
+                    SyncUnixPaginationMethod[_PageT],
+                ],
                 method,
             )
             collection: t.Iterator = cls(casted_method, *args, **kwargs)
@@ -788,7 +800,10 @@ class AsyncPageIterator(_BasyAsyncPageIterator[_PageT]):
         cls._validate_unix_config(unix)
         if unix is False:
             casted_method = t.cast(
-                "t.Union[AsyncPaginationMethod[_PageT], AsyncUnixPaginationMethod[_PageT]]",
+                t.Union[
+                    AsyncPaginationMethod[_PageT],
+                    AsyncUnixPaginationMethod[_PageT],
+                ],
                 method,
             )
             # Type annotation needed as mypy can't infer that

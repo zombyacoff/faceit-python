@@ -10,6 +10,7 @@ from pydantic import Field, validate_call
 from strenum import StrEnum
 
 from ._typing import TypeAlias  # noqa: TCH001
+from ._utils import StrEnumWithAll
 
 if t.TYPE_CHECKING:
     _EloThreshold: TypeAlias = t.Dict[int, "EloRange"]
@@ -27,26 +28,16 @@ Players cannot drop below this threshold regardless of consecutive losses.
 """
 
 
-class HighTierLevel(StrEnum):
-    ABSENT = "absent"
-    """Indicates the absence of a defined top-tier rank in this discipline.
+class EventCategory(StrEnum):
+    ALL = "all"
+    ONGOING = "ongoing"
+    PAST = "past"
+    UPCOMING = "upcoming"
 
-    Used when there is no distinct elite or highest rank in the ranking structure.
-    """
 
-    CHALLENGER = "challenger"
-    """Elite tier reserved for top 1000 players per game/region.
-
-    This rank represents a dynamic threshold based on leaderboard position rather
-    than a fixed ELO value. Due to its relative nature, determining Challenger
-    status requires additional processing (leaderboard position analysis by region)
-    beyond standard ELO calculations. In our implementation, players with actual
-    Challenger status will be classified as level 10 for system consistency.
-
-    The constant is primarily defined for completeness in representing FACEIT's
-    full ranking system and may be utilized in future enhancements for precise
-    leaderboard position tracking.
-    """
+class ExpandedField(StrEnumWithAll):
+    GAME = "game"
+    ORGANIZER = "organizer"
 
 
 class GameID(StrEnum):
@@ -54,31 +45,31 @@ class GameID(StrEnum):
     BATTALION = "battalion"
     BRAWL_STARS = "brawl_stars"
     CALL_OF_DUTY_MOBILE = "call-of-duty-mobile"
-    CSGO = "csgo"
-    CS2 = "cs2"
-    CSDZ = "csdz"
+    CLASH_OF_CLANS = "clash-of-clans"
+    CLASH_ROYALE = "clash_royale"
     CODBO6 = "codbo6"
     COD_MW3 = "cod-mw3"
     COD_WZ = "cod-wz"
-    CLASH_OF_CLANS = "clash-of-clans"
-    CLASH_ROYALE = "clash_royale"
+    CS2 = "cs2"
+    CSDZ = "csdz"
+    CSGO = "csgo"
     DEADLOCK = "deadlock"
     DESTINY2 = "destiny2"
     DESTINY2_PARENT = "destiny2_parent"
     DESTINY2_PS4 = "destiny2_ps4"
     DESTINY2_XBOX = "destiny2_xbox"
-    DOTA2 = "dota2"
     DIRTYBOMB = "dirtybomb"
+    DOTA2 = "dota2"
     EASPORTSCOLLEGEFOOTBALL25 = "easportscollegefootball25"
     EASPORTSFC24 = "easportsfc24"
     EASPORTSFC25 = "easportsfc25"
     EASPORTSNHL25 = "easportsnhl25"
     FALLGUYS = "fallguys"
+    FC_MOBILE = "fc-mobile"
     FIFA20 = "fifa20"
     FIFA22 = "fifa22"
     FIFA23 = "fifa23"
     FORTNITE = "fortnite"
-    FC_MOBILE = "fc-mobile"
     FREEFIRE = "freefire"
     GS_RAINBOW6_PS4 = "gs_rainbow_6_ps4"
     GS_RAINBOW6_XBOX = "gs_rainbow_6_xbox"
@@ -130,10 +121,10 @@ class GameID(StrEnum):
     SPLATOON3 = "splatoon-3"
     SQUADBLAST_BETA = "squadblast-beta"
     STARWARSJKJA = "starwarsjkja"
-    TEKKEN8 = "tekken8"
-    TF2 = "tf2"
     TEAMFIGHT_TACTICS = "teamfight_tactics"
+    TEKKEN8 = "tekken8"
     TEMPERIA = "temperia"
+    TF2 = "tf2"
     TRACKMANIA = "trackmania"
     UFC5 = "ufc-5"
     VALORANT = "valorant"
@@ -149,25 +140,34 @@ class GameID(StrEnum):
     WOW = "wow"
 
 
-class EventCategory(StrEnum):
-    ALL = "all"
-    UPCOMING = "upcoming"
-    ONGOING = "ongoing"
-    PAST = "past"
+class HighTierLevel(StrEnum):
+    ABSENT = "absent"
+    """Indicates the absence of a defined top-tier rank in this discipline.
 
+    Used when there is no distinct elite or highest rank in the ranking structure.
+    """
 
-class ExpandOption(StrEnum):
-    NONE = ""
-    ORGANIZER = "organizer"
-    GAME = "game"
+    CHALLENGER = "challenger"
+    """Elite tier reserved for top 1000 players per game/region.
+
+    This rank represents a dynamic threshold based on leaderboard position rather
+    than a fixed ELO value. Due to its relative nature, determining Challenger
+    status requires additional processing (leaderboard position analysis by region)
+    beyond standard ELO calculations. In our implementation, players with actual
+    Challenger status will be classified as level 10 for system consistency.
+
+    The constant is primarily defined for completeness in representing FACEIT's
+    full ranking system and may be utilized in future enhancements for precise
+    leaderboard position tracking.
+    """
 
 
 class Region(StrEnum):
     EU = "EU"
-    US = "US"
-    SEA = "SEA"
-    OCEANIA = "Oceania"
+    OCEANIA = "Ocenia"
     SA = "SA"
+    SEA = "SEA"
+    US = "US"
 
 
 @t.final

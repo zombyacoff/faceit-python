@@ -45,9 +45,6 @@ class RequestPayload(t.TypedDict):
 
 
 @t.final
-# Handle type subscription differently based on Python version
-# In Python 3.9+, Generic types became subscriptable
-# For Python 3.8 and below, we must use the unsubscripted type
 class MappedValidatorConfig(t.TypedDict, t.Generic[_KT, ModelT]):
     validator_map: t.Dict[_KT, t.Type[ModelT]]
     is_paged: bool
@@ -96,6 +93,7 @@ class BaseResource(t.Generic[ClientT], ABC):
                 f"Class {cls.__name__} requires 'path' parameter or a "
                 f"parent with 'PATH' defined."
             )
+
         cls._RAW_PATH = resource_path
         cls.PATH = Endpoint(resource_path)
 

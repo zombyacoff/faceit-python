@@ -7,7 +7,7 @@ from faceit.http import AsyncClient as AsyncClient
 from faceit.http import SyncClient as SyncClient
 
 from ._aggregator_factory import BaseResources as BaseResources
-from ._aggregator_factory import resource_aggregator as _aggregator
+from ._aggregator_factory import resource_aggregator as _resource_aggregator
 from ._base import BaseResource as BaseResource
 from ._championships import AsyncChampionships as AsyncChampionships
 from ._championships import BaseChampionships as BaseChampionships
@@ -33,9 +33,7 @@ from ._teams import SyncTeams as SyncTeams
 
 
 @t.final
-@_aggregator(
-    SyncMatches, SyncPlayers, SyncChampionships, SyncTeams, SyncRankings
-)
+@_resource_aggregator
 class SyncResources(BaseResources[SyncClient]):
     championships: SyncChampionships[Model]
     raw_championships: SyncChampionships[Raw]
@@ -54,18 +52,16 @@ class SyncResources(BaseResources[SyncClient]):
 
 
 @t.final
-@_aggregator(
-    AsyncMatches, AsyncPlayers, AsyncChampionships, AsyncTeams, AsyncRankings
-)
+@_resource_aggregator
 class AsyncResources(BaseResources[AsyncClient]):
+    championships: AsyncChampionships[Model]
+    raw_championships: AsyncChampionships[Raw]
+
     matches: AsyncMatches[Model]
     raw_matches: AsyncMatches[Raw]
 
     players: AsyncPlayers[Model]
     raw_players: AsyncPlayers[Raw]
-
-    championships: AsyncChampionships[Model]
-    raw_championships: AsyncChampionships[Raw]
 
     teams: AsyncTeams[Model]
     raw_teams: AsyncTeams[Raw]

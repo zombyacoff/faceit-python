@@ -20,7 +20,7 @@ from ._resources import CollectReturnFormat as CollectReturnFormat
 from ._resources import SyncPageIterator as SyncPageIterator
 from ._resources import check_pagination_support as check_pagination_support
 from .constants import EventCategory as EventCategory
-from .constants import ExpandOption as ExpandOption
+from .constants import ExpandedField as ExpandedField
 from .constants import GameID as GameID
 from .constants import Region as Region
 from .constants import SkillLevel as SkillLevel

@@ -15,10 +15,12 @@ if sys.version_info >= (3, 11):
         TypeGuard,
     )
 
+    from typing_extensions import deprecated
+
 elif sys.version_info >= (3, 10):
     from typing import Annotated, ParamSpec, TypeAlias, TypeGuard
 
-    from typing_extensions import NotRequired, Required, Self
+    from typing_extensions import NotRequired, Required, Self, deprecated
 elif sys.version_info >= (3, 9):
     from typing import Annotated
 
@@ -29,6 +31,7 @@ elif sys.version_info >= (3, 9):
         Self,
         TypeAlias,
         TypeGuard,
+        deprecated,
     )
 else:
     from typing_extensions import (
@@ -39,6 +42,7 @@ else:
         Self,
         TypeAlias,
         TypeGuard,
+        deprecated,
     )
 
 if t.TYPE_CHECKING:
@@ -61,6 +65,7 @@ __all__ = (
     # At the moment `TypeGuard` is not used in the project,
     # but I admit its use in the future, so we leave it imported
     "TypeGuard",
+    "deprecated",
 )
 
 _T_co = t.TypeVar("_T_co", covariant=True)
@@ -78,8 +83,8 @@ UUIDOrEmpty: TypeAlias = t.Union[UUID, EmptyString]
 EndpointParam: TypeAlias = t.Union[str, "Endpoint"]
 ValidUUID: TypeAlias = t.Union[UUID, str, bytes]
 
-Raw = t.NewType("Raw", type)
-Model = t.NewType("Model", type)
+Raw = t.NewType("Raw", bool)
+Model = t.NewType("Model", bool)
 
 # Placeholder type that signals developers to implement a proper model
 # for a resource method. Acts as a temporary stub during development.

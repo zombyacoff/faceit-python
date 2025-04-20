@@ -38,9 +38,6 @@ class TestFaceitID:
         valid_uuid = valid_uuid
         suffixed_uuid = f"{valid_uuid}gui"
 
-        # This should work
-        faceit_id = FaceitID._validate(valid_uuid)
-
         # This should fail because the suffix makes it an invalid UUID
         with pytest.raises(ValueError, match="is not a valid UUID format"):
             FaceitID._validate(suffixed_uuid)

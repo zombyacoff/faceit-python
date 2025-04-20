@@ -1,19 +1,3 @@
-"""Utility functions and helpers for internal use.
-
-While similar utility functions likely exist in third-party libraries,
-we've chosen to implement them directly to minimize external dependencies.
-This approach reduces project complexity and potential version conflicts
-while maintaining full control over the implementation details.
-
-Some API methods return Unix timestamps in milliseconds.
-
-We maintain our own `UUID` validation implementation despite potentially more
-efficient alternatives. This specific implementation is crucial for the
-library's internal logic to distinguish between different resource types
-(e.g., nickname vs ID) and supports the expected behavior of various
-resource handlers.
-"""
-
 from __future__ import annotations
 
 import json
@@ -26,8 +10,10 @@ from functools import lru_cache, reduce
 from hashlib import sha256
 from uuid import UUID
 
+from strenum import StrEnum
+
 if t.TYPE_CHECKING:
-    from ._typing import TypeAlias
+    from ._typing import Self, TypeAlias
 
     _T = t.TypeVar("_T")
     _ClassT = t.TypeVar("_ClassT", bound=t.Type)
@@ -40,6 +26,12 @@ _UNINITIALIZED_MARKER: t.Final = "uninitialized"
 
 class UnsetValue(IntEnum):
     UNSET = -1
+
+
+class StrEnumWithAll(StrEnum):
+    @classmethod
+    def all(cls) -> t.Tuple[Self, ...]:
+        return tuple(cls)
 
 
 def lazy_import(func: t.Callable[[], _T]) -> t.Callable[[], _T]:

@@ -18,7 +18,7 @@ from faceit._typing import (
     ValidUUID,
 )
 from faceit._utils import create_uuid_validator
-from faceit.constants import EventCategory, ExpandOption, GameID
+from faceit.constants import EventCategory, ExpandedField, GameID
 from faceit.http import AsyncClient, SyncClient
 from faceit.models import Championship, ItemPage
 
@@ -111,29 +111,33 @@ class SyncChampionships(
         # Return an iterator instead of a full collection to efficiently handle
         # large datasets. With a page limit of only 10, fetching all items at once
         # would be extremely slow and resource-intensive.
-        return self.__class__._sync_page_iterator[
-            t.Union[RawAPIPageResponse, ItemPage[Championship]]
-        ](self.items, game, category)
+        return self.__class__._sync_page_iterator(self.items, game, category)
 
     @t.overload
     def get(
         self: SyncChampionships[Raw],
         championship_id: _ChampionshipID,
-        expanded: ExpandOption = ExpandOption.NONE,
+        expanded: t.Optional[
+            t.Union[ExpandedField, t.Sequence[ExpandedField]]
+        ] = None,
     ) -> RawAPIItem: ...
 
     @t.overload
     def get(
         self: SyncChampionships[Model],
         championship_id: _ChampionshipID,
-        expanded: ExpandOption = ExpandOption.NONE,
+        expanded: t.Optional[
+            t.Union[ExpandedField, t.Sequence[ExpandedField]]
+        ] = None,
     ) -> ModelNotImplemented: ...
 
     @validate_call
     def get(
         self,
         championship_id: _ChampionshipIDValidator,
-        expanded: ExpandOption = ExpandOption.NONE,
+        expanded: t.Optional[
+            t.Union[ExpandedField, t.Sequence[ExpandedField]]
+        ] = None,
     ) -> t.Union[RawAPIItem, ModelNotImplemented]:
         return self._validate_response(
             self._client.get(
@@ -326,29 +330,33 @@ class AsyncChampionships(
         game: GameID,
         category: EventCategory = EventCategory.ALL,
     ) -> AsyncPageIterator:
-        return self.__class__._async_page_iterator[
-            t.Union[RawAPIPageResponse, ItemPage[Championship]]
-        ](self.items, game, category)
+        return self.__class__._async_page_iterator(self.items, game, category)
 
     @t.overload
     async def get(
         self: AsyncChampionships[Raw],
         championship_id: _ChampionshipID,
-        expanded: ExpandOption = ExpandOption.NONE,
+        expanded: t.Optional[
+            t.Union[ExpandedField, t.Sequence[ExpandedField]]
+        ] = None,
     ) -> RawAPIItem: ...
 
     @t.overload
     async def get(
         self: AsyncChampionships[Model],
         championship_id: _ChampionshipID,
-        expanded: ExpandOption = ExpandOption.NONE,
+        expanded: t.Optional[
+            t.Union[ExpandedField, t.Sequence[ExpandedField]]
+        ] = None,
     ) -> ModelNotImplemented: ...
 
     @validate_call
     async def get(
         self,
         championship_id: _ChampionshipIDValidator,
-        expanded: ExpandOption = ExpandOption.NONE,
+        expanded: t.Optional[
+            t.Union[ExpandedField, t.Sequence[ExpandedField]]
+        ] = None,
     ) -> t.Union[RawAPIItem, ModelNotImplemented]:
         return self._validate_response(
             await self._client.get(

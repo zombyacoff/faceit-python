@@ -16,26 +16,20 @@ class BaseResources(t.Generic[ClientT], ABC):
     _client: ClientT
 
 
-def _add_resource_property(
-    cls: t.Type[_AT], resource_cls: t.Type[_RT], path: str, *, raw: bool
-) -> None:
-    prop = cached_property(lambda self: resource_cls(self._client, raw=raw))
-    setattr(cls, path, prop)
-    if hasattr(prop, "__set_name__"):
-        prop.__set_name__(cls, path)
+def resource_aggregator(cls: t.Type[_AT]) -> t.Type[_AT]:
+    for name, resource_type in getattr(cls, "__annotations__", {}).items():
 
-
-def resource_aggregator(
-    *resource_classes: t.Type[_RT],
-) -> t.Callable[[t.Type[_AT]], t.Type[_AT]]:
-    def decorator(cls: t.Type[_AT]) -> t.Type[_AT]:
-        for resource_cls in resource_classes:
-            _add_resource_property(
-                cls, resource_cls, f"raw_{resource_cls._RAW_PATH}", raw=True
+        def make_property(
+            is_raw: bool,
+            resource_type: t.Type[_RT] = resource_type,
+        ) -> cached_property:
+            return cached_property(
+                lambda self: resource_type(self._client, raw=is_raw)
             )
-            _add_resource_property(
-                cls, resource_cls, resource_cls._RAW_PATH, raw=False
-            )
-        return cls
 
-    return decorator
+        prop = make_property(name.startswith("raw_"))
+        setattr(cls, name, prop)
+        if hasattr(prop, "__set_name__"):
+            prop.__set_name__(cls, name)
+
+    return cls

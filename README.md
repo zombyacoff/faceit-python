@@ -54,7 +54,6 @@ See additional usage examples in the [`examples/`](examples/) directory.
 - You can pass your API key directly or provide a pre-configured HTTP client (`faceit.SyncClient` or `faceit.AsyncClient`).
 - Paginated queries in model mode return an `ItemPage` collection with utility methods.
 - Both raw and model-based data access are supported.
-- The library is strictly type-annotated.
 
 ## Motivation
 
