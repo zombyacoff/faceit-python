@@ -94,6 +94,7 @@ class BaseFaceit(t.Generic[ClientT, DataT], ABC):
         """
         return self._client
 
+    @property
     @deprecated(
         "For greater clarity and maintainability, we now expose API domains as "
         "explicit properties such as `.data` (and in the future, `.chat`, etc.), "
@@ -103,7 +104,6 @@ class BaseFaceit(t.Generic[ClientT, DataT], ABC):
         "`.data` for your use case. This alias will be removed at the earliest "
         "opportunity, in an upcoming release."
     )
-    @property
     def resources(self) -> DataT:
         """Alias for `.data`. Deprecated."""
         return self._data
