@@ -17,8 +17,12 @@ async def main():
     # You can initially pass the client to the `faceit.AsyncFaceit`
     # constructor using the named argument `client`.
     async with faceit.AsyncFaceit(client=async_client) as f:
-        championships = f.resources.championships.all_items(
-            faceit.GameID.CS2, faceit.EventCategory.ONGOING
+        championships = await f.resources.championships.all_items(
+            faceit.GameID.CS2,
+            faceit.EventCategory.ONGOING,
+            max_items=100,  # Maximum number of items to retrieve;
+            # default is `MaxPages(30)`
+            # (i.e., 30 pages * method limit per page = 300 items).
         )
         print(f"Total ongoing CS2 championships: {len(championships)}")
 

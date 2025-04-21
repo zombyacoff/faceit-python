@@ -1,7 +1,7 @@
 # FACEIT Python API Library
 
-[![python](https://img.shields.io/badge/python-3.8%2B-3776ab?style=flat-square&labelColor=ffffff&color=3776ab)](https://www.python.org/)
-[![pypi](https://img.shields.io/pypi/v/faceit?style=flat-square&labelColor=ffffff&color=636a71)](https://pypi.org/project/faceit/)
+[![python](https://img.shields.io/badge/python-3.8%2B-3776ab?style=flat-square&labelColor=ffffff&color=2e86c1)](https://www.python.org/)
+[![pypi](https://img.shields.io/pypi/v/faceit?style=flat-square&labelColor=ffffff&color=28b463)](https://pypi.org/project/faceit/)
 
 A fully type-safe, high-level Python wrapper for the [FACEIT REST API](https://docs.faceit.com/docs).
 Provides a seamless, pythonic interface for interacting with FACEIT data — with both synchronous and asynchronous clients, strict type checking, and powerful pagination.

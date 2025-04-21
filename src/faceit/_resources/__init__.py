@@ -1,13 +1,11 @@
-import typing as t
+import typing as t  # noqa: I001
 
-from faceit._typing import ClientT as ClientT
-from faceit._typing import Model as Model
-from faceit._typing import Raw as Raw
-from faceit.http import AsyncClient as AsyncClient
-from faceit.http import SyncClient as SyncClient
+from faceit._typing import Model, Raw
+from faceit.http import AsyncClient, SyncClient
+
+from .aggregator_factory import resource_aggregator as _resource_aggregator
 
 from .aggregator_factory import BaseResources as BaseResources
-from .aggregator_factory import resource_aggregator as _resource_aggregator
 from .base import BaseResource as BaseResource
 from .championships import AsyncChampionships as AsyncChampionships
 from .championships import BaseChampionships as BaseChampionships

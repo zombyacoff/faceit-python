@@ -34,7 +34,10 @@ classifiers = [
     "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent"
 ]
-urls = { Repository = "https://github.com/zombyacoff/faceit-python" }
+
+[project.urls]
+Repository = "https://github.com/zombyacoff/faceit-python"
+Official-API-Docs = "https://docs.faceit.com/docs"
 
 [tool.poetry]
 packages = [{ include = "faceit", from = "src" }]
