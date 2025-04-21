@@ -5,7 +5,7 @@ from functools import cached_property
 
 from faceit._typing import ClientT
 
-from ._base import BaseResource
+from .base import BaseResource
 
 _RT = t.TypeVar("_RT", bound=BaseResource)
 _AT = t.TypeVar("_AT", bound="BaseResources")

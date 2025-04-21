@@ -43,6 +43,9 @@ class Endpoint:
             "/", self.__class__.__name__, type(other).__name__
         )
 
+    # Ruff cannot detect that we already use `Self` here (PYI034),
+    # likely because it's imported indirectly via a re-exporting module,
+    # not directly from `typing`/`typing_extensions`.
     def __itruediv__(self, other: EndpointParam) -> Self:  # noqa: PYI034
         if isinstance(other, str):
             if other:

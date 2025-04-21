@@ -19,7 +19,7 @@ from faceit._typing import (
 from faceit.http import Endpoint
 from faceit.models import ItemPage
 
-from ._pagination import (
+from .pagination import (
     AsyncPageIterator,
     SyncPageIterator,
     TimestampPaginationConfig,
@@ -51,7 +51,6 @@ class MappedValidatorConfig(t.TypedDict, t.Generic[_KT, ModelT]):
     key_name: NotRequired[str]
 
 
-@t.final
 class FaceitResourcePath(StrEnum):
     CHAMPIONSHIPS = "championships"
     MATCHES = "matches"

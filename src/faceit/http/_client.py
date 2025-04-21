@@ -47,10 +47,13 @@ _logger = logging.getLogger(__name__)
 _HttpxClientT = t.TypeVar("_HttpxClientT", httpx.Client, httpx.AsyncClient)
 
 
-@t.final
 class SupportedMethod(StrEnum):
     GET = auto()
     POST = auto()
+
+
+class MaxConcurrentRequests(StrEnum):
+    ABSOLUTE = "max"
 
 
 @representation("api_key", "base_url", "retry_args")
@@ -294,7 +297,9 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
         base_url: str = BaseAPIClient.DEFAULT_BASE_URL,
         timeout: float = BaseAPIClient.DEFAULT_TIMEOUT,
         retry_args: t.Optional[t.Dict[str, t.Any]] = None,
-        max_concurrent_requests: int = DEFAULT_MAX_CONCURRENT_REQUESTS,
+        max_concurrent_requests: t.Union[
+            MaxConcurrentRequests, int
+        ] = DEFAULT_MAX_CONCURRENT_REQUESTS,
         ssl_error_threshold: int = DEFAULT_SSL_ERROR_THRESHOLD,
         min_connections: int = DEFAULT_MIN_CONNECTIONS,
         recovery_interval: int = DEFAULT_RECOVERY_INTERVAL,
@@ -302,7 +307,9 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
     ) -> None:
         super().__init__(api_key, base_url, retry_args)
 
-        self.__class__._update_initial_max_requests(max_concurrent_requests)
+        max_concurrent_requests = self.__class__._update_initial_max_requests(
+            max_concurrent_requests
+        )
 
         if (
             ssl_error_threshold != self.__class__.DEFAULT_SSL_ERROR_THRESHOLD
@@ -509,11 +516,22 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
 
     @classmethod
     @validate_call
-    def _update_initial_max_requests(cls, value: PositiveInt, /) -> None:
+    def _update_initial_max_requests(
+        cls, value: t.Union[MaxConcurrentRequests, PositiveInt], /
+    ) -> int:
         with cls._lock:
-            if value > cls._initial_max_requests:
-                cls._initial_max_requests = value
-                _logger.debug("Updated initial max requests to %d", value)
+            max_concurrent_requests = (
+                cls.MAX_CONCURRENT_REQUESTS
+                if value == MaxConcurrentRequests.ABSOLUTE
+                else value
+            )
+            if max_concurrent_requests > cls._initial_max_requests:
+                cls._initial_max_requests = max_concurrent_requests
+                _logger.debug(
+                    "Updated initial max requests to %d",
+                    max_concurrent_requests,
+                )
+            return max_concurrent_requests
 
     @classmethod
     async def close_all(cls) -> None:

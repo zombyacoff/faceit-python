@@ -6,7 +6,7 @@ from uuid import UUID
 
 from faceit._utils import is_valid_uuid, representation
 
-from ._utils import build_validatable_string_type_schema
+from .utils import build_validatable_string_type_schema
 
 if t.TYPE_CHECKING:
     from pydantic import GetCoreSchemaHandler

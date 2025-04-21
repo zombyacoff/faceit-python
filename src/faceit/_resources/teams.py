@@ -19,8 +19,8 @@ from faceit._typing import (
 from faceit.constants import GameID  # noqa: TCH001
 from faceit.http import AsyncClient, SyncClient
 
-from ._base import BaseResource, FaceitResourcePath, ModelPlaceholder
-from ._pagination import MaxItemsType, MaxPages
+from .base import BaseResource, FaceitResourcePath, ModelPlaceholder
+from .pagination import MaxItemsType, MaxPages
 
 _TeamID: TypeAlias = str
 _TeamIDValidator: TypeAlias = Annotated[

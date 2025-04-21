@@ -22,8 +22,8 @@ from faceit.constants import EventCategory, ExpandedField, GameID
 from faceit.http import AsyncClient, SyncClient
 from faceit.models import Championship, ItemPage
 
-from ._base import BaseResource, FaceitResourcePath, ModelPlaceholder
-from ._pagination import MaxItemsType, MaxPages
+from .base import BaseResource, FaceitResourcePath, ModelPlaceholder
+from .pagination import MaxItemsType, MaxPages
 
 _ChampionshipID: TypeAlias = ValidUUID
 _ChampionshipIDValidator: TypeAlias = Annotated[

@@ -35,14 +35,14 @@ from faceit.models import (
 )
 from faceit.models._player import AbstractMatchPlayerStats
 
-from ._base import (
+from .base import (
     BaseResource,
     FaceitResourcePath,
     MappedValidatorConfig,
     ModelPlaceholder,
     RequestPayload,
 )
-from ._pagination import MaxItems, MaxItemsType, MaxPages
+from .pagination import MaxItems, MaxItemsType, MaxPages
 
 _logger = logging.getLogger(__name__)
 
@@ -60,7 +60,7 @@ PlayerIDValidator: TypeAlias = Annotated[
 ]
 # Alias for FACEIT ID (`UUID`, `bytes`, `str`) or nickname (`str`).
 # Used for clarity when both forms are accepted by resource methods.
-_NicknameOrPlayerID: TypeAlias = t.Union[str, ValidUUID]
+NicknameOrPlayerID: TypeAlias = t.Union[str, ValidUUID]
 
 
 class BasePlayers(
@@ -92,7 +92,7 @@ class BasePlayers(
 
     def _process_get_request(
         self,
-        player_lookup_key: t.Optional[_NicknameOrPlayerID],
+        player_lookup_key: t.Optional[NicknameOrPlayerID],
         game: t.Optional[GameID],
         game_player_id: t.Optional[str],
         /,
@@ -140,7 +140,7 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
 
     @t.overload
     def get(
-        self: SyncPlayers[Raw], player_lookup_key: _NicknameOrPlayerID
+        self: SyncPlayers[Raw], player_lookup_key: NicknameOrPlayerID
     ) -> RawAPIItem: ...
 
     @t.overload
@@ -150,7 +150,7 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
 
     @t.overload
     def get(
-        self: SyncPlayers[Model], player_lookup_key: _NicknameOrPlayerID
+        self: SyncPlayers[Model], player_lookup_key: NicknameOrPlayerID
     ) -> Player: ...
 
     @t.overload
@@ -161,7 +161,7 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
     @validate_call
     def get(
         self,
-        player_lookup_key: t.Optional[_NicknameOrPlayerID] = None,
+        player_lookup_key: t.Optional[NicknameOrPlayerID] = None,
         *,
         game: t.Optional[GameID] = None,
         game_player_id: t.Optional[str] = None,
@@ -636,7 +636,7 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
 
     @t.overload
     async def get(
-        self: AsyncPlayers[Raw], player_lookup_key: _NicknameOrPlayerID
+        self: AsyncPlayers[Raw], player_lookup_key: NicknameOrPlayerID
     ) -> RawAPIItem: ...
 
     @t.overload
@@ -646,7 +646,7 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
 
     @t.overload
     async def get(
-        self: AsyncPlayers[Model], player_lookup_key: _NicknameOrPlayerID
+        self: AsyncPlayers[Model], player_lookup_key: NicknameOrPlayerID
     ) -> Player: ...
 
     @t.overload
@@ -657,7 +657,7 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
     @validate_call
     async def get(
         self,
-        player_lookup_key: t.Optional[_NicknameOrPlayerID] = None,
+        player_lookup_key: t.Optional[NicknameOrPlayerID] = None,
         *,
         game: t.Optional[GameID] = None,
         game_player_id: t.Optional[str] = None,

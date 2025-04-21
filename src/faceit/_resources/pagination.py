@@ -38,7 +38,7 @@ from faceit.models import ItemPage
 from faceit.models._page import PaginationTimeRange
 
 if t.TYPE_CHECKING:
-    from ._base import BaseResource
+    from .base import BaseResource
 
     _OptionalTimestampPaginationConfig: TypeAlias = t.Union[
         "TimestampPaginationConfig", t.Literal[False]
@@ -47,7 +47,7 @@ if t.TYPE_CHECKING:
 
 @lazy_import
 def _get_base_resource_class() -> t.Type[BaseResource]:
-    from ._base import BaseResource  # noqa: PLC0415
+    from .base import BaseResource  # noqa: PLC0415
 
     return BaseResource
 
@@ -94,14 +94,12 @@ class MaxPages(int):
     __slots__ = ()
 
 
-@t.final
 class CollectReturnFormat(StrEnum):
     FIRST = "first"
     RAW = "raw"
     MODEL = "model"
 
 
-@t.final
 class MaxItems(StrEnum):
     SAFE = "safe"
 
@@ -233,7 +231,7 @@ class BasePageIterator(t.Generic[PaginationMethodT, _PageT], ABC):
         CollectReturnFormat.MODEL: lambda _: ItemPage,
     }
 
-    _SAFE_MAX_PAGES: t.ClassVar = 100
+    SAFE_MAX_PAGES: t.ClassVar = 100
 
     DEFAULT_MAX_ITEMS: t.ClassVar = 2000
     """
@@ -325,7 +323,7 @@ class BasePageIterator(t.Generic[PaginationMethodT, _PageT], ABC):
             self._max_items_info = _MaxItemsInfo.from_max_pages(max_pages)
 
         if max_items == MaxItems.SAFE:
-            set_max_pages(self.__class__._SAFE_MAX_PAGES)
+            set_max_pages(self.__class__.SAFE_MAX_PAGES)
             return
 
         validate_positive_int(max_items, param_name="max_items")
@@ -340,10 +338,10 @@ class BasePageIterator(t.Generic[PaginationMethodT, _PageT], ABC):
         )
 
         max_pages = math.ceil(max_items / self._pagination_limits.limit)
-        if max_pages > self.__class__._SAFE_MAX_PAGES:
+        if max_pages > self.__class__.SAFE_MAX_PAGES:
             warn(
                 f"The computed number of pages ({max_pages}) exceeds the "
-                f"recommended safe maximum ({self.__class__._SAFE_MAX_PAGES}). "
+                f"recommended safe maximum ({self.__class__.SAFE_MAX_PAGES}). "
                 f"Proceed at your own risk.",
                 UserWarning,
                 stacklevel=2,
@@ -757,12 +755,14 @@ class SyncPageIterator(_BaseSyncPageIterator[_PageT]):
                 ],
                 method,
             )
-            collection: t.Iterator = cls(casted_method, *args, **kwargs)
+            # Type annotation needed as mypy can't infer that
+            # both branches return compatible iterable
+            iterator: t.Iterator = cls(casted_method, *args, **kwargs)
         else:
             casted_method = t.cast(SyncUnixPaginationMethod[_PageT], method)
-            collection = cls.unix(casted_method, *args, **unix, **kwargs)
+            iterator = cls.unix(casted_method, *args, **unix, **kwargs)
         return cls.gather_from_iterator(
-            collection, return_format=return_format, deduplicate=deduplicate
+            iterator, return_format=return_format, deduplicate=deduplicate
         )
 
     @t.overload
@@ -944,8 +944,6 @@ class AsyncPageIterator(_BasyAsyncPageIterator[_PageT]):
                 ],
                 method,
             )
-            # Type annotation needed as mypy can't infer that
-            # both branches return compatible async iterable
             iterator: t.AsyncIterator = cls(casted_method, *args, **kwargs)
         else:
             casted_method = t.cast(AsyncUnixPaginationMethod[_PageT], method)

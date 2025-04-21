@@ -1,5 +1,5 @@
 import pytest
-from faceit._resources._aggregator_factory import (
+from faceit._resources.aggregator_factory import (
     resource_aggregator,
     BaseResources,
 )

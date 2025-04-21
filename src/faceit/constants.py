@@ -9,7 +9,7 @@ from warnings import warn
 from pydantic import Field, validate_call
 from strenum import StrEnum
 
-from ._typing import TypeAlias, deprecated
+from ._typing import TypeAlias  # noqa: TCH001
 from ._utils import StrEnumWithAll
 
 if t.TYPE_CHECKING:
@@ -36,13 +36,6 @@ class EventCategory(StrEnum):
 
 
 class ExpandedField(StrEnumWithAll):
-    GAME = "game"
-    ORGANIZER = "organizer"
-
-
-@deprecated("Use ExpandedField instead")
-class ExpandOption(StrEnumWithAll):
-    NONE = ""
     GAME = "game"
     ORGANIZER = "organizer"
 

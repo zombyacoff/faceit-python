@@ -18,7 +18,7 @@ from faceit._typing import (
 from faceit.http import AsyncClient, SyncClient
 from faceit.models._custom_types import FaceitMatchID
 
-from ._base import BaseResource, FaceitResourcePath, ModelPlaceholder
+from .base import BaseResource, FaceitResourcePath, ModelPlaceholder
 
 _MatchID: TypeAlias = str
 # We use `AfterValidator` with the `_MatchID` type alias instead of `FaceitMatchID` directly
