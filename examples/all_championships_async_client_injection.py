@@ -1,5 +1,17 @@
 """
-NOTE: This example does not work with the current version `(0.1.0)` of the library.
+NOTE: This example does not work with the current version (0.1.0) of the
+library. Please wait for release 0.1.1 for this feature.
+
+Backport 0.1.1:
+Do not use the enum `faceit.MaxConcurrentRequests.ABSOLUTE` — replace it with
+the constant `MAX_CONCURRENT_REQUESTS_ABSOLUTE_ABSOLUTE` from `AsyncClient`.
+
+The `max_items` parameter is not available yet, and instead of a list,
+the method returns an iterator. To get a list, you need to call
+`await championships.collect()`.
+
+Use this at your own risk, as in version 0.1.1 the iterator is not initially
+limited, so it may return a very large list.
 """
 
 import asyncio

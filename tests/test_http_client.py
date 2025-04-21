@@ -452,11 +452,11 @@ class TestAsyncClient:
             # Test updating to a value exceeding maximum
             with pytest.warns(UserWarning):
                 AsyncClient.update_rate_limit(
-                    AsyncClient.MAX_CONCURRENT_REQUESTS + 10
+                    AsyncClient.MAX_CONCURRENT_REQUESTS_ABSOLUTE + 10
                 )
             assert (
                 AsyncClient._max_concurrent_requests
-                == AsyncClient.MAX_CONCURRENT_REQUESTS
+                == AsyncClient.MAX_CONCURRENT_REQUESTS_ABSOLUTE
             )
 
             # Restore original value

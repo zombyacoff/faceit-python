@@ -106,8 +106,8 @@ class AsyncFaceit(BaseFaceit[AsyncClient, AsyncResources]):
     _client_cls = AsyncClient
     _resources_cls = AsyncResources
 
-    MAX_CONCURRENT_REQUESTS: t.ClassVar[int] = (
-        AsyncClient.MAX_CONCURRENT_REQUESTS
+    MAX_CONCURRENT_REQUESTS_ABSOLUTE: t.ClassVar[int] = (
+        AsyncClient.MAX_CONCURRENT_REQUESTS_ABSOLUTE
     )
 
     async def __aenter__(self) -> Self:

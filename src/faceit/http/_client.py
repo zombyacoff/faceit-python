@@ -275,15 +275,19 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
 
     # Current limit value is based on empirical testing,
     # but requires further investigation for optimal setting
-    MAX_CONCURRENT_REQUESTS: t.ClassVar = 100
+    MAX_CONCURRENT_REQUESTS_ABSOLUTE: t.ClassVar = 100
 
-    DEFAULT_MAX_CONCURRENT_REQUESTS: t.ClassVar = 30
+    DEFAULT_MAX_CONCURRENT_REQUESTS_ABSOLUTE: t.ClassVar = 30
     DEFAULT_SSL_ERROR_THRESHOLD: t.ClassVar = 5
     DEFAULT_MIN_CONNECTIONS: t.ClassVar = 5
     DEFAULT_RECOVERY_INTERVAL: t.ClassVar = 300
 
-    _initial_max_requests: t.ClassVar = DEFAULT_MAX_CONCURRENT_REQUESTS
-    _max_concurrent_requests: t.ClassVar = DEFAULT_MAX_CONCURRENT_REQUESTS
+    _initial_max_requests: t.ClassVar = (
+        DEFAULT_MAX_CONCURRENT_REQUESTS_ABSOLUTE
+    )
+    _max_concurrent_requests: t.ClassVar = (
+        DEFAULT_MAX_CONCURRENT_REQUESTS_ABSOLUTE
+    )
     _ssl_error_threshold: t.ClassVar = DEFAULT_SSL_ERROR_THRESHOLD
     _min_connections: t.ClassVar = DEFAULT_MIN_CONNECTIONS
     _recovery_interval: t.ClassVar = DEFAULT_RECOVERY_INTERVAL
@@ -299,7 +303,7 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
         retry_args: t.Optional[t.Dict[str, t.Any]] = None,
         max_concurrent_requests: t.Union[
             MaxConcurrentRequests, int
-        ] = DEFAULT_MAX_CONCURRENT_REQUESTS,
+        ] = DEFAULT_MAX_CONCURRENT_REQUESTS_ABSOLUTE,
         ssl_error_threshold: int = DEFAULT_SSL_ERROR_THRESHOLD,
         min_connections: int = DEFAULT_MIN_CONNECTIONS,
         recovery_interval: int = DEFAULT_RECOVERY_INTERVAL,
@@ -521,7 +525,7 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
     ) -> int:
         with cls._lock:
             max_concurrent_requests = (
-                cls.MAX_CONCURRENT_REQUESTS
+                cls.MAX_CONCURRENT_REQUESTS_ABSOLUTE
                 if value == MaxConcurrentRequests.ABSOLUTE
                 else value
             )
@@ -544,14 +548,14 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
     @validate_call
     def update_rate_limit(cls, new_limit: PositiveInt, /) -> None:
         with cls._lock:
-            if new_limit > cls.MAX_CONCURRENT_REQUESTS:
+            if new_limit > cls.MAX_CONCURRENT_REQUESTS_ABSOLUTE:
                 warn(
                     f"Request limit of {new_limit} exceeds "
-                    f"maximum allowed ({cls.MAX_CONCURRENT_REQUESTS})",
+                    f"maximum allowed ({cls.MAX_CONCURRENT_REQUESTS_ABSOLUTE})",
                     UserWarning,
                     stacklevel=4,
                 )
-                new_limit = cls.MAX_CONCURRENT_REQUESTS
+                new_limit = cls.MAX_CONCURRENT_REQUESTS_ABSOLUTE
 
             # `cls._semaphore` is None when this method is called from __init__
             if (
