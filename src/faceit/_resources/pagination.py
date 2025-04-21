@@ -671,8 +671,6 @@ class SyncPageIterator(_BaseSyncPageIterator[_PageT]):
 
             current_timestamp = new_timestamp
 
-    # TODO: PAGES LIMIT
-
     @t.overload
     @classmethod
     def gather_pages(

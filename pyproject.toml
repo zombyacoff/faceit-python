@@ -56,7 +56,8 @@ no_implicit_reexport = true
 exclude = [
     "_.py",
     "_async.py",
-    "tests/*"
+    "tests/*",
+    "examples/*"
 ]
 
 [tool.pytest.ini_options]

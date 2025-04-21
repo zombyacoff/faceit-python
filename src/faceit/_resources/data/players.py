@@ -166,29 +166,32 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
         game_player_id: t.Optional[str] = None,
     ) -> t.Union[RawAPIItem, Player]:
         """
-        Fetch player data either by identifier or by game-specific parameters.
+        Retrieves player data by FACEIT identifier, nickname, or game-specific
+        parameters.
 
         Args:
-            player_lookup_key: Player's FACEIT UUID or nickname
-            game: Game identifier (required if using game_player_id)
-            game_player_id: Game-specific player ID (requires game parameter)
+            player_lookup_key: Player's FACEIT UUID or nickname.
+            game: Game identifier (required if using `game_player_id`).
+            game_player_id: Game-specific player ID (requires `game` parameter).
 
         Returns:
-            Player model or raw dict depending on client configuration
+            Player model or raw dict depending on client configuration.
 
         Examples::
 
+            faceit_data = Faceit.data("YOUR_API_KEY")
+
             # Get player by nickname
-            player = faceit.resources.players.get("s1mple")
+            player = faceit_data.players.get("s1mple")
             # Get player by UUID (string format works too)
-            player = faceit.resources.players.get("ac71ba3c-d3d4-45e7-8be2-26aa3986867d")
+            player = faceit_data.players.get("ac71ba3c-d3d4-45e7-8be2-26aa3986867d")
             # Get player by game ID and game player ID
-            player = faceit.resources.players.get(game=GameID.CS2, game_player_id="76561198034202275")
+            player = faceit_data.players.get(game=GameID.CS2, game_player_id="76561198034202275")
             assert isinstance(player.id, FaceitID)
             assert str(player.id) == "ac71ba3c-d3d4-45e7-8be2-26aa3986867d"
 
-            # Get raw player data (returns `dict`)
-            player_data = faceit.resources.raw_players.get("s1mple")
+            # Get raw player data
+            player_data = faceit_data.raw_players.get("s1mple")
             assert isinstance(player_data, dict)
             assert player_data["nickname"] == "s1mple"
         """
@@ -662,29 +665,32 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
         game_player_id: t.Optional[str] = None,
     ) -> t.Union[RawAPIItem, Player]:
         """
-        Fetch player data either by identifier or by game-specific parameters asynchronously.
+        Asynchronously retrieves player data by FACEIT identifier, nickname, or
+        game-specific parameters.
 
         Args:
-            player_lookup_key: Player's FACEIT UUID or nickname
-            game: Game identifier (required if using game_player_id)
-            game_player_id: Game-specific player ID (requires game parameter)
+            player_lookup_key: Player's FACEIT UUID or nickname.
+            game: Game identifier (required if using `game_player_id`).
+            game_player_id: Game-specific player ID (requires `game` parameter).
 
         Returns:
-            Player model or raw dict depending on client configuration
+            Player model or raw dict depending on client configuration.
 
         Examples::
 
+            faceit_data = AsyncFaceit.data("YOUR_API_KEY")
+
             # Get player by nickname
-            player = await faceit.resources.players.get("s1mple")
+            player = await faceit_data.players.get("s1mple")
             # Get player by UUID (string format works too)
-            player = await faceit.resources.players.get("ac71ba3c-d3d4-45e7-8be2-26aa3986867d")
+            player = await faceit_data.players.get("ac71ba3c-d3d4-45e7-8be2-26aa3986867d")
             # Get player by game ID and game player ID
-            player = await faceit.resources.players.get(game=GameID.CS2, game_player_id="76561198034202275")
+            player = await faceit_data.players.get(game=GameID.CS2, game_player_id="76561198034202275")
             assert isinstance(player.id, FaceitID)
             assert str(player.id) == "ac71ba3c-d3d4-45e7-8be2-26aa3986867d"
 
-            # Get raw player data (returns `dict`)
-            player_data = await faceit.resources.raw_players.get("s1mple")
+            # Get raw player data
+            player_data = await faceit_data.raw_players.get("s1mple")
             assert isinstance(player_data, dict)
             assert player_data["nickname"] == "s1mple"
         """

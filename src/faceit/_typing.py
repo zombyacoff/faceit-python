@@ -9,8 +9,6 @@ from pydantic import AnyHttpUrl, BaseModel, Field
 # and implemented in type checkers and major IDEs such as VSCode and PyCharm).
 # Until then, we will continue to rely on traditional docstrings and comments.
 
-# At the moment `TypeGuard` is not used in the project,
-# but I admit its use in the future, so we leave it imported
 if sys.version_info >= (3, 11):
     from typing import Annotated as Annotated
     from typing import NotRequired as NotRequired
@@ -18,6 +16,9 @@ if sys.version_info >= (3, 11):
     from typing import Required as Required
     from typing import Self as Self
     from typing import TypeAlias as TypeAlias
+
+    # At the moment `TypeGuard` is not used in the project,
+    # but I admit its use in the future, so we leave it imported
     from typing import TypeGuard as TypeGuard
 
     from typing_extensions import deprecated as deprecated
@@ -52,7 +53,7 @@ else:
     from typing_extensions import deprecated as deprecated
 
 if t.TYPE_CHECKING:
-    from ._resources import AsyncData, SyncData
+    from ._resources import AsyncDataResource, SyncDataResource
     from .http import Endpoint
     from .http._client import BaseAPIClient
 
@@ -60,7 +61,9 @@ _T_co = t.TypeVar("_T_co", covariant=True)
 
 ModelT = t.TypeVar("ModelT", bound=BaseModel)
 ClientT = t.TypeVar("ClientT", bound="BaseAPIClient")
-DataT = t.TypeVar("DataT", bound=t.Union["SyncData", "AsyncData"])
+DataT = t.TypeVar(
+    "DataT", bound=t.Union["SyncDataResource", "AsyncDataResource"]
+)
 
 APIResponseFormatT = t.TypeVar("APIResponseFormatT", "Raw", "Model")
 PaginationMethodT = t.TypeVar("PaginationMethodT", bound="BaseMethodProtocol")

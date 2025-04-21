@@ -4,140 +4,98 @@ import typing as t
 from abc import ABC
 from warnings import warn
 
-from ._resources import AsyncData, SyncData
-from ._typing import ClientT, DataT, Self, ValidUUID, deprecated
+from ._resources import AsyncDataResource, SyncDataResource
+from ._typing import ClientT, DataT, ValidUUID
 from ._utils import representation
 from .constants import BASE_WIKI_URL
 from .http import AsyncClient, SyncClient
 
-if t.TYPE_CHECKING:
-    from types import TracebackType
 
-
-@representation("client", "data")
+@representation(use_str=True)
 class BaseFaceit(t.Generic[ClientT, DataT], ABC):
-    __slots__ = ("_client", "_data")
+    __slots__ = ()
 
     _client_cls: t.Type[ClientT]
-
-    _chat_cls: None
     _data_cls: t.Type[DataT]
-    _webhooks_cls: None
+
+    def __init_subclass__(
+        cls, *, client: t.Type[ClientT], data: t.Type[DataT], **kwargs: t.Any
+    ) -> None:
+        super().__init_subclass__(**kwargs)
+        cls._client_cls = client
+        cls._data_cls = data
 
     @t.overload
-    def __init__(
-        self,
-        api_key: ValidUUID,
-        **client_options: t.Any,
-    ) -> None: ...
+    @classmethod
+    def data(cls, api_key: ValidUUID, **client_options: t.Any) -> DataT: ...
 
     @t.overload
-    def __init__(
-        self,
-        *,
-        client: ClientT,
-    ) -> None: ...
+    @classmethod
+    def data(cls, *, client: ClientT) -> DataT: ...
 
-    def __init__(
-        self,
+    @classmethod
+    def data(
+        cls,
         api_key: t.Optional[ValidUUID] = None,
         *,
         client: t.Optional[ClientT] = None,
         **client_options: t.Any,
-    ) -> None:
-        """
-        Initializes the Faceit API interface.
+    ) -> DataT:
+        return cls._data_cls(
+            cls._initialize_client(
+                "api_key", client, auth=api_key, **client_options
+            )
+        )
 
-        You must provide either an `api_key` or a pre-configured HTTP client instance.
-        Providing both is not allowed.
-
-        If `api_key` is provided, a new client will be created using the given options.
-        If `client` is provided, any additional `client_options` will be ignored.
-
-        See the [Faceit API documentation](https://docs.faceit.com) and
-        [how to get an API key](https://docs.faceit.com/getting-started/authentication/api-keys)
-        for more information.
-
-        Args:
-            api_key: FACEIT API key (Valid UUID: `str`, `UUID`, or `bytes`).
-            client: Pre-configured HTTP client instance.
-            **client_options: Additional options for client initialization
-                (e.g., timeouts, proxies).
-        """
-        if api_key is None and client is None:
-            raise ValueError("Either 'api_key' or 'client' must be provided")
-        if api_key is not None and client is not None:
-            raise ValueError("Provide either 'api_key' or 'client', not both")
-
-        if client is not None:
-            if client_options:
-                warn(
-                    "'client_options' are ignored when an existing client "
-                    "instance is provided. Configure your client before "
-                    "passing it to this constructor.",
-                    UserWarning,
-                    stacklevel=2,
-                )
-            self._client = client
-        else:
-            self._client = self.__class__._client_cls(
-                api_key, **client_options
+    # TODO: The client initialization logic should be revisited when support
+    # for API resources beyond Data is introduced.
+    @classmethod
+    def _initialize_client(
+        cls,
+        auth_param_name: str,
+        client: t.Optional[ClientT] = None,
+        /,
+        *,
+        auth: t.Optional[ValidUUID] = None,
+        **client_options: t.Any,
+    ) -> ClientT:
+        if auth is None and client is None:
+            raise ValueError(
+                f"Either '{auth_param_name}' or 'client' must be provided"
             )
 
-        self._data = self.__class__._data_cls(self._client)
+        if auth is not None and client is not None:
+            raise ValueError(
+                f"Provide either '{auth_param_name}' or 'client', not both"
+            )
 
-    @property
-    def client(self) -> ClientT:
-        """
-        The underlying HTTP client instance for low-level interactions with the
-        Faceit API (e.g., unsupported endpoints or advanced use cases).
-        """
-        return self._client
+        if client is None:
+            return cls._client_cls(auth, **client_options)
 
-    @property
-    @deprecated(
-        "For greater clarity and maintainability, we now expose API domains as "
-        "explicit properties such as `.data` (and in the future, `.chat`, etc.), "
-        "instead of aggregating all resources under a single `.resources` property. "
-        "In earlier releases, `.resources` referred only to data-related resources, "
-        "but this is now superseded by the `.data` property. Please migrate to using "
-        "`.data` for your use case. This alias will be removed at the earliest "
-        "opportunity, in an upcoming release."
-    )
-    def resources(self) -> DataT:
-        """Alias for `.data`. Deprecated."""
-        return self._data
+        if client_options:
+            warn(
+                "'client_options' are ignored when an existing client "
+                "instance is provided. Configure your client before "
+                "passing it to this constructor.",
+                UserWarning,
+                stacklevel=3,
+            )
 
-    @property
-    def chat(self) -> t.NoReturn:
-        """
-        **Not yet supported.**
-        This API resource will be available in a future release.
-        """
-        raise NotImplementedError
-
-    @property
-    def data(self) -> DataT:
-        """Provides access to the data API resource (v4)."""
-        return self._data
-
-    @property
-    def webhooks(self) -> t.NoReturn:
-        """
-        **Not yet supported.**
-        This API resource will be available in a future release.
-        """
-        raise NotImplementedError
+        return client
 
     def __str__(self) -> str:
         return (
             f"FACEIT API interface "
-            f"(resources and client, docs: {BASE_WIKI_URL})"
+            f"(Official documentation: {BASE_WIKI_URL})"
         )
 
 
 @t.final
-class Faceit(BaseFaceit[SyncClient, SyncData]):
+class Faceit(
+    BaseFaceit[SyncClient, SyncDataResource],
+    client=SyncClient,
+    data=SyncDataResource,
+):
     """
     Synchronous Faceit API interface.
 
@@ -145,34 +103,20 @@ class Faceit(BaseFaceit[SyncClient, SyncData]):
 
         from faceit import Faceit
 
-        with Faceit("YOUR_API_KEY") as f:
-            player = f.data.players.get("s1mple")
+        with Faceit.data("YOUR_API_KEY") as f:
+            player = f.players.get("s1mple")
             assert player.nickname == "s1mple"
     """
 
     __slots__ = ()
 
-    _client_cls = SyncClient
-
-    _chat_cls = None
-    _data_cls = SyncData
-    _webhooks_cls = None
-
-    def __enter__(self) -> Self:
-        self.client.__enter__()
-        return self
-
-    def __exit__(
-        self,
-        typ: t.Optional[t.Type[BaseException]],
-        exc: t.Optional[BaseException],
-        tb: t.Optional[TracebackType],
-    ) -> None:
-        self.client.__exit__(typ, exc, tb)
-
 
 @t.final
-class AsyncFaceit(BaseFaceit[AsyncClient, AsyncData]):
+class AsyncFaceit(
+    BaseFaceit[AsyncClient, AsyncDataResource],
+    client=AsyncClient,
+    data=AsyncDataResource,
+):
     """
     Asynchronous Faceit API interface.
 
@@ -180,27 +124,9 @@ class AsyncFaceit(BaseFaceit[AsyncClient, AsyncData]):
 
         from faceit import AsyncFaceit
 
-        async with AsyncFaceit("YOUR_API_KEY") as f:
-            player = await f.data.players.get("s1mple")
+        async with AsyncFaceit.data("YOUR_API_KEY") as f:
+            player = await f.players.get("s1mple")
             assert player.nickname == "s1mple"
     """
 
     __slots__ = ()
-
-    _client_cls = AsyncClient
-
-    _chat_cls = None
-    _data_cls = AsyncData
-    _webhooks_cls = None
-
-    async def __aenter__(self) -> Self:
-        await self.client.__aenter__()
-        return self
-
-    async def __aexit__(
-        self,
-        typ: t.Optional[t.Type[BaseException]],
-        exc: t.Optional[BaseException],
-        tb: t.Optional[TracebackType],
-    ) -> None:
-        await self.client.__aexit__(typ, exc, tb)
