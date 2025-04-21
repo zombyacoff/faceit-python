@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import math
-import sys
 import typing as t
 from abc import ABC
 from inspect import Parameter, signature
@@ -200,7 +199,6 @@ class _MaxItemsInfo(t.NamedTuple):
 
 _ITERATOR_SLOTS = (
     "_exhausted",
-    "_max_items",
     "_max_items_info",
     "_max_pages",
     "_method",
@@ -259,11 +257,14 @@ class BasePageIterator(t.Generic[PaginationMethodT, _PageT], ABC):
                 f"Ensure it's a BaseResource method "
                 f"with offset and limit parameters."
             )
-        self._method = (
-            _MethodCall[PaginationMethodT]
-            if sys.version_info >= (3, 9)
-            else _MethodCall
-        )(
+        if t.TYPE_CHECKING:
+
+            def method_call(
+                *_: t.Any, **__: t.Any
+            ) -> _MethodCall[PaginationMethodT]: ...
+        else:
+            method_call = _MethodCall
+        self._method = method_call(
             call=method,
             args=args,
             kwargs=self.__class__._remove_pagination_args(**kwargs),

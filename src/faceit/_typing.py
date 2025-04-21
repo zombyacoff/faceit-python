@@ -22,6 +22,7 @@ if sys.version_info >= (3, 11):
     from typing import TypeGuard as TypeGuard
 
     from typing_extensions import deprecated as deprecated
+
 elif sys.version_info >= (3, 10):
     from typing import Annotated as Annotated
     from typing import ParamSpec as ParamSpec
@@ -32,6 +33,7 @@ elif sys.version_info >= (3, 10):
     from typing_extensions import Required as Required
     from typing_extensions import Self as Self
     from typing_extensions import deprecated as deprecated
+
 elif sys.version_info >= (3, 9):
     from typing import Annotated as Annotated
 
@@ -42,6 +44,7 @@ elif sys.version_info >= (3, 9):
     from typing_extensions import TypeAlias as TypeAlias
     from typing_extensions import TypeGuard as TypeGuard
     from typing_extensions import deprecated as deprecated
+
 else:
     from typing_extensions import Annotated as Annotated
     from typing_extensions import NotRequired as NotRequired

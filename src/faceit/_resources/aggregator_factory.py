@@ -69,7 +69,7 @@ def resource_aggregator(cls: t.Type[_AT]) -> t.Type[_AT]:
             resource_type: t.Type[_RT] = resource_type,
         ) -> cached_property:
             return cached_property(
-                lambda self: resource_type(self._client, raw=is_raw)
+                lambda self: resource_type(self._client, is_raw)
             )
 
         prop = make_property(name.startswith("raw_"))

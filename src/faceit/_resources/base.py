@@ -61,10 +61,10 @@ class FaceitResourcePath(StrEnum):
 
 @dataclass(eq=False, frozen=True)
 class BaseResource(t.Generic[ClientT], ABC):
-    __slots__ = ("_client", "raw")
+    __slots__ = ("_client", "_raw")
 
     _client: ClientT
-    raw: bool
+    _raw: bool
 
     _sync_page_iterator: t.ClassVar = SyncPageIterator
     _async_page_iterator: t.ClassVar = AsyncPageIterator
@@ -95,6 +95,10 @@ class BaseResource(t.Generic[ClientT], ABC):
 
         cls._RAW_PATH = resource_path
         cls.PATH = Endpoint(resource_path)
+
+    @property
+    def raw(self) -> bool:
+        return self._raw
 
     # NOTE: These overloads are necessary as this function directly returns in resource
     # methods, where typing must be strict for public API. Current implementation
@@ -169,7 +173,7 @@ class BaseResource(t.Generic[ClientT], ABC):
         validator: t.Optional[t.Type[ModelT]],
         /,
     ) -> t.Union[_ResponseT, ModelT]:
-        if self.raw:
+        if self._raw:
             return response
 
         if validator is None:

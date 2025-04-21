@@ -6,24 +6,21 @@ from warnings import warn
 
 from ._resources import AsyncDataResource, SyncDataResource
 from ._typing import ClientT, DataT, ValidUUID
-from ._utils import representation
-from .constants import BASE_WIKI_URL
 from .http import AsyncClient, SyncClient
 
 
-@representation(use_str=True)
 class BaseFaceit(t.Generic[ClientT, DataT], ABC):
     __slots__ = ()
 
     _client_cls: t.Type[ClientT]
     _data_cls: t.Type[DataT]
 
-    def __init_subclass__(
-        cls, *, client: t.Type[ClientT], data: t.Type[DataT], **kwargs: t.Any
-    ) -> None:
-        super().__init_subclass__(**kwargs)
-        cls._client_cls = client
-        cls._data_cls = data
+    def __new__(cls) -> t.NoReturn:
+        """Prevent direct instantiation."""
+        raise TypeError(
+            f"Direct instantiation of {cls.__name__} is not allowed. "
+            f"Use classmethods or factory methods instead."
+        )
 
     @t.overload
     @classmethod
@@ -41,6 +38,40 @@ class BaseFaceit(t.Generic[ClientT, DataT], ABC):
         client: t.Optional[ClientT] = None,
         **client_options: t.Any,
     ) -> DataT:
+        """
+        Create and return a Faceit API data resource.
+
+        You must provide either an `api_key` or a pre-configured HTTP client instance—never both.
+
+        If `api_key` is supplied, a new HTTP client will be initialized with the given options.
+        If `client` is supplied, any `client_options` are ignored.
+
+        Refer to the [Faceit API documentation](https://docs.faceit.com) and
+        [API key instructions](https://docs.faceit.com/getting-started/authentication/api-keys)
+        for details.
+
+        Args:
+            api_key: FACEIT API key (str, UUID, or bytes). Used to create a new HTTP client.
+            client: Pre-configured HTTP client instance. Cannot be combined with `api_key`.
+            **client_options: Additional keyword arguments for HTTP client initialization
+                (e.g., timeouts, proxies). Ignored if `client` is provided.
+
+        Returns:
+            A ready-to-use Faceit API data resource instance.
+
+        Examples:
+            >>> # Synchronous usage with an API key
+            >>> data = Faceit.data("YOUR_API_KEY")
+            >>> player = data.players.get("s1mple")
+
+            >>> # Synchronous usage with a pre-configured client
+            >>> sync_client = SyncClient("YOUR_API_KEY", timeout=10)
+            >>> data = Faceit.data(client=sync_client)
+
+            >>> # Asynchronous usage with an API key
+            >>> data = AsyncFaceit.data("YOUR_API_KEY")
+            >>> player = await data.players.get("s1mple")
+        """
         return cls._data_cls(
             cls._initialize_client(
                 "api_key", client, auth=api_key, **client_options
@@ -52,7 +83,7 @@ class BaseFaceit(t.Generic[ClientT, DataT], ABC):
     @classmethod
     def _initialize_client(
         cls,
-        auth_param_name: str,
+        auth_name: str,
         client: t.Optional[ClientT] = None,
         /,
         *,
@@ -61,12 +92,12 @@ class BaseFaceit(t.Generic[ClientT, DataT], ABC):
     ) -> ClientT:
         if auth is None and client is None:
             raise ValueError(
-                f"Either '{auth_param_name}' or 'client' must be provided"
+                f"Either '{auth_name}' or 'client' must be provided"
             )
 
         if auth is not None and client is not None:
             raise ValueError(
-                f"Provide either '{auth_param_name}' or 'client', not both"
+                f"Provide either '{auth_name}' or 'client', not both"
             )
 
         if client is None:
@@ -83,19 +114,9 @@ class BaseFaceit(t.Generic[ClientT, DataT], ABC):
 
         return client
 
-    def __str__(self) -> str:
-        return (
-            f"FACEIT API interface "
-            f"(Official documentation: {BASE_WIKI_URL})"
-        )
-
 
 @t.final
-class Faceit(
-    BaseFaceit[SyncClient, SyncDataResource],
-    client=SyncClient,
-    data=SyncDataResource,
-):
+class Faceit(BaseFaceit[SyncClient, SyncDataResource]):
     """
     Synchronous Faceit API interface.
 
@@ -109,14 +130,12 @@ class Faceit(
     """
 
     __slots__ = ()
+    _client_cls = SyncClient
+    _data_cls = SyncDataResource
 
 
 @t.final
-class AsyncFaceit(
-    BaseFaceit[AsyncClient, AsyncDataResource],
-    client=AsyncClient,
-    data=AsyncDataResource,
-):
+class AsyncFaceit(BaseFaceit[AsyncClient, AsyncDataResource]):
     """
     Asynchronous Faceit API interface.
 
@@ -130,3 +149,5 @@ class AsyncFaceit(
     """
 
     __slots__ = ()
+    _client_cls = AsyncClient
+    _data_cls = AsyncDataResource

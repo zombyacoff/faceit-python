@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-import sys
 import typing as t
 from abc import ABC
 from warnings import warn
@@ -41,7 +40,7 @@ from faceit.models import (
     Player,
     Tournament,
 )
-from faceit.models._player import AbstractMatchPlayerStats
+from faceit.models._player import AbstractMatchPlayerStats  # noqa: TCH001
 
 _logger = logging.getLogger(__name__)
 
@@ -69,11 +68,13 @@ class BasePlayers(
 ):
     __slots__ = ()
 
-    _matches_stats_validator_cfg: t.ClassVar = (
-        MappedValidatorConfig[GameID, AbstractMatchPlayerStats]
-        if sys.version_info >= (3, 9)
-        else MappedValidatorConfig
-    )(
+    if t.TYPE_CHECKING:
+        mapped_validator_cfg = MappedValidatorConfig[
+            GameID, AbstractMatchPlayerStats
+        ]
+    else:
+        mapped_validator_cfg = MappedValidatorConfig
+    _matches_stats_validator_cfg: t.ClassVar = mapped_validator_cfg(
         validator_map={
             GameID.CS2: CS2MatchPlayerStats,
             # TODO: Add other games (e.g. CSGO)

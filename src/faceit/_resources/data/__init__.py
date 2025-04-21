@@ -1,13 +1,9 @@
-import typing as t
+from typing import final
 
 from faceit._resources.aggregator_factory import (
-    AsyncResources as AsyncResources,
-)
-from faceit._resources.aggregator_factory import (
-    SyncResources as SyncResources,
-)
-from faceit._resources.aggregator_factory import (
-    resource_aggregator as _resource_aggregator,
+    AsyncResources,
+    SyncResources,
+    resource_aggregator,
 )
 from faceit._typing import Model, Raw
 
@@ -28,8 +24,8 @@ from .teams import BaseTeams as BaseTeams
 from .teams import SyncTeams as SyncTeams
 
 
-@t.final
-@_resource_aggregator
+@final
+@resource_aggregator
 class SyncDataResource(SyncResources):
     championships: SyncChampionships[Model]
     raw_championships: SyncChampionships[Raw]
@@ -47,8 +43,8 @@ class SyncDataResource(SyncResources):
     raw_rankings: SyncRankings[Raw]
 
 
-@t.final
-@_resource_aggregator
+@final
+@resource_aggregator
 class AsyncDataResource(AsyncResources):
     championships: AsyncChampionships[Model]
     raw_championships: AsyncChampionships[Raw]
