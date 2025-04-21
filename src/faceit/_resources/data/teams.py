@@ -5,6 +5,12 @@ from abc import ABC
 
 from pydantic import AfterValidator, Field, validate_call
 
+from faceit._resources.base import (
+    BaseResource,
+    FaceitResourcePath,
+    ModelPlaceholder,
+)
+from faceit._resources.pagination import MaxItemsType, MaxPages
 from faceit._typing import (
     Annotated,
     APIResponseFormatT,
@@ -18,9 +24,6 @@ from faceit._typing import (
 )
 from faceit.constants import GameID  # noqa: TCH001
 from faceit.http import AsyncClient, SyncClient
-
-from .base import BaseResource, FaceitResourcePath, ModelPlaceholder
-from .pagination import MaxItemsType, MaxPages
 
 _TeamID: TypeAlias = str
 _TeamIDValidator: TypeAlias = Annotated[

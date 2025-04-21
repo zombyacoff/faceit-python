@@ -8,6 +8,14 @@ from warnings import warn
 
 from pydantic import AfterValidator, Field, validate_call
 
+from faceit._resources.base import (
+    BaseResource,
+    FaceitResourcePath,
+    MappedValidatorConfig,
+    ModelPlaceholder,
+    RequestPayload,
+)
+from faceit._resources.pagination import MaxItems, MaxItemsType, MaxPages
 from faceit._typing import (
     Annotated,
     APIResponseFormatT,
@@ -34,15 +42,6 @@ from faceit.models import (
     Tournament,
 )
 from faceit.models._player import AbstractMatchPlayerStats
-
-from .base import (
-    BaseResource,
-    FaceitResourcePath,
-    MappedValidatorConfig,
-    ModelPlaceholder,
-    RequestPayload,
-)
-from .pagination import MaxItems, MaxItemsType, MaxPages
 
 _logger = logging.getLogger(__name__)
 
@@ -166,7 +165,8 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
         game: t.Optional[GameID] = None,
         game_player_id: t.Optional[str] = None,
     ) -> t.Union[RawAPIItem, Player]:
-        """Fetch player data either by identifier or by game-specific parameters.
+        """
+        Fetch player data either by identifier or by game-specific parameters.
 
         Args:
             player_lookup_key: Player's FACEIT UUID or nickname
@@ -176,8 +176,8 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
         Returns:
             Player model or raw dict depending on client configuration
 
-        Examples:
-            ```python
+        Examples::
+
             # Get player by nickname
             player = faceit.resources.players.get("s1mple")
             # Get player by UUID (string format works too)
@@ -191,7 +191,6 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
             player_data = faceit.resources.raw_players.get("s1mple")
             assert isinstance(player_data, dict)
             assert player_data["nickname"] == "s1mple"
-            ```
         """
         return self._validate_response(
             self._client.get(
@@ -662,7 +661,8 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
         game: t.Optional[GameID] = None,
         game_player_id: t.Optional[str] = None,
     ) -> t.Union[RawAPIItem, Player]:
-        """Fetch player data either by identifier or by game-specific parameters asynchronously.
+        """
+        Fetch player data either by identifier or by game-specific parameters asynchronously.
 
         Args:
             player_lookup_key: Player's FACEIT UUID or nickname
@@ -672,8 +672,8 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
         Returns:
             Player model or raw dict depending on client configuration
 
-        Examples:
-            ```python
+        Examples::
+
             # Get player by nickname
             player = await faceit.resources.players.get("s1mple")
             # Get player by UUID (string format works too)
@@ -687,7 +687,6 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
             player_data = await faceit.resources.raw_players.get("s1mple")
             assert isinstance(player_data, dict)
             assert player_data["nickname"] == "s1mple"
-            ```
         """
         return self._validate_response(
             await self._client.get(

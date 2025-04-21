@@ -5,6 +5,11 @@ from abc import ABC
 
 from pydantic import AfterValidator, validate_call
 
+from faceit._resources.base import (
+    BaseResource,
+    FaceitResourcePath,
+    ModelPlaceholder,
+)
 from faceit._typing import (
     Annotated,
     APIResponseFormatT,
@@ -17,8 +22,6 @@ from faceit._typing import (
 )
 from faceit.http import AsyncClient, SyncClient
 from faceit.models._custom_types import FaceitMatchID
-
-from .base import BaseResource, FaceitResourcePath, ModelPlaceholder
 
 _MatchID: TypeAlias = str
 # We use `AfterValidator` with the `_MatchID` type alias instead of `FaceitMatchID` directly

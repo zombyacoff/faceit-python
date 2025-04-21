@@ -1,4 +1,5 @@
-# TODO: больше исключений, в принципе реализовать данный модуль лучше
+# TODO: Enhance this module by handling additional
+# exceptions and improving its overall design.
 
 
 class FaceitError(Exception):

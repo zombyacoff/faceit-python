@@ -22,8 +22,8 @@ BASE_WIKI_URL: t.Final = "https://docs.faceit.com"
 RAW_RESPONSE_ITEMS_KEY: t.Final = "items"
 
 MIN_ELO: t.Final = 100
-"""Minimum ELO value across all FACEIT games.
-
+"""
+Minimum ELO value across all FACEIT games.
 Players cannot drop below this threshold regardless of consecutive losses.
 """
 
@@ -142,13 +142,14 @@ class GameID(StrEnum):
 
 class HighTierLevel(StrEnum):
     ABSENT = "absent"
-    """Indicates the absence of a defined top-tier rank in this discipline.
-
+    """
+    Indicates the absence of a defined top-tier rank in this discipline.
     Used when there is no distinct elite or highest rank in the ranking structure.
     """
 
     CHALLENGER = "challenger"
-    """Elite tier reserved for top 1000 players per game/region.
+    """
+    Elite tier reserved for top 1000 players per game/region.
 
     This rank represents a dynamic threshold based on leaderboard position rather
     than a fixed ELO value. Due to its relative nature, determining Challenger

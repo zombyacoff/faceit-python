@@ -79,7 +79,8 @@ class PaginationMaxParams(t.NamedTuple):
 
 @t.final
 class MaxPages(int):
-    """Indicates the maximum number of pages to fetch when passed as `max_items`.
+    """
+    Indicates the maximum number of pages to fetch when passed as `max_items`.
 
     This class enables explicit page-based limits without introducing a separate
     `max_pages` parameter, allowing for flexible and concise API usage.

@@ -4,75 +4,63 @@ from uuid import UUID
 
 from pydantic import AnyHttpUrl, BaseModel, Field
 
-if sys.version_info >= (3, 11):
-    from typing import (
-        Annotated,
-        NotRequired,
-        ParamSpec,
-        Required,
-        Self,
-        TypeAlias,
-        TypeGuard,
-    )
-
-    from typing_extensions import deprecated
-
-elif sys.version_info >= (3, 10):
-    from typing import Annotated, ParamSpec, TypeAlias, TypeGuard
-
-    from typing_extensions import NotRequired, Required, Self, deprecated
-elif sys.version_info >= (3, 9):
-    from typing import Annotated
-
-    from typing_extensions import (
-        NotRequired,
-        ParamSpec,
-        Required,
-        Self,
-        TypeAlias,
-        TypeGuard,
-        deprecated,
-    )
-else:
-    from typing_extensions import (
-        Annotated,
-        NotRequired,
-        ParamSpec,
-        Required,
-        Self,
-        TypeAlias,
-        TypeGuard,
-        deprecated,
-    )
-
-if t.TYPE_CHECKING:
-    from ._resources import BaseResources
-    from .http import Endpoint
-    from .http._client import BaseAPIClient
-
 # NOTE: We plan to migrate to using the `Doc` annotation for documentation
 # as soon as it is officially supported in Python (i.e., after PEP 727 is accepted
 # and implemented in type checkers and major IDEs such as VSCode and PyCharm).
 # Until then, we will continue to rely on traditional docstrings and comments.
 
-__all__ = (
-    "Annotated",
-    "NotRequired",
-    "ParamSpec",
-    "Required",
-    "Self",
-    "TypeAlias",
-    # At the moment `TypeGuard` is not used in the project,
-    # but I admit its use in the future, so we leave it imported
-    "TypeGuard",
-    "deprecated",
-)
+# At the moment `TypeGuard` is not used in the project,
+# but I admit its use in the future, so we leave it imported
+if sys.version_info >= (3, 11):
+    from typing import Annotated as Annotated
+    from typing import NotRequired as NotRequired
+    from typing import ParamSpec as ParamSpec
+    from typing import Required as Required
+    from typing import Self as Self
+    from typing import TypeAlias as TypeAlias
+    from typing import TypeGuard as TypeGuard
+
+    from typing_extensions import deprecated as deprecated
+elif sys.version_info >= (3, 10):
+    from typing import Annotated as Annotated
+    from typing import ParamSpec as ParamSpec
+    from typing import TypeAlias as TypeAlias
+    from typing import TypeGuard as TypeGuard
+
+    from typing_extensions import NotRequired as NotRequired
+    from typing_extensions import Required as Required
+    from typing_extensions import Self as Self
+    from typing_extensions import deprecated as deprecated
+elif sys.version_info >= (3, 9):
+    from typing import Annotated as Annotated
+
+    from typing_extensions import NotRequired as NotRequired
+    from typing_extensions import ParamSpec as ParamSpec
+    from typing_extensions import Required as Required
+    from typing_extensions import Self as Self
+    from typing_extensions import TypeAlias as TypeAlias
+    from typing_extensions import TypeGuard as TypeGuard
+    from typing_extensions import deprecated as deprecated
+else:
+    from typing_extensions import Annotated as Annotated
+    from typing_extensions import NotRequired as NotRequired
+    from typing_extensions import ParamSpec as ParamSpec
+    from typing_extensions import Required as Required
+    from typing_extensions import Self as Self
+    from typing_extensions import TypeAlias as TypeAlias
+    from typing_extensions import TypeGuard as TypeGuard
+    from typing_extensions import deprecated as deprecated
+
+if t.TYPE_CHECKING:
+    from ._resources import AsyncData, SyncData
+    from .http import Endpoint
+    from .http._client import BaseAPIClient
 
 _T_co = t.TypeVar("_T_co", covariant=True)
 
 ModelT = t.TypeVar("ModelT", bound=BaseModel)
 ClientT = t.TypeVar("ClientT", bound="BaseAPIClient")
-ResourcesT = t.TypeVar("ResourcesT", bound="BaseResources")
+DataT = t.TypeVar("DataT", bound=t.Union["SyncData", "AsyncData"])
 
 APIResponseFormatT = t.TypeVar("APIResponseFormatT", "Raw", "Model")
 PaginationMethodT = t.TypeVar("PaginationMethodT", bound="BaseMethodProtocol")

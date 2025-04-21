@@ -101,6 +101,7 @@ lint.ignore = [
 "tests/*" = ["ALL"]
 "types.py" = ["F401", "PLC041"]
 "__init__.py" = ["F401", "PLC041"]
+"_typing.py" = ["F401", "PLC041"]
 "_.py" = ["ALL"]
 "_async.py" = ["ALL"]
 

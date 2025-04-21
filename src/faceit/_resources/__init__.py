@@ -1,18 +1,26 @@
-import typing as t  # noqa: I001
+import typing as t
 
 from faceit._typing import Model, Raw
 from faceit.http import AsyncClient, SyncClient
 
-from .aggregator_factory import resource_aggregator as _resource_aggregator
-
 from .aggregator_factory import BaseResources as BaseResources
+from .aggregator_factory import resource_aggregator as _resource_aggregator
 from .base import BaseResource as BaseResource
-from .championships import AsyncChampionships as AsyncChampionships
-from .championships import BaseChampionships as BaseChampionships
-from .championships import SyncChampionships as SyncChampionships
-from .matches import AsyncMatches as AsyncMatches
-from .matches import BaseMatches as BaseMatches
-from .matches import SyncMatches as SyncMatches
+from .data import AsyncChampionships as AsyncChampionships
+from .data import AsyncMatches as AsyncMatches
+from .data import AsyncPlayers as AsyncPlayers
+from .data import AsyncRankings as AsyncRankings
+from .data import AsyncTeams as AsyncTeams
+from .data import BaseChampionships as BaseChampionships
+from .data import BaseMatches as BaseMatches
+from .data import BasePlayers as BasePlayers
+from .data import BaseRankings as BaseRankings
+from .data import BaseTeams as BaseTeams
+from .data import SyncChampionships as SyncChampionships
+from .data import SyncMatches as SyncMatches
+from .data import SyncPlayers as SyncPlayers
+from .data import SyncRankings as SyncRankings
+from .data import SyncTeams as SyncTeams
 from .pagination import AsyncPageIterator as AsyncPageIterator
 from .pagination import BasePageIterator as BasePageIterator
 from .pagination import CollectReturnFormat as CollectReturnFormat
@@ -21,20 +29,11 @@ from .pagination import MaxPages as MaxPages
 from .pagination import SyncPageIterator as SyncPageIterator
 from .pagination import TimestampPaginationConfig as TimestampPaginationConfig
 from .pagination import check_pagination_support as check_pagination_support
-from .players import AsyncPlayers as AsyncPlayers
-from .players import BasePlayers as BasePlayers
-from .players import SyncPlayers as SyncPlayers
-from .rankings import AsyncRankings as AsyncRankings
-from .rankings import BaseRankings as BaseRankings
-from .rankings import SyncRankings as SyncRankings
-from .teams import AsyncTeams as AsyncTeams
-from .teams import BaseTeams as BaseTeams
-from .teams import SyncTeams as SyncTeams
 
 
 @t.final
 @_resource_aggregator
-class SyncResources(BaseResources[SyncClient]):
+class SyncData(BaseResources[SyncClient]):
     championships: SyncChampionships[Model]
     raw_championships: SyncChampionships[Raw]
 
@@ -53,7 +52,7 @@ class SyncResources(BaseResources[SyncClient]):
 
 @t.final
 @_resource_aggregator
-class AsyncResources(BaseResources[AsyncClient]):
+class AsyncData(BaseResources[AsyncClient]):
     championships: AsyncChampionships[Model]
     raw_championships: AsyncChampionships[Raw]
 

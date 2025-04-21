@@ -5,6 +5,12 @@ from abc import ABC
 
 from pydantic import Field, validate_call
 
+from faceit._resources.base import (
+    BaseResource,
+    FaceitResourcePath,
+    ModelPlaceholder,
+)
+from faceit._resources.pagination import MaxItemsType, MaxPages
 from faceit._typing import (
     APIResponseFormatT,
     ClientT,
@@ -18,8 +24,6 @@ from faceit.constants import GameID, Region  # noqa: TCH001
 from faceit.http import AsyncClient, SyncClient
 from faceit.models._custom_types import Country  # noqa: TCH001
 
-from .base import BaseResource, FaceitResourcePath, ModelPlaceholder
-from .pagination import MaxItemsType, MaxPages
 from .players import PlayerID, PlayerIDValidator  # noqa: TCH001
 
 

@@ -50,7 +50,8 @@ class Player(BaseModel):
 
 
 class AbstractMatchPlayerStats(BaseModel, ABC):
-    """Abstract class for player match statistics models in the inheritance hierarchy.
+    """
+    Abstract class for player match statistics models in the inheritance hierarchy.
 
     Serves as a common type for different game-specific player statistics models.
     Used for type annotations where the return type depends on the `game` parameter
