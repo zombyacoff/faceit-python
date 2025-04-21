@@ -264,7 +264,7 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
     _instances: t.ClassVar[WeakSet[_BaseAsyncClient]] = WeakSet()
 
     _semaphore: t.ClassVar[t.Optional[asyncio.Semaphore]] = None
-    _rate_limit_lock: t.ClassVar = Lock()
+    _lock: t.ClassVar = Lock()
     _ssl_error_count: t.ClassVar = 0
     _adaptive_limit_enabled: t.ClassVar = True
     _last_ssl_error_time: t.ClassVar = time()
@@ -432,7 +432,7 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
 
                 # Decrease error count on successful request
                 if self.__class__._ssl_error_count > 0:
-                    with self.__class__._rate_limit_lock:
+                    with self.__class__._lock:
                         self.__class__._ssl_error_count = max(
                             0, self.__class__._ssl_error_count - 1
                         )
@@ -447,7 +447,7 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
     # happens for SSL errors in the retry mechanism
     def _register_ssl_error(cls) -> t.Literal[True]:
         current_time = time()
-        with cls._rate_limit_lock:
+        with cls._lock:
             cls._ssl_error_count += 1
             cls._last_ssl_error_time = current_time
             current_limit = cls._max_concurrent_requests
@@ -478,7 +478,7 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
     @classmethod
     async def _check_connection_recovery(cls) -> None:
         current_time = time()
-        with cls._rate_limit_lock:
+        with cls._lock:
             if (
                 current_time - cls._recovery_check_time
                 < cls._recovery_interval
@@ -510,7 +510,7 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
     @classmethod
     @validate_call
     def _update_initial_max_requests(cls, value: PositiveInt, /) -> None:
-        with cls._rate_limit_lock:
+        with cls._lock:
             if value > cls._initial_max_requests:
                 cls._initial_max_requests = value
                 _logger.debug("Updated initial max requests to %d", value)
@@ -525,7 +525,7 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
     @classmethod
     @validate_call
     def update_rate_limit(cls, new_limit: PositiveInt, /) -> None:
-        with cls._rate_limit_lock:
+        with cls._lock:
             if new_limit > cls.MAX_CONCURRENT_REQUESTS:
                 warn(
                     f"Request limit of {new_limit} exceeds "
@@ -561,7 +561,7 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
         recovery_interval: t.Optional[PositiveInt] = None,
         enabled: t.Optional[bool] = None,
     ) -> None:
-        with cls._rate_limit_lock:
+        with cls._lock:
             changes_made = False
 
             if (

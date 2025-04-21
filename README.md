@@ -44,7 +44,7 @@ with faceit.Faceit("YOUR_API_KEY") as f:
     print(f"First match with the given ID: {some_match or 'No match found'}")
 ```
 
-## Examples
+### More Examples
 
 See additional usage examples in the [`examples/`](examples/) directory.
 

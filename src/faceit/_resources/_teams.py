@@ -20,6 +20,7 @@ from faceit.constants import GameID  # noqa: TCH001
 from faceit.http import AsyncClient, SyncClient
 
 from ._base import BaseResource, FaceitResourcePath, ModelPlaceholder
+from ._pagination import MaxItemsType, MaxPages
 
 _TeamID: TypeAlias = str
 _TeamIDValidator: TypeAlias = Annotated[
@@ -115,19 +116,28 @@ class SyncTeams(BaseTeams[SyncClient], t.Generic[APIResponseFormatT]):
 
     @t.overload
     def all_tournaments(
-        self: SyncTeams[Raw], team_id: _TeamID
+        self: SyncTeams[Raw],
+        team_id: _TeamID,
+        *,
+        max_items: MaxItemsType = MaxPages(30),
     ) -> t.List[RawAPIItem]: ...
 
     @t.overload
     def all_tournaments(
-        self: SyncTeams[Model], team_id: _TeamID
+        self: SyncTeams[Model],
+        team_id: _TeamID,
+        *,
+        max_items: MaxItemsType = MaxPages(30),
     ) -> ModelNotImplemented: ...
 
     def all_tournaments(
-        self, team_id: _TeamIDValidator
+        self,
+        team_id: _TeamIDValidator,
+        *,
+        max_items: MaxItemsType = MaxPages(30),
     ) -> t.Union[t.List[RawAPIItem], ModelNotImplemented]:
         return self.__class__._sync_page_iterator.gather_pages(
-            self.tournaments, team_id
+            self.tournaments, team_id, max_items=max_items
         )
 
 
@@ -213,17 +223,26 @@ class AsyncTeams(BaseTeams[AsyncClient], t.Generic[APIResponseFormatT]):
 
     @t.overload
     async def all_tournaments(
-        self: AsyncTeams[Raw], team_id: _TeamID
+        self: AsyncTeams[Raw],
+        team_id: _TeamID,
+        *,
+        max_items: MaxItemsType = MaxPages(30),
     ) -> t.List[RawAPIItem]: ...
 
     @t.overload
     async def all_tournaments(
-        self: AsyncTeams[Model], team_id: _TeamID
+        self: AsyncTeams[Model],
+        team_id: _TeamID,
+        *,
+        max_items: MaxItemsType = MaxPages(30),
     ) -> ModelNotImplemented: ...
 
     async def all_tournaments(
-        self, team_id: _TeamIDValidator
+        self,
+        team_id: _TeamIDValidator,
+        *,
+        max_items: MaxItemsType = MaxPages(30),
     ) -> t.Union[t.List[RawAPIItem], ModelNotImplemented]:
         return await self.__class__._async_page_iterator.gather_pages(
-            self.tournaments, team_id
+            self.tournaments, team_id, max_items=max_items
         )

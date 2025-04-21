@@ -1,16 +1,17 @@
 from __future__ import annotations
 
+import math
 import sys
 import typing as t
 from abc import ABC
-from enum import auto
 from inspect import Parameter, signature
 from itertools import chain
 from warnings import warn
 
 from annotated_types import Le
+from pydantic import PositiveInt
 from pydantic.fields import FieldInfo
-from strenum import LowercaseStrEnum
+from strenum import StrEnum
 
 from faceit._typing import (
     AsyncPaginationMethod,
@@ -30,15 +31,13 @@ from faceit._utils import (
     deep_get,
     lazy_import,
     representation,
+    validate_positive_int,
 )
 from faceit.constants import RAW_RESPONSE_ITEMS_KEY
 from faceit.models import ItemPage
 from faceit.models._page import PaginationTimeRange
 
 if t.TYPE_CHECKING:
-    # `PositiveInt` is used for self-documentation, not for validation
-    from pydantic import PositiveInt
-
     from ._base import BaseResource
 
     _OptionalTimestampPaginationConfig: TypeAlias = t.Union[
@@ -59,6 +58,12 @@ _PageType: TypeAlias = t.Union[ItemPage, RawAPIPageResponse]
 _PageListType: TypeAlias = t.List[_PageType]
 _PageT = t.TypeVar("_PageT", bound=_PageType)
 
+# We use `PositiveInt` for Pydantic validation where available (e.g., with
+# `@validate_call` in resource methods). However, in this module we implement
+# our own validation logic for greater flexibility, as Pydantic-based validation
+# is not always practical here.
+MaxItemsType: TypeAlias = t.Union["MaxItems", PositiveInt]
+
 
 @t.final
 class TimestampPaginationConfig(t.TypedDict):
@@ -68,15 +73,37 @@ class TimestampPaginationConfig(t.TypedDict):
 
 @t.final
 class PaginationMaxParams(t.NamedTuple):
-    limit: PositiveInt
-    offset: t.Union[UnsetValue, PositiveInt]
+    limit: int
+    offset: int
 
 
 @t.final
-class CollectReturnFormat(LowercaseStrEnum):
-    FIRST = auto()
-    RAW = auto()
-    MODEL = auto()
+class MaxPages(int):
+    """Indicates the maximum number of pages to fetch when passed as `max_items`.
+
+    This class enables explicit page-based limits without introducing a separate
+    `max_pages` parameter, allowing for flexible and concise API usage.
+
+    **Developer rationale:**
+    This dedicated class enables explicit page-based limits via the `max_items`
+    parameter, without introducing a separate `max_pages` argument. Using a
+    distinct type allows for clear and robust isinstance checks, making the
+    API flexible and concise while keeping downstream logic simple and safe.
+    """
+
+    __slots__ = ()
+
+
+@t.final
+class CollectReturnFormat(StrEnum):
+    FIRST = "first"
+    RAW = "raw"
+    MODEL = "model"
+
+
+@t.final
+class MaxItems(StrEnum):
+    SAFE = "safe"
 
 
 _UNIX_METHOD_REQUIRED_KEYS: t.Final[t.FrozenSet[str]] = frozenset(
@@ -162,8 +189,21 @@ class _MethodCall(t.NamedTuple, t.Generic[PaginationMethodT]):
     kwargs: t.Dict[str, t.Any]
 
 
+class _MaxItemsInfo(t.NamedTuple):
+    max_items: MaxItemsType
+    last_page_remainder: int
+    is_partial_last_page: bool
+
+    @classmethod
+    def from_max_pages(cls, max_pages: MaxItemsType, /) -> Self:
+        return cls(max_pages, 0, False)
+
+
 _ITERATOR_SLOTS = (
     "_exhausted",
+    "_max_items",
+    "_max_items_info",
+    "_max_pages",
     "_method",
     "_offset",
     "_page_index",
@@ -193,10 +233,25 @@ class BasePageIterator(t.Generic[PaginationMethodT, _PageT], ABC):
         CollectReturnFormat.MODEL: lambda _: ItemPage,
     }
 
+    _SAFE_MAX_PAGES: t.ClassVar = 100
+
+    DEFAULT_MAX_ITEMS: t.ClassVar = 2000
+    """
+    Selected as an optimal default to balance performance and resource usage
+    when iterating through paginated FACEIT API data. 2000 is a multiple of
+    both 100 and 20, the most common per-request limits in the FACEIT API,
+    ensuring efficient pagination and minimal overhead.
+    """
+
     timestamp_cfg: t.ClassVar = TimestampPaginationConfig
 
     def __init__(
-        self, method: PaginationMethodT, /, *args: t.Any, **kwargs: t.Any
+        self,
+        method: PaginationMethodT,
+        /,
+        *args: t.Any,
+        max_items: MaxItemsType = DEFAULT_MAX_ITEMS,
+        **kwargs: t.Any,
     ) -> None:
         pagination_limits = check_pagination_support(method)
         if pagination_limits is False:
@@ -215,12 +270,21 @@ class BasePageIterator(t.Generic[PaginationMethodT, _PageT], ABC):
             kwargs=self.__class__._remove_pagination_args(**kwargs),
         )
         self._pagination_limits = pagination_limits
+        self._max_pages_setter(max_items)
         self._init_iteration()
 
     def _init_iteration(self) -> None:
         self._exhausted = False
         self._offset = 0
         self._page_index = 0
+
+    @property
+    def max_items(self) -> int:
+        return self._max_pages * self._pagination_limits.limit
+
+    @max_items.setter
+    def max_items(self, value: int, /) -> None:
+        self._max_pages_setter(value)
 
     @property
     def exhausted(self) -> bool:
@@ -231,16 +295,13 @@ class BasePageIterator(t.Generic[PaginationMethodT, _PageT], ABC):
         return self._offset
 
     @current_offset.setter
-    def current_offset(self, value: t.Any, /) -> None:
-        if not isinstance(value, int):
-            raise TypeError(f"Pagination offset must be an integer: {value}")
+    def current_offset(self, value: int, /) -> None:
+        validate_positive_int(value, param_name="offset")
         if self._exhausted:
             raise ValueError(
                 "Pagination offset cannot be set "
                 "after the iterator has been exhausted"
             )
-        if value < 0:
-            raise ValueError(f"Pagination offset cannot be negative: {value}")
         if value > self._pagination_limits.limit:
             raise ValueError(
                 f"Pagination offset cannot exceed the maximum limit "
@@ -258,6 +319,38 @@ class BasePageIterator(t.Generic[PaginationMethodT, _PageT], ABC):
     def with_updated_args(self, *args: t.Any, **kwargs: t.Any) -> Self:
         return self.__class__(self._method.call, *args, **kwargs)
 
+    def _max_pages_setter(self, max_items: t.Union[MaxItems, int], /) -> None:
+        def set_max_pages(max_pages: int, /) -> None:
+            self._max_pages = max_pages
+            self._max_items_info = _MaxItemsInfo.from_max_pages(max_pages)
+
+        if max_items == MaxItems.SAFE:
+            set_max_pages(self.__class__._SAFE_MAX_PAGES)
+            return
+
+        validate_positive_int(max_items, param_name="max_items")
+
+        if isinstance(max_items, MaxPages):
+            set_max_pages(max_items)
+            return
+
+        last_page_remainder = max_items % self._pagination_limits.limit
+        self._max_items_info = _MaxItemsInfo(
+            max_items, last_page_remainder, last_page_remainder != 0
+        )
+
+        max_pages = math.ceil(max_items / self._pagination_limits.limit)
+        if max_pages > self.__class__._SAFE_MAX_PAGES:
+            warn(
+                f"The computed number of pages ({max_pages}) exceeds the "
+                f"recommended safe maximum ({self.__class__._SAFE_MAX_PAGES}). "
+                f"Proceed at your own risk.",
+                UserWarning,
+                stacklevel=2,
+            )
+
+        self._max_pages = max_pages
+
     def _handle_iteration_state(self, page: t.Optional[_PageT], /) -> _PageT:
         if page is None:
             self._exhausted = True
@@ -267,9 +360,9 @@ class BasePageIterator(t.Generic[PaginationMethodT, _PageT], ABC):
 
         is_page_smaller_than_limit = (
             len(
-                page
-                if isinstance(page, ItemPage)
-                else page[RAW_RESPONSE_ITEMS_KEY]
+                page[RAW_RESPONSE_ITEMS_KEY]
+                if isinstance(page, dict)
+                else page
             )
             < self._pagination_limits.limit
         )
@@ -278,16 +371,43 @@ class BasePageIterator(t.Generic[PaginationMethodT, _PageT], ABC):
             if self._pagination_limits.offset == UnsetValue.UNSET
             else self._offset >= self._pagination_limits.offset
         )
-        self._exhausted = is_page_smaller_than_limit or is_offset_exceeded
+        is_max_items_reached = self._page_index >= self._max_pages
+        self._exhausted = (
+            is_page_smaller_than_limit
+            or is_offset_exceeded
+            or is_max_items_reached
+        )
+
         self._offset += self._pagination_limits.limit
+
+        if self._max_items_info.is_partial_last_page and self._exhausted:
+            if isinstance(page, dict):
+                page.update(
+                    items=page[RAW_RESPONSE_ITEMS_KEY][
+                        : self._max_items_info.last_page_remainder
+                    ],
+                    end=self._max_items_info.last_page_remainder,
+                )
+                return t.cast(_PageT, page)
+
+            return t.cast(
+                _PageT,
+                t.cast(ItemPage, page)[
+                    : self._max_items_info.last_page_remainder
+                ].model_copy(
+                    update={"end": self._max_items_info.last_page_remainder}
+                ),
+            )
+
         return page
 
     @staticmethod
     def _remove_pagination_args(**kwargs: t.Any) -> t.Dict[str, t.Any]:
         if any(kwargs.pop(arg, None) for arg in _PAGINATION_ARGS):
             warn(
-                f"Pagination parameters {_PAGINATION_ARGS} should not be provided by users. "
-                f"These parameters are managed internally by the pagination system. ",
+                f"Pagination parameters {_PAGINATION_ARGS} should not be "
+                f"provided by users. These parameters are managed internally "
+                f"by the pagination system.",
                 UserWarning,
                 stacklevel=2,
             )
@@ -318,7 +438,8 @@ class BasePageIterator(t.Generic[PaginationMethodT, _PageT], ABC):
         if any(kwargs.pop(arg, None) for arg in _UNIX_PAGINATION_PARAMS):
             warn(
                 "The parameters start and to will be managed automatically "
-                "with Unix timestamp pagination. Your provided values will be ignored.",
+                "with Unix timestamp pagination. Your provided values will "
+                "be ignored.",
                 UserWarning,
                 stacklevel=3,
             )
@@ -329,9 +450,10 @@ class BasePageIterator(t.Generic[PaginationMethodT, _PageT], ABC):
     ) -> None:
         if unix_config is not False and not isinstance(unix_config, dict):
             raise ValueError(
-                f"Invalid unix pagination configuration: "
-                f"expected UnixPaginationConfig dictionary or False, got {type(unix_config)}. "
-                f"See pagination.UnixPaginationConfig for the required format."
+                f"Invalid unix pagination configuration: expected "
+                f"UnixPaginationConfig dictionary or False, got "
+                f"{type(unix_config)}. See pagination.UnixPaginationConfig "
+                "for the required format."
             )
         if (
             isinstance(unix_config, dict)
@@ -522,11 +644,13 @@ class SyncPageIterator(_BaseSyncPageIterator[_PageT]):
         method: SyncUnixPaginationMethod[_PageT],
         /,
         *args: t.Any,
+        max_items: MaxItemsType = BasePageIterator.DEFAULT_MAX_ITEMS,
         key: str,
         attr: str,
         **kwargs: t.Any,
     ) -> t.Generator[_PageT, None, None]:
         cls._validate_unix_pagination_parameter(method, kwargs, key, attr)
+        kwargs["max_items"] = max_items
 
         current_timestamp = None
         while True:
@@ -557,6 +681,7 @@ class SyncPageIterator(_BaseSyncPageIterator[_PageT]):
         method: SyncPaginationMethod[ItemPage[_T]],
         /,
         *args: t.Any,
+        max_items: MaxItemsType = BasePageIterator.DEFAULT_MAX_ITEMS,
         unix: t.Literal[False] = ...,
         return_format: CollectReturnFormat = ...,
         deduplicate: bool = ...,
@@ -570,6 +695,7 @@ class SyncPageIterator(_BaseSyncPageIterator[_PageT]):
         method: SyncPaginationMethod[RawAPIPageResponse],
         /,
         *args: t.Any,
+        max_items: MaxItemsType = BasePageIterator.DEFAULT_MAX_ITEMS,
         unix: t.Literal[False] = ...,
         return_format: CollectReturnFormat = ...,
         deduplicate: bool = ...,
@@ -583,6 +709,7 @@ class SyncPageIterator(_BaseSyncPageIterator[_PageT]):
         method: SyncUnixPaginationMethod[ItemPage[_T]],
         /,
         *args: t.Any,
+        max_items: MaxItemsType = BasePageIterator.DEFAULT_MAX_ITEMS,
         unix: _OptionalTimestampPaginationConfig = ...,
         return_format: CollectReturnFormat = ...,
         deduplicate: bool = ...,
@@ -596,6 +723,7 @@ class SyncPageIterator(_BaseSyncPageIterator[_PageT]):
         method: SyncUnixPaginationMethod[RawAPIPageResponse],
         /,
         *args: t.Any,
+        max_items: MaxItemsType = BasePageIterator.DEFAULT_MAX_ITEMS,
         unix: _OptionalTimestampPaginationConfig = ...,
         return_format: CollectReturnFormat = ...,
         deduplicate: bool = ...,
@@ -613,12 +741,14 @@ class SyncPageIterator(_BaseSyncPageIterator[_PageT]):
         ],
         /,
         *args: t.Any,
+        max_items: MaxItemsType = BasePageIterator.DEFAULT_MAX_ITEMS,
         unix: _OptionalTimestampPaginationConfig = False,
         return_format: CollectReturnFormat = CollectReturnFormat.FIRST,
         deduplicate: bool = True,
         **kwargs: t.Any,
     ) -> t.Union[ItemPage[_T], t.List[RawAPIItem]]:
         cls._validate_unix_config(unix)
+        kwargs["max_items"] = max_items
         if unix is False:
             casted_method = t.cast(
                 t.Union[
@@ -701,11 +831,13 @@ class AsyncPageIterator(_BasyAsyncPageIterator[_PageT]):
         method: AsyncUnixPaginationMethod[_PageT],
         /,
         *args: t.Any,
+        max_items: MaxItemsType = BasePageIterator.DEFAULT_MAX_ITEMS,
         key: str,
         attr: str,
         **kwargs: t.Any,
     ) -> t.AsyncGenerator[_PageT, None]:
         cls._validate_unix_pagination_parameter(method, kwargs, key, attr)
+        kwargs["max_items"] = max_items
 
         current_timestamp = None
         while True:
@@ -736,6 +868,7 @@ class AsyncPageIterator(_BasyAsyncPageIterator[_PageT]):
         method: AsyncPaginationMethod[ItemPage[_T]],
         /,
         *args: t.Any,
+        max_items: MaxItemsType = BasePageIterator.DEFAULT_MAX_ITEMS,
         unix: t.Literal[False] = ...,
         return_format: CollectReturnFormat = ...,
         deduplicate: bool = ...,
@@ -749,6 +882,7 @@ class AsyncPageIterator(_BasyAsyncPageIterator[_PageT]):
         method: AsyncPaginationMethod[RawAPIPageResponse],
         /,
         *args: t.Any,
+        max_items: MaxItemsType = BasePageIterator.DEFAULT_MAX_ITEMS,
         unix: t.Literal[False] = ...,
         return_format: CollectReturnFormat = ...,
         deduplicate: bool = ...,
@@ -762,6 +896,7 @@ class AsyncPageIterator(_BasyAsyncPageIterator[_PageT]):
         method: AsyncUnixPaginationMethod[ItemPage[_T]],
         /,
         *args: t.Any,
+        max_items: MaxItemsType = BasePageIterator.DEFAULT_MAX_ITEMS,
         unix: _OptionalTimestampPaginationConfig = ...,
         return_format: CollectReturnFormat = ...,
         deduplicate: bool = ...,
@@ -775,6 +910,7 @@ class AsyncPageIterator(_BasyAsyncPageIterator[_PageT]):
         method: AsyncUnixPaginationMethod[RawAPIPageResponse],
         /,
         *args: t.Any,
+        max_items: MaxItemsType = BasePageIterator.DEFAULT_MAX_ITEMS,
         unix: _OptionalTimestampPaginationConfig = ...,
         return_format: CollectReturnFormat = ...,
         deduplicate: bool = ...,
@@ -792,12 +928,14 @@ class AsyncPageIterator(_BasyAsyncPageIterator[_PageT]):
         ],
         /,
         *args: t.Any,
+        max_items: MaxItemsType = BasePageIterator.DEFAULT_MAX_ITEMS,
         unix: _OptionalTimestampPaginationConfig = False,
         return_format: CollectReturnFormat = CollectReturnFormat.FIRST,
         deduplicate: bool = True,
         **kwargs: t.Any,
     ) -> t.Union[ItemPage[_T], t.List[RawAPIItem]]:
         cls._validate_unix_config(unix)
+        kwargs["max_items"] = max_items
         if unix is False:
             casted_method = t.cast(
                 t.Union[

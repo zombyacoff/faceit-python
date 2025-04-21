@@ -175,8 +175,9 @@ class BaseResource(t.Generic[ClientT], ABC):
 
         if validator is None:
             warn(
-                "No model defined for this response. Validation and model parsing are "
-                "unavailable. Use the raw version for explicit, unprocessed data.",
+                "No model defined for this response. Validation and model "
+                "parsing are unavailable. Use the raw version for explicit, "
+                "unprocessed data.",
                 UserWarning,
                 stacklevel=5,
             )

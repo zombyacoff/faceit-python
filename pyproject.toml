@@ -107,6 +107,9 @@ keep-runtime-typing = true
 [tool.ruff.lint.pydocstyle]
 convention = "google"
 
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["faceit._resources._pagination.MaxPages"]
+
 [tool.ruff.format]
 docstring-code-format = true
 docstring-code-line-length = 100

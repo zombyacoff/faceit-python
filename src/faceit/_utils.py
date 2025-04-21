@@ -169,6 +169,25 @@ def create_uuid_validator(
     return validator
 
 
+def validate_positive_int(
+    value: t.Any, /, *, param_name: str = "value"
+) -> int:
+    """Utility for validating that a value is a positive integer.
+
+    Use this when Pydantic's `PositiveInt` type or validation is
+    impractical or unavailable.
+    """
+    if not isinstance(value, int):
+        raise TypeError(
+            f"'{param_name}' must be int, got {type(value).__name__}"
+        )
+    if value <= 0:
+        raise ValueError(
+            f"'{param_name}' must be a positive integer, got {value}"
+        )
+    return value
+
+
 def _format_fields(
     obj: t.Any, fields: t.Tuple[str, ...], joiner: str = " ", /
 ) -> str:

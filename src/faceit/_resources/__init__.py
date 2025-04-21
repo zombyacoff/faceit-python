@@ -18,6 +18,8 @@ from ._matches import SyncMatches as SyncMatches
 from ._pagination import AsyncPageIterator as AsyncPageIterator
 from ._pagination import BasePageIterator as BasePageIterator
 from ._pagination import CollectReturnFormat as CollectReturnFormat
+from ._pagination import MaxItems as MaxItems
+from ._pagination import MaxPages as MaxPages
 from ._pagination import SyncPageIterator as SyncPageIterator
 from ._pagination import TimestampPaginationConfig as TimestampPaginationConfig
 from ._pagination import check_pagination_support as check_pagination_support

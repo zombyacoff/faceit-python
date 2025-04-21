@@ -23,12 +23,7 @@ from faceit.http import AsyncClient, SyncClient
 from faceit.models import Championship, ItemPage
 
 from ._base import BaseResource, FaceitResourcePath, ModelPlaceholder
-
-if t.TYPE_CHECKING:
-    from faceit._resources._pagination import (
-        AsyncPageIterator,
-        SyncPageIterator,
-    )
+from ._pagination import MaxItemsType, MaxPages
 
 _ChampionshipID: TypeAlias = ValidUUID
 _ChampionshipIDValidator: TypeAlias = Annotated[
@@ -96,22 +91,29 @@ class SyncChampionships(
         self: SyncChampionships[Raw],
         game: GameID,
         category: EventCategory = EventCategory.ALL,
-    ) -> SyncPageIterator[RawAPIPageResponse]: ...
+        *,
+        max_items: MaxItemsType = MaxPages(30),
+    ) -> RawAPIPageResponse: ...
 
     @t.overload
     def all_items(
         self: SyncChampionships[Model],
         game: GameID,
         category: EventCategory = EventCategory.ALL,
-    ) -> SyncPageIterator[ItemPage[Championship]]: ...
+        *,
+        max_items: MaxItemsType = MaxPages(30),
+    ) -> ItemPage[Championship]: ...
 
     def all_items(
-        self, game: GameID, category: EventCategory = EventCategory.ALL
-    ) -> SyncPageIterator:
-        # Return an iterator instead of a full collection to efficiently handle
-        # large datasets. With a page limit of only 10, fetching all items at once
-        # would be extremely slow and resource-intensive.
-        return self.__class__._sync_page_iterator(self.items, game, category)
+        self,
+        game: GameID,
+        category: EventCategory = EventCategory.ALL,
+        *,
+        max_items: MaxItemsType = MaxPages(30),
+    ) -> t.Union[RawAPIPageResponse, ItemPage[Championship]]:
+        return self.__class__._sync_page_iterator.gather_pages(
+            self.items, game, category, max_items=max_items
+        )
 
     @t.overload
     def get(
@@ -316,21 +318,29 @@ class AsyncChampionships(
         self: AsyncChampionships[Raw],
         game: GameID,
         category: EventCategory = EventCategory.ALL,
-    ) -> AsyncPageIterator[RawAPIPageResponse]: ...
+        *,
+        max_items: MaxItemsType = MaxPages(30),
+    ) -> RawAPIPageResponse: ...
 
     @t.overload
     def all_items(
         self: AsyncChampionships[Model],
         game: GameID,
         category: EventCategory = EventCategory.ALL,
-    ) -> AsyncPageIterator[ItemPage[Championship]]: ...
+        *,
+        max_items: MaxItemsType = MaxPages(30),
+    ) -> ItemPage[Championship]: ...
 
     def all_items(
         self,
         game: GameID,
         category: EventCategory = EventCategory.ALL,
-    ) -> AsyncPageIterator:
-        return self.__class__._async_page_iterator(self.items, game, category)
+        *,
+        max_items: MaxItemsType = MaxPages(30),
+    ) -> t.Union[RawAPIPageResponse, ItemPage[Championship]]:
+        return self.__class__._async_page_iterator.gather_pages(
+            self.items, game, category, max_items=max_items
+        )
 
     @t.overload
     async def get(
