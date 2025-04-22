@@ -4,7 +4,7 @@
 [![pypi](https://img.shields.io/pypi/v/faceit?style=flat-square&labelColor=ffffff&color=43a047)](https://pypi.org/project/faceit/)
 
 A fully type-safe, high-level Python wrapper for the [FACEIT REST API](https://docs.faceit.com/docs).
-Offers a seamless, pythonic interface for interacting with FACEIT data—featuring both synchronous and asynchronous clients, strict type checking, and robust pagination.
+Offers a seamless, pythonic interface for interacting with FACEIT data-featuring both synchronous and asynchronous clients, strict type checking, and robust pagination.
 
 ### Requirements
 
