@@ -67,7 +67,6 @@ pythonpath = "."
 line-length = 79
 preview = true
 target-version = "py38"
-exclude = ["types.py"]
 lint.select = ["ALL"]
 lint.ignore = [
     "ANN401",

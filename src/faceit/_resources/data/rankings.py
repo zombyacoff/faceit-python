@@ -114,7 +114,7 @@ class SyncRankings(BaseRankings[SyncClient], t.Generic[APIResponseFormatT]):
         )
 
     @t.overload
-    def user(
+    def player(
         self: SyncRankings[Raw],
         game: GameID,
         region: Region,
@@ -125,7 +125,7 @@ class SyncRankings(BaseRankings[SyncClient], t.Generic[APIResponseFormatT]):
     ) -> t.Union[RawAPIPageResponse]: ...
 
     @t.overload
-    def user(
+    def player(
         self: SyncRankings[Model],
         game: GameID,
         region: Region,
@@ -136,7 +136,7 @@ class SyncRankings(BaseRankings[SyncClient], t.Generic[APIResponseFormatT]):
     ) -> t.Union[ModelNotImplemented]: ...
 
     @validate_call
-    def user(
+    def player(
         self,
         game: GameID,
         region: Region,
@@ -238,7 +238,7 @@ class AsyncRankings(BaseRankings[AsyncClient], t.Generic[APIResponseFormatT]):
         )
 
     @t.overload
-    async def user(
+    async def player(
         self: AsyncRankings[Raw],
         game: GameID,
         region: Region,
@@ -249,7 +249,7 @@ class AsyncRankings(BaseRankings[AsyncClient], t.Generic[APIResponseFormatT]):
     ) -> t.Union[RawAPIPageResponse]: ...
 
     @t.overload
-    async def user(
+    async def player(
         self: AsyncRankings[Model],
         game: GameID,
         region: Region,
@@ -260,7 +260,7 @@ class AsyncRankings(BaseRankings[AsyncClient], t.Generic[APIResponseFormatT]):
     ) -> t.Union[ModelNotImplemented]: ...
 
     @validate_call
-    async def user(
+    async def player(
         self,
         game: GameID,
         region: Region,

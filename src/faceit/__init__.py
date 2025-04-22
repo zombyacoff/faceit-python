@@ -4,16 +4,9 @@
 """
 `faceit`: Type-safe, high-level Python SDK for the FACEIT REST API.
 
-Provides a seamless, pythonic interface to FACEIT data with:
-- Full static typing and mypy compatibility
-- Both synchronous and asynchronous clients
-- Pydantic models and advanced pagination utilities
-- Idiomatic, reliable abstractions for rapid development
-
 See documentation and usage examples: https://github.com/zombyacoff/faceit
 """
 
-from .__version__ import __version__ as __version__
 from ._faceit import AsyncFaceit as AsyncFaceit
 from ._faceit import Faceit as Faceit
 from ._resources import AsyncPageIterator as AsyncPageIterator
@@ -22,6 +15,7 @@ from ._resources import MaxItems as MaxItems
 from ._resources import MaxPages as MaxPages
 from ._resources import SyncPageIterator as SyncPageIterator
 from ._resources import check_pagination_support as check_pagination_support
+from ._version import __version__ as __version__
 from .constants import EventCategory as EventCategory
 from .constants import ExpandedField as ExpandedField
 from .constants import GameID as GameID

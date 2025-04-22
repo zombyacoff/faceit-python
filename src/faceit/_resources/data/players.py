@@ -40,7 +40,9 @@ from faceit.models import (
     Player,
     Tournament,
 )
-from faceit.models._player import AbstractMatchPlayerStats  # noqa: TCH001
+from faceit.models.players._match import (
+    AbstractMatchPlayerStats,  # noqa: TCH001
+)
 
 _logger = logging.getLogger(__name__)
 
@@ -319,7 +321,7 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
                 expect_page=True,
             ),
             game,
-            **self.__class__._matches_stats_validator_cfg,
+            self.__class__._matches_stats_validator_cfg,
         )
 
     @t.overload
@@ -814,7 +816,7 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
                 expect_page=True,
             ),
             game,
-            **self.__class__._matches_stats_validator_cfg,
+            self.__class__._matches_stats_validator_cfg,
         )
 
     @t.overload

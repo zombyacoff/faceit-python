@@ -9,13 +9,7 @@ from warnings import warn
 from pydantic import ValidationError
 from strenum import StrEnum
 
-from faceit._typing import (
-    ClientT,
-    ModelT,
-    NotRequired,
-    RawAPIPageResponse,
-    RawAPIResponse,
-)
+from faceit._typing import ClientT, ModelT, RawAPIPageResponse, RawAPIResponse
 from faceit.http import Endpoint
 from faceit.models import ItemPage
 
@@ -45,10 +39,10 @@ class RequestPayload(t.TypedDict):
 
 
 @t.final
-class MappedValidatorConfig(t.TypedDict, t.Generic[_KT, ModelT]):
+class MappedValidatorConfig(t.NamedTuple, t.Generic[_KT, ModelT]):
     validator_map: t.Dict[_KT, t.Type[ModelT]]
     is_paged: bool
-    key_name: NotRequired[str]
+    key_name: str = "key"
 
 
 class FaceitResourcePath(StrEnum):
@@ -70,13 +64,12 @@ class BaseResource(t.Generic[ClientT], ABC):
     _async_page_iterator: t.ClassVar = AsyncPageIterator
     _timestamp_cfg: t.ClassVar = TimestampPaginationConfig
 
-    _RAW_PATH: t.ClassVar[str]
-    PATH: t.ClassVar[Endpoint]
-
     _PARAM_NAME_MAP: t.ClassVar = {
         "start": "from",
         "category": "type",
     }
+
+    PATH: t.ClassVar[Endpoint]
 
     def __init_subclass__(
         cls,
@@ -89,11 +82,9 @@ class BaseResource(t.Generic[ClientT], ABC):
             return
         if resource_path is None:
             raise TypeError(
-                f"Class {cls.__name__} requires 'path' parameter or a "
-                f"parent with 'PATH' defined."
+                f"Class {cls.__name__} requires 'path' parameter or a parent "
+                f"with 'PATH' defined."
             )
-
-        cls._RAW_PATH = resource_path
         cls.PATH = Endpoint(resource_path)
 
     @property
@@ -104,21 +95,13 @@ class BaseResource(t.Generic[ClientT], ABC):
     # methods, where typing must be strict for public API. Current implementation
     # is sufficient, though alternative typing approaches could be considered.
 
-    # TODO: Replace named arguments with a single `config: MappedValidatorConfig`
-    # parameter, but this is currently not possible due to Python 3.8 compatibility
-    # issues with Generic type subscriptions. Once Python 3.8 support is dropped,
-    # this should be refactored.
-
     @t.overload
     def _process_response_with_mapped_validator(
         self,
         response: RawAPIPageResponse,
         key: _KT,
+        config: MappedValidatorConfig[_KT, ModelT],
         /,
-        *,
-        validator_map: t.Dict[_KT, t.Type[ModelT]],
-        is_paged: t.Literal[False],
-        key_name: str = ...,
     ) -> t.Union[ModelT, RawAPIPageResponse]: ...
 
     @t.overload
@@ -126,31 +109,25 @@ class BaseResource(t.Generic[ClientT], ABC):
         self,
         response: RawAPIPageResponse,
         key: _KT,
+        config: MappedValidatorConfig[_KT, ModelT],
         /,
-        *,
-        validator_map: t.Dict[_KT, t.Type[ModelT]],
-        is_paged: t.Literal[True],
-        key_name: str = ...,
     ) -> t.Union[ItemPage[ModelT], RawAPIPageResponse]: ...
 
     def _process_response_with_mapped_validator(
         self,
         response: RawAPIPageResponse,
         key: _KT,
+        config: MappedValidatorConfig[_KT, ModelT],
         /,
-        *,
-        validator_map: t.Dict[_KT, t.Type[ModelT]],
-        is_paged: bool,
-        key_name: str = "key",
     ) -> t.Union[ModelT, ItemPage[ModelT], RawAPIPageResponse]:
         _logger.debug(
             "Processing response with mapped validator for key: %s", key
         )
 
-        validator = validator_map.get(key)
+        validator = config.validator_map.get(key)
         if validator is None:
             warn(
-                f"No model defined for {key_name} '{key}'. "
+                f"No model defined for {config.key_name} '{key}'. "
                 f"Consider using the raw response.",
                 UserWarning,
                 stacklevel=5,
@@ -163,7 +140,7 @@ class BaseResource(t.Generic[ClientT], ABC):
         return self._validate_response(
             response,
             t.cast(t.Type[ModelT], ItemPage[validator])  # type: ignore[valid-type]
-            if is_paged
+            if config.is_paged
             else validator,
         )
 

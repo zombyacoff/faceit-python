@@ -122,8 +122,6 @@ class Faceit(BaseFaceit[SyncClient, SyncDataResource]):
 
     Example::
 
-        from faceit import Faceit
-
         with Faceit.data("YOUR_API_KEY") as f:
             player = f.players.get("s1mple")
             assert player.nickname == "s1mple"
@@ -140,8 +138,6 @@ class AsyncFaceit(BaseFaceit[AsyncClient, AsyncDataResource]):
     Asynchronous Faceit API interface.
 
     Example::
-
-        from faceit import AsyncFaceit
 
         async with AsyncFaceit.data("YOUR_API_KEY") as f:
             player = await f.players.get("s1mple")

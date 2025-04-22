@@ -54,4 +54,6 @@ from .models._custom_types import ResponseContainer as ResponseContainer
 from .models._custom_types.faceit_uuid import BaseFaceitID as BaseFaceitID
 from .models._page import PaginationMetadata as PaginationMetadata
 from .models._page import PaginationTimeRange as PaginationTimeRange
-from .models._player import AbstractMatchPlayerStats as AbstractMatchPlayerStats
+from .models.players._match import (
+    AbstractMatchPlayerStats as AbstractMatchPlayerStats,
+)
