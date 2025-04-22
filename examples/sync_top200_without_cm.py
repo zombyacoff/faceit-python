@@ -8,12 +8,12 @@ cs2_rankings = data.raw_rankings.all_unbounded(
     # MaxPages (`int`): explicit page count, not item count.
     # Used to separate pages from items in logic.
     # Total items = limit * MaxPages (pages = `math.ceil(max_items / limit)`).
-    max_items=faceit.MaxPages(1),  # equivalent to `max_items=100`
+    max_items=faceit.MaxPages(2),  # equivalent to `max_items=200`
 )
 
-for place, player in enumerate(cs2_rankings, 1):
+for player in cs2_rankings:
     print(
-        f"{place} place:\n"
+        f"{player['position']} place:\n"
         f"Nickname: {player['nickname']}\n"
         f"Country: {player['country']}\n"
         f"Skill Level: {player['game_skill_level']}\n"
