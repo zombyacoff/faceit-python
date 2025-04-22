@@ -12,8 +12,8 @@ async def main():
 
     # You can initially pass the client to the `faceit.AsyncFaceit`
     # constructor using the named argument `client`.
-    async with faceit.AsyncFaceit.data(client=async_client) as f:
-        championships = await f.championships.all_items(
+    async with faceit.AsyncFaceit.data(client=async_client) as data:
+        championships = await data.championships.all_items(
             faceit.GameID.CS2,
             faceit.EventCategory.ONGOING,
             max_items=25,  # Maximum number of items to retrieve;

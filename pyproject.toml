@@ -36,7 +36,6 @@ classifiers = [
 ]
 
 [project.urls]
-Repository = "https://github.com/zombyacoff/faceit-python"
 Official-API-Docs = "https://docs.faceit.com/docs"
 
 [tool.poetry]
