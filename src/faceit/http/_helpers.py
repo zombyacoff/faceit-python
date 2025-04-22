@@ -5,7 +5,45 @@ import typing as t
 from faceit._utils import raise_unsupported_operand_error, representation
 
 if t.TYPE_CHECKING:
-    from faceit._typing import EndpointParam, Self
+    from tenacity import RetryCallState, RetryError
+    from tenacity.asyncio.retry import async_retry_base
+    from tenacity.retry import retry_base
+    from tenacity.stop import stop_base
+    from tenacity.wait import wait_base
+
+    from faceit._typing import EndpointParam, Self, TypeAlias
+
+    _StopBase: TypeAlias = t.Union[
+        stop_base, t.Callable[[RetryCallState], bool]
+    ]
+    _WaitBase: TypeAlias = t.Union[
+        wait_base, t.Callable[[RetryCallState], t.Union[float, int]]
+    ]
+    _RetryBase: TypeAlias = t.Union[
+        retry_base, t.Callable[[RetryCallState], bool]
+    ]
+    _AsyncRetryBase: TypeAlias = t.Union[
+        async_retry_base, t.Callable[[RetryCallState], t.Awaitable[bool]]
+    ]
+    _RetryHook: TypeAlias = t.Callable[
+        [RetryCallState], t.Union[None, t.Awaitable[None]]
+    ]
+
+
+@t.final
+class RetryArgs(t.TypedDict, total=False):
+    sleep: t.Callable[[t.Union[int, float]], t.Union[None, t.Awaitable[None]]]
+    stop: _StopBase
+    wait: _WaitBase
+    retry: t.Union[_RetryBase, _AsyncRetryBase]
+    before: _RetryHook
+    after: _RetryHook
+    before_sleep: t.Optional[_RetryHook]
+    reraise: bool
+    retry_error_cls: t.Type[RetryError]
+    retry_error_callback: t.Optional[
+        t.Callable[[RetryCallState], t.Union[t.Any]]
+    ]
 
 
 @t.final

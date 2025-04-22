@@ -1,10 +1,7 @@
-# NOTE: This module docstring is provisional and may be revised.
-# Suggestions and improvements to the header are welcome.
-
 """
-`faceit`: Type-safe, high-level Python SDK for the FACEIT REST API.
+Type-safe, high-level Python SDK for the official [FACEIT REST API](https://docs.faceit.com/docs/).
 
-See documentation and usage examples: https://github.com/zombyacoff/faceit
+See usage examples and documentation: https://github.com/zombyacoff/faceit-python
 """
 
 from ._faceit import AsyncFaceit as AsyncFaceit

@@ -164,11 +164,11 @@ class HighTierLevel(StrEnum):
 
 
 class Region(StrEnum):
-    EU = "EU"
-    OCEANIA = "Ocenia"
-    SA = "SA"
-    SEA = "SEA"
-    US = "US"
+    EUROPE = "EU"
+    NORTH_AMERICA = "NA"
+    OCEANIA = "OCE"
+    SOUTHEAST_ASIA = "SEA"
+    SOUTH_AMERICA = "SA"
 
 
 @t.final
@@ -209,7 +209,7 @@ def _create_default_elo_tiers() -> _EloThreshold:
     for level in range(2, 10):
         # `cast(int, ...)` tells the type checker that we know `upper` is
         # definitely an `int` for levels 1-9, not the full
-        # `Optional[Union[int, Literal["challenger"]]` type
+        # `t.Union[int, HighTierLevel]` type
         lower_bound = t.cast(int, tier_ranges[level - 1].upper) + 1
         tier_ranges[level] = EloRange(lower_bound, lower_bound + 149)
 

@@ -13,14 +13,14 @@ from faceit.models._custom_types import (
 
 
 class GameInfo(BaseModel):
-    region: str
+    region: Region
     game_player_id: str
     level: Annotated[int, Field(alias="skill_level")]
     elo: Annotated[int, Field(alias="faceit_elo")]
     game_player_name: str
     # I think this attribute is outdated:
     # `level_label: str = Field(alias="skill_level_label")`
-    regions: ResponseContainer = ResponseContainer({})
+    regions: ResponseContainer[Region] = ResponseContainer({})
     game_profile_id: str
 
 

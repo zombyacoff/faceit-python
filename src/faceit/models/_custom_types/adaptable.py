@@ -22,6 +22,8 @@ if t.TYPE_CHECKING:
 
 # TODO: Integrate this type alias into all data models in the future
 Country: TypeAlias = Annotated[
+    # I assume that there must be a better implementation than this.
+    # It is necessary to study this issue in more detail.
     CountryAlpha2, AfterValidator(lambda x: t.cast(str, x).lower())
 ]
 """

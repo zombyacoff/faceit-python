@@ -34,7 +34,7 @@ from faceit._utils import (
 )
 from faceit.constants import RAW_RESPONSE_ITEMS_KEY
 from faceit.models import ItemPage
-from faceit.models._page import PaginationTimeRange
+from faceit.models._item_page import PaginationTimeRange
 
 if t.TYPE_CHECKING:
     from .base import BaseResource
@@ -258,7 +258,9 @@ class BasePageIterator(t.Generic[PaginationMethodT, _PageT], ABC):
                 f"with offset and limit parameters."
             )
         if t.TYPE_CHECKING:
-
+            # Use a function here because mypy does not allow direct assignment of
+            # `_MethodCall[PaginationMethodT]` due to "Can't use bound type variable"
+            # errors. This preserves type checking without runtime issues.
             def method_call(
                 *_: t.Any, **__: t.Any
             ) -> _MethodCall[PaginationMethodT]: ...
@@ -461,7 +463,7 @@ class BasePageIterator(t.Generic[PaginationMethodT, _PageT], ABC):
         ):
             raise ValueError(
                 f"Invalid unix pagination configuration: "
-                f"missing required keys {_UNIX_METHOD_REQUIRED_KEYS}. "
+                f"missing required keys {tuple(_UNIX_METHOD_REQUIRED_KEYS)}. "
                 f"See pagination.UnixPaginationConfig for the required format."
             )
 

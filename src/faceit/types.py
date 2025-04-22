@@ -44,7 +44,6 @@ from ._typing import RawAPIPageResponse as RawAPIPageResponse
 from ._typing import RawAPIResponse as RawAPIResponse
 from ._typing import SyncPaginationMethod as SyncPaginationMethod
 from ._typing import SyncUnixPaginationMethod as SyncUnixPaginationMethod
-from .constants import EloRange as EloRange
 from .http._client import BaseAPIClient as BaseAPIClient
 from .models._custom_types import FaceitID as FaceitID
 from .models._custom_types import FaceitMatchID as FaceitMatchID
@@ -52,8 +51,8 @@ from .models._custom_types import FaceitTeamID as FaceitTeamID
 from .models._custom_types import NullableList as NullableList
 from .models._custom_types import ResponseContainer as ResponseContainer
 from .models._custom_types.faceit_uuid import BaseFaceitID as BaseFaceitID
-from .models._page import PaginationMetadata as PaginationMetadata
-from .models._page import PaginationTimeRange as PaginationTimeRange
+from .models._item_page import PaginationMetadata as PaginationMetadata
+from .models._item_page import PaginationTimeRange as PaginationTimeRange
 from .models.players._match import (
     AbstractMatchPlayerStats as AbstractMatchPlayerStats,
 )

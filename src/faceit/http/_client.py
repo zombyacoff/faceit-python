@@ -28,7 +28,7 @@ from faceit._utils import create_uuid_validator, representation
 from faceit.constants import BASE_WIKI_URL
 from faceit.exceptions import APIError
 
-from ._helpers import Endpoint
+from ._helpers import Endpoint, RetryArgs
 
 if t.TYPE_CHECKING:
     from types import TracebackType
@@ -56,19 +56,19 @@ class MaxConcurrentRequests(StrEnum):
     ABSOLUTE = "max"
 
 
+# TODO: The HTTP client is currently designed exclusively for API key authentication,
+# which is required for the Data resource. This should be revisited when adding
+# support for other resources, as they may require different authentication methods.
 @representation("api_key", "base_url", "retry_args")
 class BaseAPIClient(t.Generic[_HttpxClientT], ABC):
     __slots__ = ("_api_key", "base_url", "retry_args")
 
     DEFAULT_BASE_URL: t.ClassVar = "https://open.faceit.com/data/v4"
     DEFAULT_TIMEOUT: t.ClassVar[float] = 10
-    DEFAULT_RETRY_ARGS: t.ClassVar[t.Dict[str, t.Any]] = {
-        "stop": stop_after_attempt(3),
-        "wait": wait_random_exponential(multiplier=1, max=10),
-        # Retry on transient errors:
-        # network issues (timeouts, connection errors, protocol errors)
-        # and server errors (5xx HTTP status codes)
-        "retry": retry_if_exception(
+    DEFAULT_RETRY_ARGS: t.ClassVar = RetryArgs(
+        stop=stop_after_attempt(3),
+        wait=wait_random_exponential(1, 10),
+        retry=retry_if_exception(
             lambda e: isinstance(
                 e,
                 (
@@ -79,16 +79,20 @@ class BaseAPIClient(t.Generic[_HttpxClientT], ABC):
             )
             or (
                 isinstance(e, httpx.HTTPStatusError)
-                and e.response.is_server_error
+                and (
+                    e.response.status_code == httpx.codes.TOO_MANY_REQUESTS
+                    or e.response.is_server_error
+                )
             )
         ),
-        "reraise": True,
-        "before_sleep": lambda s: _logger.warning(
-            "Retry attempt %d failed; sleeping for %.2f seconds before next attempt",
+        reraise=True,
+        before_sleep=lambda s: _logger.warning(
+            "Retry attempt %d failed; sleeping for %.2f "
+            "seconds before next attempt",
             s.attempt_number,
             s.next_action.sleep if s.next_action else 0,
         ),
-    }
+    )
 
     _client: _HttpxClientT  # Type hint for the HTTP client that subclasses must initialize
 
@@ -104,7 +108,7 @@ class BaseAPIClient(t.Generic[_HttpxClientT], ABC):
         self,
         api_key: ValidUUID,
         base_url: str = DEFAULT_BASE_URL,
-        retry_args: t.Optional[t.Dict[str, t.Any]] = None,
+        retry_args: t.Optional[RetryArgs] = None,
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self._api_key = self.__class__.__api_key_validator(api_key)
@@ -211,7 +215,7 @@ class _BaseSyncClient(BaseAPIClient[httpx.Client]):
         *,
         base_url: str = BaseAPIClient.DEFAULT_BASE_URL,
         timeout: float = BaseAPIClient.DEFAULT_TIMEOUT,
-        retry_args: t.Optional[t.Dict[str, t.Any]] = None,
+        retry_args: t.Optional[RetryArgs] = None,
         **raw_client_kwargs: t.Any,
     ) -> None:
         super().__init__(api_key, base_url, retry_args)
@@ -277,17 +281,13 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
     # but requires further investigation for optimal setting
     MAX_CONCURRENT_REQUESTS_ABSOLUTE: t.ClassVar = 100
 
-    DEFAULT_MAX_CONCURRENT_REQUESTS_ABSOLUTE: t.ClassVar = 30
+    DEFAULT_MAX_CONCURRENT_REQUESTS: t.ClassVar = 30
     DEFAULT_SSL_ERROR_THRESHOLD: t.ClassVar = 5
     DEFAULT_MIN_CONNECTIONS: t.ClassVar = 5
     DEFAULT_RECOVERY_INTERVAL: t.ClassVar = 300
 
-    _initial_max_requests: t.ClassVar = (
-        DEFAULT_MAX_CONCURRENT_REQUESTS_ABSOLUTE
-    )
-    _max_concurrent_requests: t.ClassVar = (
-        DEFAULT_MAX_CONCURRENT_REQUESTS_ABSOLUTE
-    )
+    _initial_max_requests: t.ClassVar = DEFAULT_MAX_CONCURRENT_REQUESTS
+    _max_concurrent_requests: t.ClassVar = DEFAULT_MAX_CONCURRENT_REQUESTS
     _ssl_error_threshold: t.ClassVar = DEFAULT_SSL_ERROR_THRESHOLD
     _min_connections: t.ClassVar = DEFAULT_MIN_CONNECTIONS
     _recovery_interval: t.ClassVar = DEFAULT_RECOVERY_INTERVAL
@@ -300,10 +300,10 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
         *,
         base_url: str = BaseAPIClient.DEFAULT_BASE_URL,
         timeout: float = BaseAPIClient.DEFAULT_TIMEOUT,
-        retry_args: t.Optional[t.Dict[str, t.Any]] = None,
+        retry_args: t.Optional[RetryArgs] = None,
         max_concurrent_requests: t.Union[
             MaxConcurrentRequests, int
-        ] = DEFAULT_MAX_CONCURRENT_REQUESTS_ABSOLUTE,
+        ] = DEFAULT_MAX_CONCURRENT_REQUESTS,
         ssl_error_threshold: int = DEFAULT_SSL_ERROR_THRESHOLD,
         min_connections: int = DEFAULT_MIN_CONNECTIONS,
         recovery_interval: int = DEFAULT_RECOVERY_INTERVAL,

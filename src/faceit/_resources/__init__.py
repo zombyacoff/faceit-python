@@ -1,6 +1,3 @@
-from .aggregator_factory import AsyncResources as AsyncResources
-from .aggregator_factory import BaseResources as BaseResources
-from .aggregator_factory import SyncResources as SyncResources
 from .base import BaseResource as BaseResource
 from .data import AsyncChampionships as AsyncChampionships
 from .data import AsyncDataResource as AsyncDataResource
@@ -27,3 +24,6 @@ from .pagination import MaxPages as MaxPages
 from .pagination import SyncPageIterator as SyncPageIterator
 from .pagination import TimestampPaginationConfig as TimestampPaginationConfig
 from .pagination import check_pagination_support as check_pagination_support
+from .resource_aggregator import AsyncResources as AsyncResources
+from .resource_aggregator import BaseResources as BaseResources
+from .resource_aggregator import SyncResources as SyncResources

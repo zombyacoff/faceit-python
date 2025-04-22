@@ -16,7 +16,6 @@ class BaseFaceit(t.Generic[ClientT, DataT], ABC):
     _data_cls: t.Type[DataT]
 
     def __new__(cls) -> t.NoReturn:
-        """Prevent direct instantiation."""
         raise TypeError(
             f"Direct instantiation of {cls.__name__} is not allowed. "
             f"Use classmethods or factory methods instead."
@@ -46,7 +45,7 @@ class BaseFaceit(t.Generic[ClientT, DataT], ABC):
         If `api_key` is supplied, a new HTTP client will be initialized with the given options.
         If `client` is supplied, any `client_options` are ignored.
 
-        Refer to the [Faceit API documentation](https://docs.faceit.com) and
+        Refer to the [Faceit API documentation](https://docs.faceit.com/docs) and
         [API key instructions](https://docs.faceit.com/getting-started/authentication/api-keys)
         for details.
 
@@ -74,7 +73,7 @@ class BaseFaceit(t.Generic[ClientT, DataT], ABC):
         """
         return cls._data_cls(
             cls._initialize_client(
-                "api_key", client, auth=api_key, **client_options
+                api_key, client, auth_name="api_key", **client_options
             )
         )
 
@@ -83,11 +82,11 @@ class BaseFaceit(t.Generic[ClientT, DataT], ABC):
     @classmethod
     def _initialize_client(
         cls,
-        auth_name: str,
+        auth: t.Optional[ValidUUID] = None,
         client: t.Optional[ClientT] = None,
         /,
         *,
-        auth: t.Optional[ValidUUID] = None,
+        auth_name: str,
         **client_options: t.Any,
     ) -> ClientT:
         if auth is None and client is None:
@@ -122,8 +121,8 @@ class Faceit(BaseFaceit[SyncClient, SyncDataResource]):
 
     Example::
 
-        with Faceit.data("YOUR_API_KEY") as f:
-            player = f.players.get("s1mple")
+        with Faceit.data("YOUR_API_KEY") as data:
+            player = data.players.get("s1mple")
             assert player.nickname == "s1mple"
     """
 
@@ -139,8 +138,8 @@ class AsyncFaceit(BaseFaceit[AsyncClient, AsyncDataResource]):
 
     Example::
 
-        async with AsyncFaceit.data("YOUR_API_KEY") as f:
-            player = await f.players.get("s1mple")
+        async with AsyncFaceit.data("YOUR_API_KEY") as data:
+            player = await data.players.get("s1mple")
             assert player.nickname == "s1mple"
     """
 

@@ -1,6 +1,6 @@
-from typing import final
+from typing import final  # noqa: ICN003
 
-from faceit._resources.aggregator_factory import (
+from faceit._resources.resource_aggregator import (
     AsyncResources,
     SyncResources,
     resource_aggregator,

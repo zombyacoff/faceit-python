@@ -53,6 +53,9 @@ class FaceitResourcePath(StrEnum):
     TEAMS = "teams"
 
 
+# TODO: Refactor the base resource class if/when support for resources
+# other than Data is required, since the current implementation is
+# too Data-centric.
 @dataclass(eq=False, frozen=True)
 class BaseResource(t.Generic[ClientT], ABC):
     __slots__ = ("_client", "_raw")
@@ -64,7 +67,7 @@ class BaseResource(t.Generic[ClientT], ABC):
     _async_page_iterator: t.ClassVar = AsyncPageIterator
     _timestamp_cfg: t.ClassVar = TimestampPaginationConfig
 
-    _PARAM_NAME_MAP: t.ClassVar = {
+    _PARAM_NAME_MAP: t.ClassVar[t.Dict[str, str]] = {
         "start": "from",
         "category": "type",
     }
@@ -82,8 +85,8 @@ class BaseResource(t.Generic[ClientT], ABC):
             return
         if resource_path is None:
             raise TypeError(
-                f"Class {cls.__name__} requires 'path' parameter or a parent "
-                f"with 'PATH' defined."
+                f"Class {cls.__name__} requires 'path' "
+                f"parameter or a parent with 'PATH' defined."
             )
         cls.PATH = Endpoint(resource_path)
 

@@ -1,5 +1,5 @@
-from ._championships import Championship as Championship
-from ._page import ItemPage as ItemPage
+from ._item_page import ItemPage as ItemPage
+from .championships import Championship as Championship
 from .players import BanEntry as BanEntry
 from .players import CS2MatchPlayerStats as CS2MatchPlayerStats
 from .players import GeneralTeam as GeneralTeam

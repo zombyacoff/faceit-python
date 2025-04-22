@@ -5,7 +5,7 @@ from datetime import datetime
 from pydantic import BaseModel, Field, field_validator
 
 from faceit._typing import Annotated, TypeAlias, UrlOrEmpty
-from faceit.constants import GameID
+from faceit.constants import GameID, Region
 from faceit.models._custom_types import (
     FaceitID,
     FaceitMatchID,
@@ -59,7 +59,7 @@ class Results(BaseModel):
 class Match(BaseModel):
     id: Annotated[str, Field(alias="match_id")]
     game_id: GameID
-    region: str
+    region: Region
     type: Annotated[str, Field(alias="match_type")]
     game_mode: str
     max_players: int
@@ -92,7 +92,7 @@ class AbstractMatchPlayerStats(BaseModel, ABC):
 # Необходимо добавить значения по умолчанию для всех полей, которые могут отсутствовать
 class CS2MatchPlayerStats(AbstractMatchPlayerStats):
     game_mode: Annotated[str, Field(alias="Game Mode")]
-    region: Annotated[str, Field(alias="Region")]
+    region: Annotated[Region, Field(alias="Region")]
     kd_ratio: Annotated[float, Field(alias="K/D Ratio")]
     winner: Annotated[FaceitID, Field(alias="Winner")]
     player_id: Annotated[FaceitID, Field(alias="Player Id")]

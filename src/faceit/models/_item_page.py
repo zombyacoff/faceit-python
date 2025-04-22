@@ -131,12 +131,12 @@ class ItemPage(BaseModel, t.Generic[_T], frozen=True):
         return choice(self.items) if self.items else default  # noqa: S311
 
     def map(self, func: t.Callable[[_T], _R], /) -> ItemPage[_R]:
-        return self.__class__._construct_without_pagination(
+        return self.__class__._construct_without_metadata(
             list(map(func, self.items))
         )
 
     def filter(self, predicate: t.Callable[[_T], bool], /) -> Self:
-        return self.__class__._construct_without_pagination(
+        return self.__class__._construct_without_metadata(
             list(filter(predicate, self.items))
         )
 
@@ -147,7 +147,7 @@ class ItemPage(BaseModel, t.Generic[_T], frozen=True):
     # Using `ItemPage[_R]` return type and `type: ignore`
     # to support generic type transformation when called from
     # methods like `map()` that change the item type from `_T` to `_R`
-    def _construct_without_pagination(
+    def _construct_without_metadata(
         cls, items: t.Optional[t.List[_R]] = None, /
     ) -> ItemPage[_R]:
         return cls.model_construct(  # type: ignore[return-value]
@@ -160,7 +160,7 @@ class ItemPage(BaseModel, t.Generic[_T], frozen=True):
 
     @classmethod
     def merge(cls, pages: t.Iterable[ItemPage[_T]], /) -> ItemPage[_T]:
-        return cls._construct_without_pagination(
+        return cls._construct_without_metadata(
             list(chain.from_iterable(pages))
         )
 
