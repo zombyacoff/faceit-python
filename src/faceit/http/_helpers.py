@@ -41,9 +41,7 @@ class RetryArgs(t.TypedDict, total=False):
     before_sleep: t.Optional[_RetryHook]
     reraise: bool
     retry_error_cls: t.Type[RetryError]
-    retry_error_callback: t.Optional[
-        t.Callable[[RetryCallState], t.Union[t.Any]]
-    ]
+    retry_error_callback: t.Optional[t.Callable[[RetryCallState], t.Any]]
 
 
 @t.final

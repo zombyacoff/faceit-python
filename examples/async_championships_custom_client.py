@@ -16,7 +16,7 @@ async def main():
         championships = await data.championships.all_items(
             faceit.GameID.CS2,
             faceit.EventCategory.ONGOING,
-            max_items=25,  # Maximum number of items to retrieve;
+            max_items=250,  # Maximum number of items to retrieve;
             # default is `MaxPages(30)`
             # (i.e., 30 pages * method limit per page (10 in this case) = 300 items).
         )

@@ -22,7 +22,7 @@ Offers a seamless, pythonic interface for interacting with FACEIT data-featuring
 
 ## Installation
 
-```bash
+```
 pip install faceit
 ```
 
@@ -30,7 +30,7 @@ pip install faceit
 
 Below is a minimal example demonstrating how to retrieve the complete CS2 match history for a player using the synchronous API.
 
-> [!NOTE]
+> [!IMPORTANT]
 > Currently, only the Faceit Data resource is available, and access requires a valid API key. You can obtain your API key by following the instructions in the [official FACEIT documentation](https://docs.faceit.com/getting-started/authentication/api-keys).
 
 ```python
@@ -61,11 +61,13 @@ The goal is to provide a solution approaching enterprise-level quality, while re
 ## Project Status & Roadmap
 
 > [!WARNING]
+>
 > This library is currently in **early development**.
 > Many endpoints, models, and features are not yet implemented.
 > Webhooks, chat API, and some advanced features are not available yet.
 > Inline code documentation is minimal, and the Sphinx documentation site is not yet ready.
 > Expect breaking changes and incomplete coverage.
+>
 > **Contributions and feedback are highly welcome!**
 
 ### Planned Improvements

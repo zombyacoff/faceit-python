@@ -64,8 +64,8 @@ _T_co = t.TypeVar("_T_co", covariant=True)
 
 ModelT = t.TypeVar("ModelT", bound=BaseModel)
 ClientT = t.TypeVar("ClientT", bound="BaseAPIClient")
-DataT = t.TypeVar(
-    "DataT", bound=t.Union["SyncDataResource", "AsyncDataResource"]
+DataResourceT = t.TypeVar(
+    "DataResourceT", bound=t.Union["SyncDataResource", "AsyncDataResource"]
 )
 
 APIResponseFormatT = t.TypeVar("APIResponseFormatT", "Raw", "Model")

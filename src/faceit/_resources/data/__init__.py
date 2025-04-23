@@ -29,16 +29,12 @@ from .teams import SyncTeams as SyncTeams
 class SyncDataResource(SyncResources):
     championships: SyncChampionships[Model]
     raw_championships: SyncChampionships[Raw]
-
     matches: SyncMatches[Model]
     raw_matches: SyncMatches[Raw]
-
     players: SyncPlayers[Model]
     raw_players: SyncPlayers[Raw]
-
     teams: SyncTeams[Model]
     raw_teams: SyncTeams[Raw]
-
     rankings: SyncRankings[Model]
     raw_rankings: SyncRankings[Raw]
 
@@ -48,15 +44,11 @@ class SyncDataResource(SyncResources):
 class AsyncDataResource(AsyncResources):
     championships: AsyncChampionships[Model]
     raw_championships: AsyncChampionships[Raw]
-
     matches: AsyncMatches[Model]
     raw_matches: AsyncMatches[Raw]
-
     players: AsyncPlayers[Model]
     raw_players: AsyncPlayers[Raw]
-
     teams: AsyncTeams[Model]
     raw_teams: AsyncTeams[Raw]
-
     rankings: AsyncRankings[Model]
     raw_rankings: AsyncRankings[Raw]

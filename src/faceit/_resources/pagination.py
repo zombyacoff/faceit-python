@@ -315,6 +315,15 @@ class BasePageIterator(t.Generic[PaginationMethodT, _PageT], ABC):
     def current_page_index(self) -> int:
         return self._page_index
 
+    @property
+    def _effective_limit(self) -> int:
+        return (
+            self._max_items_info.last_page_remainder
+            if self._max_items_info.is_partial_last_page
+            and self._page_index == self._max_pages - 1
+            else self._pagination_limits.limit
+        )
+
     def reset(self) -> None:
         self._init_iteration()
 
@@ -326,6 +335,17 @@ class BasePageIterator(t.Generic[PaginationMethodT, _PageT], ABC):
             self._max_pages = max_pages
             self._max_items_info = _MaxItemsInfo.from_max_pages(max_pages)
 
+        def warn_if_exceeds_safe(max_pages: int, /) -> int:
+            if max_pages > self.__class__.SAFE_MAX_PAGES:
+                warn(
+                    f"The computed number of pages ({max_pages}) exceeds the "
+                    f"recommended safe maximum ({self.__class__.SAFE_MAX_PAGES}). "
+                    f"Proceed at your own risk.",
+                    UserWarning,
+                    stacklevel=2,
+                )
+            return max_pages
+
         if max_items == MaxItems.SAFE:
             set_max_pages(self.__class__.SAFE_MAX_PAGES)
             return
@@ -333,25 +353,16 @@ class BasePageIterator(t.Generic[PaginationMethodT, _PageT], ABC):
         validate_positive_int(max_items, param_name="max_items")
 
         if isinstance(max_items, MaxPages):
-            set_max_pages(max_items)
+            set_max_pages(warn_if_exceeds_safe(max_items))
             return
 
         last_page_remainder = max_items % self._pagination_limits.limit
         self._max_items_info = _MaxItemsInfo(
             max_items, last_page_remainder, last_page_remainder != 0
         )
-
-        max_pages = math.ceil(max_items / self._pagination_limits.limit)
-        if max_pages > self.__class__.SAFE_MAX_PAGES:
-            warn(
-                f"The computed number of pages ({max_pages}) exceeds the "
-                f"recommended safe maximum ({self.__class__.SAFE_MAX_PAGES}). "
-                f"Proceed at your own risk.",
-                UserWarning,
-                stacklevel=2,
-            )
-
-        self._max_pages = max_pages
+        self._max_pages = warn_if_exceeds_safe(
+            math.ceil(max_items / self._pagination_limits.limit)
+        )
 
     def _handle_iteration_state(self, page: t.Optional[_PageT], /) -> _PageT:
         if page is None:
@@ -381,26 +392,6 @@ class BasePageIterator(t.Generic[PaginationMethodT, _PageT], ABC):
         )
 
         self._offset += self._pagination_limits.limit
-
-        if self._max_items_info.is_partial_last_page and self._exhausted:
-            if isinstance(page, dict):
-                page.update(
-                    items=page[RAW_RESPONSE_ITEMS_KEY][
-                        : self._max_items_info.last_page_remainder
-                    ],
-                    end=self._max_items_info.last_page_remainder,
-                )
-                return t.cast(_PageT, page)
-
-            return t.cast(
-                _PageT,
-                t.cast(ItemPage, page)[
-                    : self._max_items_info.last_page_remainder
-                ].model_copy(
-                    update={"end": self._max_items_info.last_page_remainder}
-                ),
-            )
-
         return page
 
     @staticmethod
@@ -570,7 +561,7 @@ class _BaseSyncPageIterator(
             self._method.call(
                 *self._method.args,
                 **self._method.kwargs,
-                limit=self._pagination_limits.limit,
+                limit=self._effective_limit,
                 offset=self._offset,
             )
             or None
@@ -603,7 +594,7 @@ class _BasyAsyncPageIterator(
             await self._method.call(
                 *self._method.args,
                 **self._method.kwargs,
-                limit=self._pagination_limits.limit,
+                limit=self._effective_limit,
                 offset=self._offset,
             )
             or None

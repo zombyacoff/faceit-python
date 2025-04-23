@@ -5,15 +5,15 @@ from abc import ABC
 from warnings import warn
 
 from ._resources import AsyncDataResource, SyncDataResource
-from ._typing import ClientT, DataT, ValidUUID
+from ._typing import ClientT, DataResourceT, ValidUUID
 from .http import AsyncClient, SyncClient
 
 
-class BaseFaceit(t.Generic[ClientT, DataT], ABC):
+class BaseFaceit(t.Generic[ClientT, DataResourceT], ABC):
     __slots__ = ()
 
     _client_cls: t.Type[ClientT]
-    _data_cls: t.Type[DataT]
+    _data_cls: t.Type[DataResourceT]
 
     def __new__(cls) -> t.NoReturn:
         raise TypeError(
@@ -23,11 +23,13 @@ class BaseFaceit(t.Generic[ClientT, DataT], ABC):
 
     @t.overload
     @classmethod
-    def data(cls, api_key: ValidUUID, **client_options: t.Any) -> DataT: ...
+    def data(
+        cls, api_key: ValidUUID, **client_options: t.Any
+    ) -> DataResourceT: ...
 
     @t.overload
     @classmethod
-    def data(cls, *, client: ClientT) -> DataT: ...
+    def data(cls, *, client: ClientT) -> DataResourceT: ...
 
     @classmethod
     def data(
@@ -36,16 +38,16 @@ class BaseFaceit(t.Generic[ClientT, DataT], ABC):
         *,
         client: t.Optional[ClientT] = None,
         **client_options: t.Any,
-    ) -> DataT:
+    ) -> DataResourceT:
         """
-        Create and return a Faceit API data resource.
+        Create and return a Faceit Data API resource.
 
         You must provide either an `api_key` or a pre-configured HTTP client instance—never both.
 
         If `api_key` is supplied, a new HTTP client will be initialized with the given options.
         If `client` is supplied, any `client_options` are ignored.
 
-        Refer to the [Faceit API documentation](https://docs.faceit.com/docs) and
+        Refer to the [Faceit Data API documentation](https://docs.faceit.com/docs/data-api/data) and
         [API key instructions](https://docs.faceit.com/getting-started/authentication/api-keys)
         for details.
 
@@ -56,20 +58,7 @@ class BaseFaceit(t.Generic[ClientT, DataT], ABC):
                 (e.g., timeouts, proxies). Ignored if `client` is provided.
 
         Returns:
-            A ready-to-use Faceit API data resource instance.
-
-        Examples:
-            >>> # Synchronous usage with an API key
-            >>> data = Faceit.data("YOUR_API_KEY")
-            >>> player = data.players.get("s1mple")
-
-            >>> # Synchronous usage with a pre-configured client
-            >>> sync_client = SyncClient("YOUR_API_KEY", timeout=10)
-            >>> data = Faceit.data(client=sync_client)
-
-            >>> # Asynchronous usage with an API key
-            >>> data = AsyncFaceit.data("YOUR_API_KEY")
-            >>> player = await data.players.get("s1mple")
+            A ready-to-use Faceit Data API resource instance.
         """
         return cls._data_cls(
             cls._initialize_client(
