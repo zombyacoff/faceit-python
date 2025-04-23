@@ -52,7 +52,7 @@ class BaseFaceit(t.Generic[ClientT, DataResourceT], ABC):
         for details.
 
         Args:
-            api_key: FACEIT API key (str, UUID, or bytes). Used to create a new HTTP client.
+            api_key: FACEIT API key (`str`, `UUID`, or `bytes`). Used to create a new HTTP client.
             client: Pre-configured HTTP client instance. Cannot be combined with `api_key`.
             **client_options: Additional keyword arguments for HTTP client initialization
                 (e.g., timeouts, proxies). Ignored if `client` is provided.
@@ -108,7 +108,7 @@ class Faceit(BaseFaceit[SyncClient, SyncDataResource]):
     """
     Synchronous Faceit API interface.
 
-    Example::
+    Example (Data API)::
 
         with Faceit.data("YOUR_API_KEY") as data:
             player = data.players.get("s1mple")
@@ -125,7 +125,7 @@ class AsyncFaceit(BaseFaceit[AsyncClient, AsyncDataResource]):
     """
     Asynchronous Faceit API interface.
 
-    Example::
+    Example (Data API)::
 
         async with AsyncFaceit.data("YOUR_API_KEY") as data:
             player = await data.players.get("s1mple")

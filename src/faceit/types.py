@@ -26,6 +26,7 @@ from ._resources import BaseRankings as BaseRankings
 from ._resources import BaseResource as BaseResource
 from ._resources import BaseResources as BaseResources
 from ._resources import BaseTeams as BaseTeams
+from ._resources import PaginationMaxParams as PaginationMaxParams
 from ._resources import SyncChampionships as SyncChampionships
 from ._resources import SyncMatches as SyncMatches
 from ._resources import SyncPlayers as SyncPlayers
@@ -45,14 +46,7 @@ from ._typing import RawAPIResponse as RawAPIResponse
 from ._typing import SyncPaginationMethod as SyncPaginationMethod
 from ._typing import SyncUnixPaginationMethod as SyncUnixPaginationMethod
 from .http._client import BaseAPIClient as BaseAPIClient
-from .models._custom_types import FaceitID as FaceitID
-from .models._custom_types import FaceitMatchID as FaceitMatchID
-from .models._custom_types import FaceitTeamID as FaceitTeamID
-from .models._custom_types import NullableList as NullableList
-from .models._custom_types import ResponseContainer as ResponseContainer
-from .models._custom_types.faceit_uuid import BaseFaceitID as BaseFaceitID
-from .models._item_page import PaginationMetadata as PaginationMetadata
-from .models._item_page import PaginationTimeRange as PaginationTimeRange
+from .models.custom_types._faceit_uuid import BaseFaceitID as BaseFaceitID
 from .models.players._match import (
     AbstractMatchPlayerStats as AbstractMatchPlayerStats,
 )

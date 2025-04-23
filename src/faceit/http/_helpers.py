@@ -19,12 +19,6 @@ if t.TYPE_CHECKING:
     _WaitBase: TypeAlias = t.Union[
         wait_base, t.Callable[[RetryCallState], t.Union[float, int]]
     ]
-    _RetryBase: TypeAlias = t.Union[
-        retry_base, t.Callable[[RetryCallState], bool]
-    ]
-    _AsyncRetryBase: TypeAlias = t.Union[
-        async_retry_base, t.Callable[[RetryCallState], t.Awaitable[bool]]
-    ]
     _RetryHook: TypeAlias = t.Callable[
         [RetryCallState], t.Union[None, t.Awaitable[None]]
     ]
@@ -35,7 +29,11 @@ class RetryArgs(t.TypedDict, total=False):
     sleep: t.Callable[[t.Union[int, float]], t.Union[None, t.Awaitable[None]]]
     stop: _StopBase
     wait: _WaitBase
-    retry: t.Union[_RetryBase, _AsyncRetryBase]
+    retry: t.Union[
+        retry_base,
+        async_retry_base,
+        t.Callable[[RetryCallState], t.Union[bool, t.Awaitable[bool]]],
+    ]
     before: _RetryHook
     after: _RetryHook
     before_sleep: t.Optional[_RetryHook]

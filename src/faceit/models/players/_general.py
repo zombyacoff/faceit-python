@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 
 from faceit._typing import Annotated, UrlOrEmpty
 from faceit.constants import GameID, Region
-from faceit.models._custom_types import (
+from faceit.models.custom_types import (
     FaceitID,
     LangFormattedAnyHttpUrl,
     ResponseContainer,

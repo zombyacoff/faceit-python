@@ -47,7 +47,9 @@ class MappedValidatorConfig(t.NamedTuple, t.Generic[_KT, ModelT]):
 
 class FaceitResourcePath(StrEnum):
     CHAMPIONSHIPS = "championships"
+    LEAGUES = "leagues"
     MATCHES = "matches"
+    MATCHMAKINGS = "matchmakings"
     PLAYERS = "players"
     RANKINGS = "rankings"
     TEAMS = "teams"

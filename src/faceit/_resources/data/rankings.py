@@ -22,7 +22,7 @@ from faceit._typing import (
 )
 from faceit.constants import GameID, Region  # noqa: TCH001
 from faceit.http import AsyncClient, SyncClient
-from faceit.models._custom_types import Country  # noqa: TCH001
+from faceit.models.custom_types import Country  # noqa: TCH001
 
 from .players import PlayerID, PlayerIDValidator  # noqa: TCH001
 

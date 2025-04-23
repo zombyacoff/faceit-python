@@ -270,8 +270,8 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
 
     _instances: t.ClassVar[WeakSet[_BaseAsyncClient]] = WeakSet()
 
-    _semaphore: t.ClassVar[t.Optional[asyncio.Semaphore]] = None
     _lock: t.ClassVar = Lock()
+    _semaphore: t.ClassVar[t.Optional[asyncio.Semaphore]] = None
     _ssl_error_count: t.ClassVar = 0
     _adaptive_limit_enabled: t.ClassVar = True
     _last_ssl_error_time: t.ClassVar = time()

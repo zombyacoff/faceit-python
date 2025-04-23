@@ -21,7 +21,7 @@ from faceit._typing import (
     TypeAlias,
 )
 from faceit.http import AsyncClient, SyncClient
-from faceit.models._custom_types import FaceitMatchID
+from faceit.models.custom_types import FaceitMatchID
 
 _MatchID: TypeAlias = str
 # We use `AfterValidator` with the `_MatchID` type alias instead of `FaceitMatchID` directly
@@ -44,15 +44,15 @@ class SyncMatches(BaseMatches[SyncClient], t.Generic[APIResponseFormatT]):
     __slots__ = ()
 
     @t.overload
-    def details(self: SyncMatches[Raw], match_id: _MatchID) -> RawAPIItem: ...
+    def get(self: SyncMatches[Raw], match_id: _MatchID) -> RawAPIItem: ...
 
     @t.overload
-    def details(
+    def get(
         self: SyncMatches[Model], match_id: _MatchID
     ) -> ModelNotImplemented: ...
 
     @validate_call
-    def details(
+    def get(
         self, match_id: _MatchIDValidator
     ) -> t.Union[RawAPIItem, ModelNotImplemented]:
         return self._validate_response(
@@ -82,17 +82,17 @@ class AsyncMatches(BaseMatches[AsyncClient], t.Generic[APIResponseFormatT]):
     __slots__ = ()
 
     @t.overload
-    async def details(
+    async def get(
         self: AsyncMatches[Raw], match_id: _MatchID
     ) -> RawAPIItem: ...
 
     @t.overload
-    async def details(
+    async def get(
         self: AsyncMatches[Model], match_id: _MatchID
     ) -> ModelNotImplemented: ...
 
     @validate_call
-    async def details(
+    async def get(
         self, match_id: _MatchIDValidator
     ) -> t.Union[RawAPIItem, ModelNotImplemented]:
         return self._validate_response(

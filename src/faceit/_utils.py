@@ -189,7 +189,7 @@ def validate_positive_int(
 
 
 def _format_fields(
-    obj: t.Any, fields: t.Tuple[str, ...], joiner: str = " ", /
+    obj: t.Any, fields: t.Tuple[str, ...], /, *, joiner: str
 ) -> str:
     return (
         joiner.join(
@@ -208,18 +208,20 @@ def _apply_representation(
     if use_str and not has_str:
         raise TypeError(f"Class {cls.__name__} must define __str__ method")
 
-    def repr_(self: _ClassT) -> str:
+    def build_repr(self: _ClassT) -> str:
         str_args = (
-            f"'{self}'" if use_str else _format_fields(self, fields, ", ")
+            f"'{self}'"
+            if use_str
+            else _format_fields(self, fields, joiner=", ")
         )
         return f"{self.__class__.__name__}({str_args})"
 
-    def str_(self: _ClassT) -> str:
-        return _format_fields(self, fields)
+    def build_str(self: _ClassT) -> str:
+        return _format_fields(self, fields, joiner=" ")
 
-    cls.__repr__ = t.cast(_ReprMethod, repr_)
+    cls.__repr__ = t.cast(_ReprMethod, build_repr)
     if not has_str:
-        cls.__str__ = t.cast(_ReprMethod, str_)
+        cls.__str__ = t.cast(_ReprMethod, build_str)
 
     return cls
 
@@ -227,6 +229,14 @@ def _apply_representation(
 def representation(
     *fields: str, use_str: bool = False
 ) -> t.Callable[[_ClassT], _ClassT]:
+    """
+    Decorator that adds a custom `__repr__` and, optionally, `__str__` method to a class.
+
+    Args:
+        *fields: Attribute names to include in the string representation.
+        use_str: If `True`, requires the class to define `__str__` and uses it in `__repr__`.
+    """
+
     def decorator(cls: _ClassT) -> _ClassT:
         return _apply_representation(cls, fields, use_str)
 

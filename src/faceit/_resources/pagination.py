@@ -34,7 +34,7 @@ from faceit._utils import (
 )
 from faceit.constants import RAW_RESPONSE_ITEMS_KEY
 from faceit.models import ItemPage
-from faceit.models._item_page import PaginationTimeRange
+from faceit.models.item_page import PaginationTimeRange
 
 if t.TYPE_CHECKING:
     from .base import BaseResource

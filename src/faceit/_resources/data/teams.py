@@ -27,7 +27,7 @@ from faceit.http import AsyncClient, SyncClient
 
 _TeamID: TypeAlias = str
 _TeamIDValidator: TypeAlias = Annotated[
-    _TeamID, AfterValidator(lambda x: x)  # TODO: Validation function
+    _TeamID, AfterValidator(str)  # TODO: Validation function
 ]
 
 
@@ -43,15 +43,15 @@ class SyncTeams(BaseTeams[SyncClient], t.Generic[APIResponseFormatT]):
     __slots__ = ()
 
     @t.overload
-    def details(self: SyncTeams[Raw], team_id: _TeamID) -> RawAPIItem: ...
+    def get(self: SyncTeams[Raw], team_id: _TeamID) -> RawAPIItem: ...
 
     @t.overload
-    def details(
+    def get(
         self: SyncTeams[Model], team_id: _TeamID
     ) -> ModelNotImplemented: ...
 
     @validate_call
-    def details(
+    def get(
         self, team_id: _TeamIDValidator
     ) -> t.Union[RawAPIItem, ModelNotImplemented]:
         return self._validate_response(
@@ -148,17 +148,15 @@ class AsyncTeams(BaseTeams[AsyncClient], t.Generic[APIResponseFormatT]):
     __slots__ = ()
 
     @t.overload
-    async def details(
-        self: AsyncTeams[Raw], team_id: _TeamID
-    ) -> RawAPIItem: ...
+    async def get(self: AsyncTeams[Raw], team_id: _TeamID) -> RawAPIItem: ...
 
     @t.overload
-    async def details(
+    async def get(
         self: AsyncTeams[Model], team_id: _TeamID
     ) -> ModelNotImplemented: ...
 
     @validate_call
-    async def details(
+    async def get(
         self, team_id: _TeamIDValidator
     ) -> t.Union[RawAPIItem, ModelNotImplemented]:
         return self._validate_response(

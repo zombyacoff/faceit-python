@@ -7,7 +7,7 @@ regarding edge cases and integration with `Pydantic`.
 """
 
 import pytest
-from faceit.models._custom_types import (
+from faceit.models.custom_types import (
     FaceitID,
     FaceitMatchID,
     FaceitTeamID,

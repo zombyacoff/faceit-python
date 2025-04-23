@@ -38,7 +38,7 @@ def test_representation_with_missing_fields():
             # `email` is not initialized
 
     person = Person("John", 30)
-    assert repr(person) == f"Person({repr(_UNINITIALIZED_MARKER)})"
+    assert repr(person) == f"Person('{_UNINITIALIZED_MARKER}')"
 
 
 def test_representation_with_use_str_but_no_str_method():

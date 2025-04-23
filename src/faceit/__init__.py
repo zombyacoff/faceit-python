@@ -1,7 +1,12 @@
 """
-Type-safe, high-level Python SDK for the official [FACEIT REST API](https://docs.faceit.com/docs/).
+Type-safe, high-level Python SDK for the official FACEIT REST API.
 
-See usage examples and documentation: https://github.com/zombyacoff/faceit-python
+This library provides a Pythonic interface for interacting with FACEIT data,
+featuring both synchronous and asynchronous clients, strict type checking,
+and advanced pagination utilities.
+
+See usage examples and documentation:
+https://github.com/zombyacoff/faceit-python
 """
 
 from ._faceit import AsyncFaceit as AsyncFaceit
