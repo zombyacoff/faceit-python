@@ -19,7 +19,3 @@ for player in cs2_rankings:
         f"Skill Level: {player['game_skill_level']}\n"
         f"Elo: {player['faceit_elo']}\n"
     )
-
-# If not using a context manager, it's best to explicitly
-# close the client after use to avoid resource leaks.
-data.client.close()

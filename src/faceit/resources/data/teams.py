@@ -5,13 +5,15 @@ from abc import ABC
 
 from pydantic import AfterValidator, Field, validate_call
 
-from faceit._resources.base import (
+from faceit.constants import GameID  # noqa: TCH001
+from faceit.http import AsyncClient, SyncClient
+from faceit.resources.base import (
     BaseResource,
     FaceitResourcePath,
     ModelPlaceholder,
 )
-from faceit._resources.pagination import MaxItemsType, MaxPages
-from faceit._typing import (
+from faceit.resources.pagination import MaxItemsType, MaxPages
+from faceit.types import (
     Annotated,
     APIResponseFormatT,
     ClientT,
@@ -22,8 +24,6 @@ from faceit._typing import (
     RawAPIPageResponse,
     TypeAlias,
 )
-from faceit.constants import GameID  # noqa: TCH001
-from faceit.http import AsyncClient, SyncClient
 
 _TeamID: TypeAlias = str
 _TeamIDValidator: TypeAlias = Annotated[

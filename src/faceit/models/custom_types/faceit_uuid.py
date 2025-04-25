@@ -4,15 +4,15 @@ import typing as t
 from abc import ABC, abstractmethod
 from uuid import UUID
 
-from faceit._utils import is_valid_uuid, representation
+from faceit.utils import is_valid_uuid, representation
 
-from ._utils import build_validatable_string_type_schema
+from .utils import build_validatable_string_type_schema
 
 if t.TYPE_CHECKING:
     from pydantic import GetCoreSchemaHandler
     from pydantic_core import CoreSchema
 
-    from faceit._typing import Self
+    from faceit.types import Self
 
 
 class _BaseFaceitUUIDValidator(ABC):
@@ -60,7 +60,7 @@ class _BaseFaceitUUIDValidator(ABC):
 
 # The inconsistency was discovered when verifying account friend lists,
 # where some UUIDs would fail validation due to this unexpected suffix.
-class BaseFaceitID(_BaseFaceitUUIDValidator, ABC):
+class BaseFaceitID(_BaseFaceitUUIDValidator):
     __slots__ = ()
 
     _SUFFIX = "gui"
@@ -85,7 +85,7 @@ class _FaceitIDWithUniquePrefix(str, BaseFaceitID, ABC):
 
     UNIQUE_PREFIX: t.ClassVar[str]
 
-    def __init_subclass__(cls, *, prefix: str, **kwargs: t.Any) -> None:
+    def __init_subclass__(cls, prefix: str, **kwargs: t.Any) -> None:
         super().__init_subclass__(**kwargs)
         cls.UNIQUE_PREFIX = prefix
 

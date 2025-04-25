@@ -9,9 +9,9 @@ from warnings import warn
 from pydantic import ValidationError
 from strenum import StrEnum
 
-from faceit._typing import ClientT, ModelT, RawAPIPageResponse, RawAPIResponse
 from faceit.http import Endpoint
 from faceit.models import ItemPage
+from faceit.types import ClientT, ModelT, RawAPIPageResponse, RawAPIResponse
 
 from .pagination import (
     AsyncPageIterator,
@@ -78,7 +78,6 @@ class BaseResource(t.Generic[ClientT], ABC):
 
     def __init_subclass__(
         cls,
-        *,
         resource_path: t.Optional[FaceitResourcePath] = None,
         **kwargs: t.Any,
     ) -> None:
@@ -93,7 +92,7 @@ class BaseResource(t.Generic[ClientT], ABC):
         cls.PATH = Endpoint(resource_path)
 
     @property
-    def raw(self) -> bool:
+    def is_raw(self) -> bool:
         return self._raw
 
     # NOTE: These overloads are necessary as this function directly returns in resource

@@ -4,13 +4,13 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field, field_validator
 
-from faceit._typing import Annotated, TypeAlias, UrlOrEmpty
 from faceit.constants import GameID, Region
 from faceit.models.custom_types import (
     FaceitID,
     FaceitMatchID,
     LangFormattedAnyHttpUrl,
 )
+from faceit.types import Annotated, TypeAlias, UrlOrEmpty
 
 _NoOpponent: TypeAlias = t.Literal["bye"]
 
@@ -81,9 +81,9 @@ class AbstractMatchPlayerStats(BaseModel, ABC):
     """
     Abstract class for player match statistics models in the inheritance hierarchy.
 
-    Serves as a common type for different game-specific player statistics models.
-    Used for type annotations where the return type depends on the `game` parameter
-    provided by the user, allowing different `MatchPlayerStats` subclasses to be
+    Serves as a common type for various game-specific player statistics models.
+    Useful for type annotations when the return type depends on the ``game`` parameter
+    provided by the user, allowing different ``MatchPlayerStats`` subclasses to be
     returned based on the game context.
     """
 

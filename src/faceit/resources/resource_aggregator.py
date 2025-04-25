@@ -5,8 +5,8 @@ from abc import ABC
 from dataclasses import dataclass
 from functools import cached_property
 
-from faceit._typing import ClientT, Self
 from faceit.http import AsyncClient, SyncClient
+from faceit.types import ClientT, Self
 
 from .base import BaseResource
 
@@ -26,6 +26,15 @@ class BaseResources(t.Generic[ClientT], ABC):
         """
         The underlying HTTP client instance for low-level interactions with the
         Faceit API (e.g., unsupported endpoints or advanced use cases).
+
+        This object provides direct access to the raw HTTP client used by the library,
+        allowing you to perform custom requests to the Faceit API when the high-level
+        interface does not cover your needs.
+
+        .. note::
+            For most use cases, it is recommended to use the library's standard methods.
+            Access the low-level client only when interacting with non-standard or
+            experimental API features.
         """
         return self._client
 

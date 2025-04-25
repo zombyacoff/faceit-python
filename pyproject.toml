@@ -98,9 +98,8 @@ lint.ignore = [
 [tool.ruff.lint.per-file-ignores]
 "examples/*" = ["ALL"]
 "tests/*" = ["ALL"]
-"types.py" = ["F401", "PLC041"]
+"types.py" = ["F401", "PLC041", "ICN003"]
 "__init__.py" = ["F401", "PLC041"]
-"_typing.py" = ["F401", "PLC041", "ICN003"]
 "_.py" = ["ALL"]
 "_async.py" = ["ALL"]
 
@@ -111,7 +110,7 @@ keep-runtime-typing = true
 convention = "google"
 
 [tool.ruff.lint.flake8-bugbear]
-extend-immutable-calls = ["faceit._resources.pagination.MaxPages"] 
+extend-immutable-calls = ["faceit.resources.pagination.MaxPages"] 
 
 [tool.ruff.lint.flake8-import-conventions]
 banned-from = ["typing"]

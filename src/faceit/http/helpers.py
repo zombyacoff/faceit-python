@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import typing as t
 
-from faceit._utils import raise_unsupported_operand_error, representation
+from faceit.utils import raise_unsupported_operand_error, representation
 
 if t.TYPE_CHECKING:
     from tenacity import RetryCallState, RetryError
@@ -11,7 +11,7 @@ if t.TYPE_CHECKING:
     from tenacity.stop import stop_base
     from tenacity.wait import wait_base
 
-    from faceit._typing import EndpointParam, Self, TypeAlias
+    from faceit.types import EndpointParam, Self, TypeAlias
 
     _StopBase: TypeAlias = t.Union[
         stop_base, t.Callable[[RetryCallState], bool]

@@ -9,8 +9,8 @@ from warnings import warn
 from pydantic import Field, validate_call
 from strenum import StrEnum
 
-from ._typing import TypeAlias  # noqa: TCH001
-from ._utils import StrEnumWithAll
+from .types import TypeAlias  # noqa: TCH001
+from .utils import StrEnumWithAll
 
 if t.TYPE_CHECKING:
     _EloThreshold: TypeAlias = t.Dict[int, "EloRange"]
@@ -151,13 +151,15 @@ class HighTierLevel(StrEnum):
     """
     Elite tier reserved for top 1000 players per game/region.
 
-    This rank represents a dynamic threshold based on leaderboard position rather
-    than a fixed ELO value. Due to its relative nature, determining Challenger
-    status requires additional processing (leaderboard position analysis by region)
-    beyond standard ELO calculations. In our implementation, players with actual
-    Challenger status will be classified as level 10 for system consistency.
+    .. note::
+        This rank represents a dynamic threshold based on leaderboard position rather
+        than a fixed ELO value. Determining Challenger status requires additional
+        processing (leaderboard position analysis by region) beyond standard ELO calculations.
 
-    The constant is primarily defined for completeness in representing FACEIT's
+        In our implementation, players with actual Challenger status will be classified
+        as level 10 for system consistency.
+
+    This constant is primarily defined for completeness in representing FACEIT's
     full ranking system and may be utilized in future enhancements for precise
     leaderboard position tracking.
     """

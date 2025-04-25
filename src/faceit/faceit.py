@@ -4,9 +4,9 @@ import typing as t
 from abc import ABC
 from warnings import warn
 
-from ._resources import AsyncDataResource, SyncDataResource
-from ._typing import ClientT, DataResourceT, ValidUUID
 from .http import AsyncClient, SyncClient
+from .resources import AsyncDataResource, SyncDataResource
+from .types import ClientT, DataResourceT, ValidUUID
 
 
 class BaseFaceit(t.Generic[ClientT, DataResourceT], ABC):
@@ -42,23 +42,21 @@ class BaseFaceit(t.Generic[ClientT, DataResourceT], ABC):
         """
         Create and return a Faceit Data API resource.
 
-        You must provide either an `api_key` or a pre-configured HTTP client instance—never both.
+        .. important::
+            You must provide either an ``api_key`` or a pre-configured HTTP client instance — **never both**.
 
-        If `api_key` is supplied, a new HTTP client will be initialized with the given options.
-        If `client` is supplied, any `client_options` are ignored.
+            - If ``api_key`` is supplied, a new HTTP client will be initialized with the given options.
+            - If ``client`` is supplied, any ``client_options`` are ignored.
 
-        Refer to the [Faceit Data API documentation](https://docs.faceit.com/docs/data-api/data) and
-        [API key instructions](https://docs.faceit.com/getting-started/authentication/api-keys)
+        Refer to the `Faceit Data API documentation <https://docs.faceit.com/docs/data-api/data>`_ and
+        `API key instructions <https://docs.faceit.com/getting-started/authentication/api-keys>`_
         for details.
 
-        Args:
-            api_key: FACEIT API key (`str`, `UUID`, or `bytes`). Used to create a new HTTP client.
-            client: Pre-configured HTTP client instance. Cannot be combined with `api_key`.
-            **client_options: Additional keyword arguments for HTTP client initialization
-                (e.g., timeouts, proxies). Ignored if `client` is provided.
-
-        Returns:
-            A ready-to-use Faceit Data API resource instance.
+        :param api_key: FACEIT API key (``str``, ``UUID``, or ``bytes``). Used to create a new HTTP client.
+        :param client: Pre-configured HTTP client instance. Cannot be combined with ``api_key``.
+        :param client_options: Additional keyword arguments for HTTP client initialization
+                            (e.g., timeouts, proxies). Ignored if ``client`` is provided.
+        :return: A ready-to-use Faceit Data API resource instance.
         """
         return cls._data_cls(
             cls._initialize_client(
@@ -113,6 +111,8 @@ class Faceit(BaseFaceit[SyncClient, SyncDataResource]):
         with Faceit.data("YOUR_API_KEY") as data:
             player = data.players.get("s1mple")
             assert player.nickname == "s1mple"
+
+    This class uses a synchronous HTTP client under the hood.
     """
 
     __slots__ = ()
@@ -130,6 +130,8 @@ class AsyncFaceit(BaseFaceit[AsyncClient, AsyncDataResource]):
         async with AsyncFaceit.data("YOUR_API_KEY") as data:
             player = await data.players.get("s1mple")
             assert player.nickname == "s1mple"
+
+    This class uses an asynchronous HTTP client under the hood.
     """
 
     __slots__ = ()

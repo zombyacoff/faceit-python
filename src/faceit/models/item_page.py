@@ -7,9 +7,9 @@ from random import choice
 
 from pydantic import BaseModel, Field, field_validator
 
-from faceit._typing import Annotated, Self, TypeAlias
-from faceit._utils import UnsetValue, get_nested_property
 from faceit.constants import RAW_RESPONSE_ITEMS_KEY
+from faceit.types import Annotated, Self, TypeAlias
+from faceit.utils import UnsetValue, get_nested_property
 
 _T = t.TypeVar("_T")
 

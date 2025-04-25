@@ -13,7 +13,7 @@ from uuid import UUID
 from strenum import StrEnum
 
 if t.TYPE_CHECKING:
-    from ._typing import Self, TypeAlias
+    from .types import Self, TypeAlias
 
     _T = t.TypeVar("_T")
     _ClassT = t.TypeVar("_ClassT", bound=t.Type)
@@ -174,7 +174,7 @@ def validate_positive_int(
 ) -> int:
     """
     Utility for validating that a value is a positive integer.
-    Use this when Pydantic's `PositiveInt` type or validation is
+    Use this when Pydantic's ``PositiveInt`` type or validation is
     impractical or unavailable.
     """
     if not isinstance(value, int):
@@ -229,14 +229,6 @@ def _apply_representation(
 def representation(
     *fields: str, use_str: bool = False
 ) -> t.Callable[[_ClassT], _ClassT]:
-    """
-    Decorator that adds a custom `__repr__` and, optionally, `__str__` method to a class.
-
-    Args:
-        *fields: Attribute names to include in the string representation.
-        use_str: If `True`, requires the class to define `__str__` and uses it in `__repr__`.
-    """
-
     def decorator(cls: _ClassT) -> _ClassT:
         return _apply_representation(cls, fields, use_str)
 

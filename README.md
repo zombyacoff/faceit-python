@@ -38,15 +38,13 @@ import faceit
 
 with faceit.Faceit.data("YOUR_API_KEY") as data:
     player = data.players.get("s1mple")
-    # Returns an ItemPage collection (fully-featured iterable)
+    # Returns an `ItemPage` collection (fully-featured iterable)
     matches = data.players.all_history(player.id, faceit.GameID.CS2)
     print(f"Total CS2 matches for s1mple: {len(matches)}")
     # Example: find a match by attribute
     some_match = matches.find("id", "some_match_id")
     print(f"First match with the given ID: {some_match or 'No match found'}")
 ```
-
-Replace `"YOUR_API_KEY"` with your personal FACEIT API key.
 
 ### More Examples
 
@@ -61,13 +59,11 @@ The goal is to provide a solution approaching enterprise-level quality, while re
 ## Project Status & Roadmap
 
 > [!WARNING]
->
 > This library is currently in **early development**.
 > Many endpoints, models, and features are not yet implemented.
 > Webhooks, chat API, and some advanced features are not available yet.
 > Inline code documentation is minimal, and the Sphinx documentation site is not yet ready.
 > Expect breaking changes and incomplete coverage.
->
 > **Contributions and feedback are highly welcome!**
 
 ### Planned Improvements

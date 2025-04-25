@@ -1,6 +1,6 @@
 import pytest
 
-from faceit._resources.resource_aggregator import (
+from faceit.resources.resource_aggregator import (
     resource_aggregator,
     BaseResources,
 )

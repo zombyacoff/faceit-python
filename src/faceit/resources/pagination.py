@@ -12,7 +12,10 @@ from pydantic import PositiveInt
 from pydantic.fields import FieldInfo
 from strenum import StrEnum
 
-from faceit._typing import (
+from faceit.constants import RAW_RESPONSE_ITEMS_KEY
+from faceit.models import ItemPage
+from faceit.models.item_page import PaginationTimeRange
+from faceit.types import (
     AsyncPaginationMethod,
     AsyncUnixPaginationMethod,
     BaseUnixPaginationMethod,
@@ -24,7 +27,7 @@ from faceit._typing import (
     SyncUnixPaginationMethod,
     TypeAlias,
 )
-from faceit._utils import (
+from faceit.utils import (
     UnsetValue,
     deduplicate_unhashable,
     deep_get,
@@ -32,9 +35,6 @@ from faceit._utils import (
     representation,
     validate_positive_int,
 )
-from faceit.constants import RAW_RESPONSE_ITEMS_KEY
-from faceit.models import ItemPage
-from faceit.models.item_page import PaginationTimeRange
 
 if t.TYPE_CHECKING:
     from .base import BaseResource
@@ -79,16 +79,17 @@ class PaginationMaxParams(t.NamedTuple):
 @t.final
 class MaxPages(int):
     """
-    Indicates the maximum number of pages to fetch when passed as `max_items`.
+    Indicates the maximum number of pages to fetch when passed as ``max_items``.
 
     This class enables explicit page-based limits without introducing a separate
-    `max_pages` parameter, allowing for flexible and concise API usage.
+    ``max_pages`` parameter, allowing for flexible and concise API usage.
 
-    **Developer rationale:**
-    This dedicated class enables explicit page-based limits via the `max_items`
-    parameter, without introducing a separate `max_pages` argument. Using a
-    distinct type allows for clear and robust isinstance checks, making the
-    API flexible and concise while keeping downstream logic simple and safe.
+    .. admonition:: Developer rationale
+
+        This dedicated class enables explicit page-based limits via the ``max_items``
+        parameter, without introducing a separate ``max_pages`` argument. Using a
+        distinct type allows for clear and robust ``isinstance`` checks, making the
+        API flexible and concise while keeping downstream logic simple and safe.
     """
 
     __slots__ = ()

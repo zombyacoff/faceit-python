@@ -18,7 +18,7 @@ import pytest
 from faceit.constants import BASE_WIKI_URL
 from faceit.exceptions import APIError
 from faceit.http import AsyncClient, Endpoint, SupportedMethod, SyncClient
-from faceit.http._client import (
+from faceit.http.client import (
     BaseAPIClient,
     _BaseAsyncClient,
     _BaseSyncClient,
@@ -519,7 +519,7 @@ class TestSSLErrorHandling:
 
     @pytest.mark.asyncio
     @patch("httpx.AsyncClient")
-    @patch("faceit.http._client._logger")  # Mock the logger to avoid real logs
+    @patch("faceit.http.client._logger")  # Mock the logger to avoid real logs
     async def test_register_ssl_error(
         self, mock_logger, mock_client, valid_uuid
     ):
@@ -594,7 +594,7 @@ class TestSSLErrorHandling:
 
     @pytest.mark.asyncio
     @patch("httpx.AsyncClient")
-    @patch("faceit.http._client._logger")  # Mock the logger to avoid real logs
+    @patch("faceit.http.client._logger")  # Mock the logger to avoid real logs
     async def test_check_connection_recovery(
         self, mock_logger, mock_client, valid_uuid
     ):
@@ -702,7 +702,7 @@ class TestRetryLogic:
     async def test_ssl_before_sleep(self, valid_uuid):
         """Test the SSL before_sleep callback."""
         with patch("httpx.AsyncClient") as mock_client, patch(
-            "faceit.http._client._logger"
+            "faceit.http.client._logger"
         ) as mock_logger, patch(
             "asyncio.sleep", new_callable=AsyncMock
         ) as mock_sleep:

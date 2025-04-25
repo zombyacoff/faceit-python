@@ -11,9 +11,9 @@ from pydantic import (
 from pydantic_core import core_schema
 from pydantic_extra_types.country import CountryAlpha2
 
-from faceit._typing import Annotated, TypeAlias
+from faceit.types import Annotated, TypeAlias
 
-from ._utils import build_validatable_string_type_schema
+from .utils import build_validatable_string_type_schema
 
 _T = t.TypeVar("_T")
 
@@ -28,6 +28,7 @@ Country: TypeAlias = Annotated[
 ]
 """
 Type alias for country codes that are always validated and converted to lowercase.
+
 Used because Faceit API requires country codes to be in lowercase.
 """
 

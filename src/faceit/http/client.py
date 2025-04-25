@@ -24,16 +24,16 @@ from tenacity import (
     wait_random_exponential,
 )
 
-from faceit._utils import create_uuid_validator, representation
 from faceit.constants import BASE_WIKI_URL
 from faceit.exceptions import APIError
+from faceit.utils import create_uuid_validator, representation
 
-from ._helpers import Endpoint, RetryArgs
+from .helpers import Endpoint, RetryArgs
 
 if t.TYPE_CHECKING:
     from types import TracebackType
 
-    from faceit._typing import (
+    from faceit.types import (
         EndpointParam,
         RawAPIItem,
         RawAPIPageResponse,
@@ -186,24 +186,9 @@ class BaseAPIClient(t.Generic[_HttpxClientT], ABC):
                 response.status_code, "Invalid JSON response"
             ) from None
 
-    @classmethod
-    def _warn_unclosed_client(cls) -> None:
-        is_async = "Async" in cls.__name__
-        _logger.warning(
-            "Unclosed client session detected. Resources may be leaked. "
-            "Either use %swith statement (context manager) or explicitly "
-            "call %sclose() to properly close the session.",
-            "async " if is_async else "",
-            "await client.a" if is_async else "client.",
-        )
-
     @abstractmethod
     def close(self) -> None:
         raise NotImplementedError
-
-    def __del__(self) -> None:
-        if not self.is_closed:
-            self.__class__._warn_unclosed_client()
 
 
 class _BaseSyncClient(BaseAPIClient[httpx.Client]):
@@ -412,7 +397,8 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
     def close(self) -> None:
         """
         This method intentionally raises an error to prevent incorrect usage.
-        Async clients should use `aclose()` instead.
+
+        Async clients should use ``aclose()`` instead.
         """
         raise TypeError(
             f"Use 'await {self.__class__.__name__}.aclose()' "

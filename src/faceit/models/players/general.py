@@ -3,13 +3,13 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
-from faceit._typing import Annotated, UrlOrEmpty
 from faceit.constants import GameID, Region
 from faceit.models.custom_types import (
     FaceitID,
     LangFormattedAnyHttpUrl,
     ResponseContainer,
 )
+from faceit.types import Annotated, UrlOrEmpty
 
 
 class GameInfo(BaseModel):

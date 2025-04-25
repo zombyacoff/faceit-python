@@ -5,13 +5,16 @@ from abc import ABC
 
 from pydantic import AfterValidator, Field, validate_call
 
-from faceit._resources.base import (
+from faceit.constants import EventCategory, ExpandedField, GameID
+from faceit.http import AsyncClient, SyncClient
+from faceit.models import Championship, ItemPage
+from faceit.resources.base import (
     BaseResource,
     FaceitResourcePath,
     ModelPlaceholder,
 )
-from faceit._resources.pagination import MaxItemsType, MaxPages
-from faceit._typing import (
+from faceit.resources.pagination import MaxItemsType, MaxPages
+from faceit.types import (
     Annotated,
     APIResponseFormatT,
     ClientT,
@@ -23,10 +26,7 @@ from faceit._typing import (
     TypeAlias,
     ValidUUID,
 )
-from faceit._utils import create_uuid_validator
-from faceit.constants import EventCategory, ExpandedField, GameID
-from faceit.http import AsyncClient, SyncClient
-from faceit.models import Championship, ItemPage
+from faceit.utils import create_uuid_validator
 
 _ChampionshipID: TypeAlias = ValidUUID
 _ChampionshipIDValidator: TypeAlias = Annotated[

@@ -5,12 +5,13 @@ from abc import ABC
 
 from pydantic import AfterValidator, Field, validate_call
 
-from faceit._resources.base import (
+from faceit.http import AsyncClient, SyncClient
+from faceit.resources.base import (
     BaseResource,
     FaceitResourcePath,
     ModelPlaceholder,
 )
-from faceit._typing import (
+from faceit.types import (
     Annotated,
     APIResponseFormatT,
     ClientT,
@@ -21,8 +22,7 @@ from faceit._typing import (
     TypeAlias,
     ValidUUID,
 )
-from faceit._utils import create_uuid_validator
-from faceit.http import AsyncClient, SyncClient
+from faceit.utils import create_uuid_validator
 
 from .players import PlayerID, PlayerIDValidator  # noqa: TCH001
 

@@ -1,52 +1,145 @@
-"""
-This module aggregates public types, abstract base classes, and protocols intended
-for use by library consumers in type annotations, runtime checks (e.g., isinstance),
-and static analysis.
+import sys
+import typing as t
+from uuid import UUID
 
-Most types are imported from the internal `_typing.py` module, which handles backports
-and compatibility with different Python versions. This separation ensures a clear
-distinction between types used for annotations and the core implementation classes
-aggregated by the main `__init__.py`.
+from pydantic import AnyHttpUrl, BaseModel, Field
 
-End users should import types from this module for type hinting and interface checks,
-rather than from internal modules or implementation files.
-"""
+# NOTE: We plan to migrate to using the `Doc` annotation for documentation
+# as soon as it is officially supported in Python (i.e., after PEP 727 is accepted
+# and implemented in type checkers and major IDEs such as VSCode and PyCharm).
+# Until then, we will continue to rely on traditional docstrings and comments.
 
-from ._faceit import BaseFaceit as BaseFaceit
-from ._resources import AsyncChampionships as AsyncChampionships
-from ._resources import AsyncMatches as AsyncMatches
-from ._resources import AsyncPlayers as AsyncPlayers
-from ._resources import AsyncRankings as AsyncRankings
-from ._resources import AsyncTeams as AsyncTeams
-from ._resources import BaseChampionships as BaseChampionships
-from ._resources import BaseMatches as BaseMatches
-from ._resources import BasePageIterator as BasePageIterator
-from ._resources import BasePlayers as BasePlayers
-from ._resources import BaseRankings as BaseRankings
-from ._resources import BaseResource as BaseResource
-from ._resources import BaseResources as BaseResources
-from ._resources import BaseTeams as BaseTeams
-from ._resources import PaginationMaxParams as PaginationMaxParams
-from ._resources import SyncChampionships as SyncChampionships
-from ._resources import SyncMatches as SyncMatches
-from ._resources import SyncPlayers as SyncPlayers
-from ._resources import SyncRankings as SyncRankings
-from ._resources import SyncTeams as SyncTeams
-from ._resources import TimestampPaginationConfig as TimestampPaginationConfig
-from ._typing import AsyncPaginationMethod as AsyncPaginationMethod
-from ._typing import AsyncUnixPaginationMethod as AsyncUnixPaginationMethod
-from ._typing import BasePaginationMethod as BasePaginationMethod
-from ._typing import BaseUnixPaginationMethod as BaseUnixPaginationMethod
-from ._typing import EndpointParam as EndpointParam
-from ._typing import Model as Model
-from ._typing import Raw as Raw
-from ._typing import RawAPIItem as RawAPIItem
-from ._typing import RawAPIPageResponse as RawAPIPageResponse
-from ._typing import RawAPIResponse as RawAPIResponse
-from ._typing import SyncPaginationMethod as SyncPaginationMethod
-from ._typing import SyncUnixPaginationMethod as SyncUnixPaginationMethod
-from .http._client import BaseAPIClient as BaseAPIClient
-from .models.custom_types._faceit_uuid import BaseFaceitID as BaseFaceitID
-from .models.players._match import (
-    AbstractMatchPlayerStats as AbstractMatchPlayerStats,
+if sys.version_info >= (3, 11):
+    from typing import Annotated as Annotated
+    from typing import NotRequired as NotRequired
+    from typing import ParamSpec as ParamSpec
+    from typing import Required as Required
+    from typing import Self as Self
+    from typing import TypeAlias as TypeAlias
+
+    # At the moment `TypeGuard` is not used in the project,
+    # but I admit its use in the future, so we leave it imported
+    from typing import TypeGuard as TypeGuard
+
+    from typing_extensions import deprecated as deprecated
+
+elif sys.version_info >= (3, 10):
+    from typing import Annotated as Annotated
+    from typing import ParamSpec as ParamSpec
+    from typing import TypeAlias as TypeAlias
+    from typing import TypeGuard as TypeGuard
+
+    from typing_extensions import NotRequired as NotRequired
+    from typing_extensions import Required as Required
+    from typing_extensions import Self as Self
+    from typing_extensions import deprecated as deprecated
+
+elif sys.version_info >= (3, 9):
+    from typing import Annotated as Annotated
+
+    from typing_extensions import NotRequired as NotRequired
+    from typing_extensions import ParamSpec as ParamSpec
+    from typing_extensions import Required as Required
+    from typing_extensions import Self as Self
+    from typing_extensions import TypeAlias as TypeAlias
+    from typing_extensions import TypeGuard as TypeGuard
+    from typing_extensions import deprecated as deprecated
+
+else:
+    from typing_extensions import Annotated as Annotated
+    from typing_extensions import NotRequired as NotRequired
+    from typing_extensions import ParamSpec as ParamSpec
+    from typing_extensions import Required as Required
+    from typing_extensions import Self as Self
+    from typing_extensions import TypeAlias as TypeAlias
+    from typing_extensions import TypeGuard as TypeGuard
+    from typing_extensions import deprecated as deprecated
+
+if t.TYPE_CHECKING:
+    from .http import Endpoint
+    from .http.client import BaseAPIClient
+    from .resources import AsyncDataResource, SyncDataResource
+
+_T_co = t.TypeVar("_T_co", covariant=True)
+
+ModelT = t.TypeVar("ModelT", bound=BaseModel)
+ClientT = t.TypeVar("ClientT", bound="BaseAPIClient")
+DataResourceT = t.TypeVar(
+    "DataResourceT", bound=t.Union["SyncDataResource", "AsyncDataResource"]
 )
+
+APIResponseFormatT = t.TypeVar("APIResponseFormatT", "Raw", "Model")
+PaginationMethodT = t.TypeVar("PaginationMethodT", bound="BaseMethodProtocol")
+
+EmptyString: TypeAlias = t.Literal[""]
+UrlOrEmpty: TypeAlias = t.Union[AnyHttpUrl, EmptyString]
+UUIDOrEmpty: TypeAlias = t.Union[UUID, EmptyString]
+EndpointParam: TypeAlias = t.Union[str, "Endpoint"]
+ValidUUID: TypeAlias = t.Union[UUID, str, bytes]
+
+Raw = t.NewType("Raw", bool)
+Model = t.NewType("Model", bool)
+
+# Placeholder type that signals developers to implement a proper model
+# for a resource method. Acts as a temporary stub during development.
+ModelNotImplemented: TypeAlias = BaseModel
+
+RawAPIItem = t.NewType("RawAPIItem", t.Dict[str, t.Any])
+RawAPIPageResponse = t.TypedDict(
+    "RawAPIPageResponse",
+    {
+        "items": t.List[RawAPIItem],
+        # Required pagination parameters (cursor based)
+        "start": int,
+        "end": int,
+        # Unix timestamps (in milliseconds)
+        "from": NotRequired[int],
+        "to": NotRequired[int],
+    },
+)
+RawAPIResponse: TypeAlias = t.Union[RawAPIItem, RawAPIPageResponse]
+
+
+class BaseMethodProtocol(t.Protocol):
+    __name__: str
+    __call__: t.Callable[..., t.Any]
+
+
+class BasePaginationMethod(BaseMethodProtocol, t.Protocol[_T_co]):
+    def __call__(
+        self,
+        *args: t.Any,
+        offset: int = Field(...),
+        limit: int = Field(...),
+        **kwargs: t.Any,
+    ) -> _T_co: ...
+
+
+class SyncPaginationMethod(BasePaginationMethod[_T_co], t.Protocol): ...
+
+
+class AsyncPaginationMethod(
+    BasePaginationMethod[t.Awaitable[_T_co]], t.Protocol
+): ...
+
+
+class BaseUnixPaginationMethod(BaseMethodProtocol, t.Protocol[_T_co]):
+    def __call__(
+        self,
+        *args: t.Any,
+        offset: int = Field(...),
+        limit: int = Field(...),
+        start: t.Optional[int] = None,
+        to: t.Optional[int] = None,
+        **kwargs: t.Any,
+    ) -> _T_co: ...
+
+
+class SyncUnixPaginationMethod(
+    BaseUnixPaginationMethod[_T_co], t.Protocol
+): ...
+
+
+class AsyncUnixPaginationMethod(
+    BaseUnixPaginationMethod[t.Awaitable[_T_co]], t.Protocol
+): ...

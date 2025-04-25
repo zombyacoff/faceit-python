@@ -2,13 +2,13 @@ import typing as t
 
 from pydantic import BaseModel
 
-from faceit._typing import UrlOrEmpty, UUIDOrEmpty
 from faceit.constants import Region
 from faceit.models.custom_types import (
     FaceitID,
     NullableList,
     ResponseContainer,
 )
+from faceit.types import UrlOrEmpty, UUIDOrEmpty
 
 
 class JoinChecks(BaseModel):

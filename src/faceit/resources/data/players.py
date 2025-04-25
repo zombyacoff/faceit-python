@@ -7,27 +7,6 @@ from warnings import warn
 
 from pydantic import AfterValidator, Field, validate_call
 
-from faceit._resources.base import (
-    BaseResource,
-    FaceitResourcePath,
-    MappedValidatorConfig,
-    ModelPlaceholder,
-    RequestPayload,
-)
-from faceit._resources.pagination import MaxItems, MaxItemsType, MaxPages
-from faceit._typing import (
-    Annotated,
-    APIResponseFormatT,
-    ClientT,
-    Model,
-    ModelNotImplemented,
-    Raw,
-    RawAPIItem,
-    RawAPIPageResponse,
-    TypeAlias,
-    ValidUUID,
-)
-from faceit._utils import create_uuid_validator, is_valid_uuid
 from faceit.constants import GameID
 from faceit.http import AsyncClient, SyncClient
 from faceit.models import (
@@ -40,9 +19,30 @@ from faceit.models import (
     Player,
     Tournament,
 )
-from faceit.models.players._match import (
+from faceit.models.players.match import (
     AbstractMatchPlayerStats,  # noqa: TCH001
 )
+from faceit.resources.base import (
+    BaseResource,
+    FaceitResourcePath,
+    MappedValidatorConfig,
+    ModelPlaceholder,
+    RequestPayload,
+)
+from faceit.resources.pagination import MaxItems, MaxItemsType, MaxPages
+from faceit.types import (
+    Annotated,
+    APIResponseFormatT,
+    ClientT,
+    Model,
+    ModelNotImplemented,
+    Raw,
+    RawAPIItem,
+    RawAPIPageResponse,
+    TypeAlias,
+    ValidUUID,
+)
+from faceit.utils import create_uuid_validator, is_valid_uuid
 
 _logger = logging.getLogger(__name__)
 
@@ -168,36 +168,6 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
         game: t.Optional[GameID] = None,
         game_player_id: t.Optional[str] = None,
     ) -> t.Union[RawAPIItem, Player]:
-        """
-        Retrieves player data by FACEIT identifier, nickname, or game-specific
-        parameters.
-
-        Args:
-            player_lookup_key: Player's FACEIT UUID or nickname.
-            game: Game identifier (required if using `game_player_id`).
-            game_player_id: Game-specific player ID (requires `game` parameter).
-
-        Returns:
-            Player model or raw dict depending on client configuration.
-
-        Examples::
-
-            data = Faceit.data("YOUR_API_KEY")
-
-            # Get player by nickname
-            player = data.players.get("s1mple")
-            # Get player by UUID (string format works too)
-            player = data.players.get("ac71ba3c-d3d4-45e7-8be2-26aa3986867d")
-            # Get player by game ID and game player ID
-            player = data.players.get(game=GameID.CS2, game_player_id="76561198034202275")
-            assert isinstance(player.id, FaceitID)
-            assert str(player.id) == "ac71ba3c-d3d4-45e7-8be2-26aa3986867d"
-
-            # Get raw player data
-            player_data = data.raw_players.get("s1mple")
-            assert isinstance(player_data, dict)
-            assert player_data["nickname"] == "s1mple"
-        """
         return self._validate_response(
             self._client.get(
                 **self._process_get_request(
@@ -667,36 +637,6 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
         game: t.Optional[GameID] = None,
         game_player_id: t.Optional[str] = None,
     ) -> t.Union[RawAPIItem, Player]:
-        """
-        Asynchronously retrieves player data by FACEIT identifier, nickname, or
-        game-specific parameters.
-
-        Args:
-            player_lookup_key: Player's FACEIT UUID or nickname.
-            game: Game identifier (required if using `game_player_id`).
-            game_player_id: Game-specific player ID (requires `game` parameter).
-
-        Returns:
-            Player model or raw dict depending on client configuration.
-
-        Examples::
-
-            data = AsyncFaceit.data("YOUR_API_KEY")
-
-            # Get player by nickname
-            player = await data.players.get("s1mple")
-            # Get player by UUID (string format works too)
-            player = await data.players.get("ac71ba3c-d3d4-45e7-8be2-26aa3986867d")
-            # Get player by game ID and game player ID
-            player = await data.players.get(game=GameID.CS2, game_player_id="76561198034202275")
-            assert isinstance(player.id, FaceitID)
-            assert str(player.id) == "ac71ba3c-d3d4-45e7-8be2-26aa3986867d"
-
-            # Get raw player data
-            player_data = await data.raw_players.get("s1mple")
-            assert isinstance(player_data, dict)
-            assert player_data["nickname"] == "s1mple"
-        """
         return self._validate_response(
             await self._client.get(
                 **self._process_get_request(

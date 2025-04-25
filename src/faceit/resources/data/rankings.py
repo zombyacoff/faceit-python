@@ -5,13 +5,16 @@ from abc import ABC
 
 from pydantic import Field, validate_call
 
-from faceit._resources.base import (
+from faceit.constants import GameID, Region  # noqa: TCH001
+from faceit.http import AsyncClient, SyncClient
+from faceit.models.custom_types import Country  # noqa: TCH001
+from faceit.resources.base import (
     BaseResource,
     FaceitResourcePath,
     ModelPlaceholder,
 )
-from faceit._resources.pagination import MaxItemsType, MaxPages
-from faceit._typing import (
+from faceit.resources.pagination import MaxItemsType, MaxPages
+from faceit.types import (
     APIResponseFormatT,
     ClientT,
     Model,
@@ -20,9 +23,6 @@ from faceit._typing import (
     RawAPIItem,
     RawAPIPageResponse,
 )
-from faceit.constants import GameID, Region  # noqa: TCH001
-from faceit.http import AsyncClient, SyncClient
-from faceit.models.custom_types import Country  # noqa: TCH001
 
 from .players import PlayerID, PlayerIDValidator  # noqa: TCH001
 

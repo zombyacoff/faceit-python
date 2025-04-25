@@ -5,12 +5,13 @@ from abc import ABC
 
 from pydantic import AfterValidator, validate_call
 
-from faceit._resources.base import (
+from faceit.http import AsyncClient, SyncClient
+from faceit.resources.base import (
     BaseResource,
     FaceitResourcePath,
     ModelPlaceholder,
 )
-from faceit._typing import (
+from faceit.types import (
     Annotated,
     APIResponseFormatT,
     ClientT,
@@ -21,7 +22,6 @@ from faceit._typing import (
     TypeAlias,
     ValidUUID,
 )
-from faceit.http import AsyncClient, SyncClient
 
 _MatchmakingID: TypeAlias = ValidUUID
 _MatchmakingIDValidator: TypeAlias = Annotated[
