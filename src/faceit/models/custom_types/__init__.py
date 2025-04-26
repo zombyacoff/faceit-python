@@ -1,4 +1,4 @@
-from .adaptable import Country as Country
+from .adaptable import CountryCode as CountryCode
 from .adaptable import LangFormattedAnyHttpUrl as LangFormattedAnyHttpUrl
 from .adaptable import NullableList as NullableList
 from .adaptable import ResponseContainer as ResponseContainer

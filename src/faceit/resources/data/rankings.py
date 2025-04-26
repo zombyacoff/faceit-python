@@ -7,7 +7,7 @@ from pydantic import Field, validate_call
 
 from faceit.constants import GameID, Region  # noqa: TCH001
 from faceit.http import AsyncClient, SyncClient
-from faceit.models.custom_types import Country  # noqa: TCH001
+from faceit.models.custom_types import CountryCode  # noqa: TCH001
 from faceit.resources.base import (
     BaseResource,
     FaceitResourcePath,
@@ -43,7 +43,7 @@ class SyncRankings(BaseRankings[SyncClient], t.Generic[APIResponseFormatT]):
         self: SyncRankings[Raw],
         game: GameID,
         region: Region,
-        country: t.Optional[Country] = None,
+        country: t.Optional[CountryCode] = None,
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
@@ -54,7 +54,7 @@ class SyncRankings(BaseRankings[SyncClient], t.Generic[APIResponseFormatT]):
         self: SyncRankings[Model],
         game: GameID,
         region: Region,
-        country: t.Optional[Country] = None,
+        country: t.Optional[CountryCode] = None,
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
@@ -65,7 +65,7 @@ class SyncRankings(BaseRankings[SyncClient], t.Generic[APIResponseFormatT]):
         self,
         game: GameID,
         region: Region,
-        country: t.Optional[Country] = None,
+        country: t.Optional[CountryCode] = None,
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
@@ -86,7 +86,7 @@ class SyncRankings(BaseRankings[SyncClient], t.Generic[APIResponseFormatT]):
         self: SyncRankings[Raw],
         game: GameID,
         region: Region,
-        country: t.Optional[Country] = None,
+        country: t.Optional[CountryCode] = None,
         *,
         max_items: MaxItemsType = MaxPages(10),
     ) -> t.List[RawAPIItem]: ...
@@ -96,7 +96,7 @@ class SyncRankings(BaseRankings[SyncClient], t.Generic[APIResponseFormatT]):
         self: SyncRankings[Model],
         game: GameID,
         region: Region,
-        country: t.Optional[Country] = None,
+        country: t.Optional[CountryCode] = None,
         *,
         max_items: MaxItemsType = MaxPages(10),
     ) -> ModelNotImplemented: ...
@@ -105,7 +105,7 @@ class SyncRankings(BaseRankings[SyncClient], t.Generic[APIResponseFormatT]):
         self,
         game: GameID,
         region: Region,
-        country: t.Optional[Country] = None,
+        country: t.Optional[CountryCode] = None,
         *,
         max_items: MaxItemsType = MaxPages(10),
     ) -> t.Union[t.List[RawAPIItem], ModelNotImplemented]:
@@ -119,7 +119,7 @@ class SyncRankings(BaseRankings[SyncClient], t.Generic[APIResponseFormatT]):
         game: GameID,
         region: Region,
         player_id: PlayerID,
-        country: t.Optional[Country] = None,
+        country: t.Optional[CountryCode] = None,
         *,
         limit: int = Field(20, ge=1, le=100),
     ) -> t.Union[RawAPIPageResponse]: ...
@@ -130,7 +130,7 @@ class SyncRankings(BaseRankings[SyncClient], t.Generic[APIResponseFormatT]):
         game: GameID,
         region: Region,
         player_id: PlayerID,
-        country: t.Optional[Country] = None,
+        country: t.Optional[CountryCode] = None,
         *,
         limit: int = Field(20, ge=1, le=100),
     ) -> t.Union[ModelNotImplemented]: ...
@@ -141,7 +141,7 @@ class SyncRankings(BaseRankings[SyncClient], t.Generic[APIResponseFormatT]):
         game: GameID,
         region: Region,
         player_id: PlayerIDValidator,
-        country: t.Optional[Country] = None,
+        country: t.Optional[CountryCode] = None,
         *,
         limit: int = Field(20, ge=1, le=100),
     ) -> t.Union[RawAPIPageResponse, ModelNotImplemented]:
@@ -167,7 +167,7 @@ class AsyncRankings(BaseRankings[AsyncClient], t.Generic[APIResponseFormatT]):
         self: AsyncRankings[Raw],
         game: GameID,
         region: Region,
-        country: t.Optional[Country] = None,
+        country: t.Optional[CountryCode] = None,
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
@@ -178,7 +178,7 @@ class AsyncRankings(BaseRankings[AsyncClient], t.Generic[APIResponseFormatT]):
         self: AsyncRankings[Model],
         game: GameID,
         region: Region,
-        country: t.Optional[Country] = None,
+        country: t.Optional[CountryCode] = None,
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
@@ -189,7 +189,7 @@ class AsyncRankings(BaseRankings[AsyncClient], t.Generic[APIResponseFormatT]):
         self,
         game: GameID,
         region: Region,
-        country: t.Optional[Country] = None,
+        country: t.Optional[CountryCode] = None,
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
@@ -210,7 +210,7 @@ class AsyncRankings(BaseRankings[AsyncClient], t.Generic[APIResponseFormatT]):
         self: AsyncRankings[Raw],
         game: GameID,
         region: Region,
-        country: t.Optional[Country] = None,
+        country: t.Optional[CountryCode] = None,
         *,
         max_items: MaxItemsType = MaxPages(10),
     ) -> t.List[RawAPIItem]: ...
@@ -220,7 +220,7 @@ class AsyncRankings(BaseRankings[AsyncClient], t.Generic[APIResponseFormatT]):
         self: AsyncRankings[Model],
         game: GameID,
         region: Region,
-        country: t.Optional[Country] = None,
+        country: t.Optional[CountryCode] = None,
         *,
         max_items: MaxItemsType = MaxPages(10),
     ) -> ModelNotImplemented: ...
@@ -229,7 +229,7 @@ class AsyncRankings(BaseRankings[AsyncClient], t.Generic[APIResponseFormatT]):
         self,
         game: GameID,
         region: Region,
-        country: t.Optional[Country] = None,
+        country: t.Optional[CountryCode] = None,
         *,
         max_items: MaxItemsType = MaxPages(10),
     ) -> t.Union[t.List[RawAPIItem], ModelNotImplemented]:
@@ -243,7 +243,7 @@ class AsyncRankings(BaseRankings[AsyncClient], t.Generic[APIResponseFormatT]):
         game: GameID,
         region: Region,
         player_id: PlayerID,
-        country: t.Optional[Country] = None,
+        country: t.Optional[CountryCode] = None,
         *,
         limit: int = Field(20, ge=1, le=100),
     ) -> t.Union[RawAPIPageResponse]: ...
@@ -254,7 +254,7 @@ class AsyncRankings(BaseRankings[AsyncClient], t.Generic[APIResponseFormatT]):
         game: GameID,
         region: Region,
         player_id: PlayerID,
-        country: t.Optional[Country] = None,
+        country: t.Optional[CountryCode] = None,
         *,
         limit: int = Field(20, ge=1, le=100),
     ) -> t.Union[ModelNotImplemented]: ...
@@ -265,7 +265,7 @@ class AsyncRankings(BaseRankings[AsyncClient], t.Generic[APIResponseFormatT]):
         game: GameID,
         region: Region,
         player_id: PlayerIDValidator,
-        country: t.Optional[Country] = None,
+        country: t.Optional[CountryCode] = None,
         *,
         limit: int = Field(20, ge=1, le=100),
     ) -> t.Union[RawAPIPageResponse, ModelNotImplemented]:

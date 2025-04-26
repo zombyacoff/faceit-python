@@ -18,7 +18,7 @@ if t.TYPE_CHECKING:
     _T = t.TypeVar("_T")
     _ClassT = t.TypeVar("_ClassT", bound=t.Type)
 
-_ReprMethod: TypeAlias = t.Callable[[], str]
+_RepresentationMethod: TypeAlias = t.Callable[[], str]
 
 _UUID_BYTES: t.Final = 16
 _UNINITIALIZED_MARKER: t.Final = "uninitialized"
@@ -88,7 +88,7 @@ def _get_hashable_representation(obj: t.Any, /) -> int:
     with suppress(TypeError):
         return hash(obj)
     try:
-        obj_str = json.dumps(obj, sort_keys=True, default=str)
+        obj_str = json.dumps(obj, default=str, sort_keys=True)
     except (TypeError, AttributeError):
         obj_str = str(obj)
     return _fallback_hash(obj_str)
@@ -219,9 +219,9 @@ def _apply_representation(
     def build_str(self: _ClassT) -> str:
         return _format_fields(self, fields, joiner=" ")
 
-    cls.__repr__ = t.cast(_ReprMethod, build_repr)
+    cls.__repr__ = t.cast(_RepresentationMethod, build_repr)
     if not has_str:
-        cls.__str__ = t.cast(_ReprMethod, build_str)
+        cls.__str__ = t.cast(_RepresentationMethod, build_str)
 
     return cls
 

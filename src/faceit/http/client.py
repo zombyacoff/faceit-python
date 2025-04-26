@@ -5,7 +5,6 @@ import logging
 import ssl
 import typing as t
 from abc import ABC, abstractmethod
-from enum import auto
 from inspect import iscoroutinefunction
 from threading import Lock
 from time import time
@@ -28,7 +27,7 @@ from faceit.constants import BASE_WIKI_URL
 from faceit.exceptions import APIError
 from faceit.utils import create_uuid_validator, representation
 
-from .helpers import Endpoint, RetryArgs
+from .helpers import Endpoint, RetryArgs, SupportedMethod
 
 if t.TYPE_CHECKING:
     from types import TracebackType
@@ -45,11 +44,6 @@ if t.TYPE_CHECKING:
 _logger = logging.getLogger(__name__)
 
 _HttpxClientT = t.TypeVar("_HttpxClientT", httpx.Client, httpx.AsyncClient)
-
-
-class SupportedMethod(StrEnum):
-    GET = auto()
-    POST = auto()
 
 
 class MaxConcurrentRequests(StrEnum):
@@ -98,8 +92,8 @@ class BaseAPIClient(t.Generic[_HttpxClientT], ABC):
 
     __api_key_validator: t.ClassVar[t.Callable[[ValidUUID], str]] = (
         create_uuid_validator(
-            f"Invalid FACEIT API key format: '{{value}}'. "
-            f"Please visit the official wiki for API key information: "
+            "Invalid FACEIT API key format: '{value}'. "
+            "Please visit the official wiki for API key information: "
             f"{BASE_WIKI_URL}/getting-started/authentication/api-keys"
         )
     )

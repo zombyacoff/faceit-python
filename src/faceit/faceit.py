@@ -43,20 +43,21 @@ class BaseFaceit(t.Generic[ClientT, DataResourceT], ABC):
         Create and return a Faceit Data API resource.
 
         .. important::
-            You must provide either an ``api_key`` or a pre-configured HTTP client instance — **never both**.
+            You must provide either an ``api_key`` OR a pre-configured HTTP client instance - **not both**.
 
-            - If ``api_key`` is supplied, a new HTTP client will be initialized with the given options.
-            - If ``client`` is supplied, any ``client_options`` are ignored.
+            * If ``api_key`` is provided, a new HTTP client will be initialized with the given options.
+            * If ``client`` is provided, all ``client_options`` will be ignored.
 
-        Refer to the `Faceit Data API documentation <https://docs.faceit.com/docs/data-api/data>`_ and
-        `API key instructions <https://docs.faceit.com/getting-started/authentication/api-keys>`_
-        for details.
+        This method gives you access to the Faceit Data API endpoints. For more information, see:
 
-        :param api_key: FACEIT API key (``str``, ``UUID``, or ``bytes``). Used to create a new HTTP client.
-        :param client: Pre-configured HTTP client instance. Cannot be combined with ``api_key``.
-        :param client_options: Additional keyword arguments for HTTP client initialization
-                            (e.g., timeouts, proxies). Ignored if ``client`` is provided.
-        :return: A ready-to-use Faceit Data API resource instance.
+        * `Faceit Data API documentation <https://docs.faceit.com/docs/data-api/data>`_
+        * `API key instructions <https://docs.faceit.com/getting-started/authentication/api-keys>`_
+
+        :param api_key: FACEIT Data API key used to create a new HTTP client
+        :param client: Pre-configured HTTP client instance (cannot be used with ``api_key``)
+        :param client_options: Additional options for HTTP client initialization
+                            (e.g., timeouts, proxies) - ignored if ``client`` is provided
+        :return: A configured Faceit Data API resource instance
         """
         return cls._data_cls(
             cls._initialize_client(

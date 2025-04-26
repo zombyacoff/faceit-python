@@ -1,14 +1,3 @@
-"""
-Type-safe, high-level Python SDK for the official FACEIT REST API.
-
-This library provides a Pythonic interface for interacting with FACEIT data,
-featuring both synchronous and asynchronous clients, strict type checking,
-and advanced pagination utilities.
-
-See usage examples and documentation:
-https://github.com/zombyacoff/faceit-python
-"""
-
 from .constants import EventCategory as EventCategory
 from .constants import ExpandedField as ExpandedField
 from .constants import GameID as GameID

@@ -19,6 +19,8 @@ _AT = t.TypeVar("_AT", bound="BaseResources")
 
 @dataclass(eq=False, frozen=True)
 class BaseResources(t.Generic[ClientT], ABC):
+    __slots__ = ("_client",)
+
     _client: ClientT
 
     @property
@@ -40,6 +42,8 @@ class BaseResources(t.Generic[ClientT], ABC):
 
 
 class SyncResources(BaseResources[SyncClient]):
+    __slots__ = ()
+
     def __enter__(self) -> Self:
         self._client.__enter__()
         return self
@@ -54,6 +58,8 @@ class SyncResources(BaseResources[SyncClient]):
 
 
 class AsyncResources(BaseResources[AsyncClient]):
+    __slots__ = ()
+
     async def __aenter__(self) -> Self:
         await self._client.__aenter__()
         return self

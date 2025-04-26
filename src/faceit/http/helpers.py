@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import typing as t
+from enum import auto
+
+from strenum import StrEnum
 
 from faceit.utils import raise_unsupported_operand_error, representation
 
@@ -40,6 +43,11 @@ class RetryArgs(t.TypedDict, total=False):
     reraise: bool
     retry_error_cls: t.Type[RetryError]
     retry_error_callback: t.Optional[t.Callable[[RetryCallState], t.Any]]
+
+
+class SupportedMethod(StrEnum):
+    GET = auto()
+    POST = auto()
 
 
 @t.final
