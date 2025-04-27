@@ -7,11 +7,11 @@ from dataclasses import dataclass
 from warnings import warn
 
 from pydantic import ValidationError
-from strenum import StrEnum
 
 from faceit.http import Endpoint
 from faceit.models import ItemPage
 from faceit.types import ClientT, ModelT, RawAPIPageResponse, RawAPIResponse
+from faceit.utils import StrEnum
 
 from .pagination import (
     AsyncPageIterator,

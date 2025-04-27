@@ -5,12 +5,10 @@ import reprlib
 import typing as t
 from contextlib import suppress
 from datetime import datetime, timezone
-from enum import IntEnum
+from enum import Enum, IntEnum, auto
 from functools import lru_cache, reduce
 from hashlib import sha256
 from uuid import UUID
-
-from strenum import StrEnum
 
 if t.TYPE_CHECKING:
     from .types import Self, TypeAlias
@@ -24,14 +22,35 @@ _UUID_BYTES: t.Final = 16
 _UNINITIALIZED_MARKER: t.Final = "uninitialized"
 
 
-class UnsetValue(IntEnum):
-    UNSET = -1
+# NOTE: Inspired by irgeek/StrEnum:
+# https://github.com/irgeek/StrEnum/blob/master/strenum/__init__.py#L21
+# Previously depended on `StrEnum`, but only core features were needed -
+# now implemented inline to avoid extra dependencies.
+class StrEnum(str, Enum):
+    def __new__(cls, value: t.Any, *args: t.Any, **kwargs: t.Any) -> Self:
+        if not isinstance(value, (str, auto)):
+            raise TypeError(
+                f"StrEnum values must be of type 'str', "
+                f"but got {type(value).__name__}: {value!r}"
+            )
+        return super().__new__(cls, value, *args, **kwargs)
+
+    @staticmethod
+    def _generate_next_value_(name: str, *_: t.Any) -> str:
+        return name
+
+    def __str__(self) -> str:
+        return str(self.value)
 
 
 class StrEnumWithAll(StrEnum):
     @classmethod
     def all(cls) -> t.Tuple[Self, ...]:
         return tuple(cls)
+
+
+class UnsetValue(IntEnum):
+    UNSET = -1
 
 
 def lazy_import(func: t.Callable[[], _T]) -> t.Callable[[], _T]:

@@ -3,9 +3,11 @@ from __future__ import annotations
 import typing as t
 from enum import auto
 
-from strenum import StrEnum
-
-from faceit.utils import raise_unsupported_operand_error, representation
+from faceit.utils import (
+    StrEnum,
+    raise_unsupported_operand_error,
+    representation,
+)
 
 if t.TYPE_CHECKING:
     from tenacity import RetryCallState, RetryError

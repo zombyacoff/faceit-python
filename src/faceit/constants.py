@@ -7,10 +7,9 @@ from operator import attrgetter
 from warnings import warn
 
 from pydantic import Field, validate_call
-from strenum import StrEnum
 
 from .types import TypeAlias  # noqa: TCH001
-from .utils import StrEnumWithAll
+from .utils import StrEnum, StrEnumWithAll
 
 if t.TYPE_CHECKING:
     _EloThreshold: TypeAlias = t.Dict[int, "EloRange"]

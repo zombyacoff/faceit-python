@@ -10,7 +10,6 @@ from warnings import warn
 from annotated_types import Le
 from pydantic import PositiveInt
 from pydantic.fields import FieldInfo
-from strenum import StrEnum
 
 from faceit.constants import RAW_RESPONSE_ITEMS_KEY
 from faceit.models import ItemPage
@@ -28,6 +27,7 @@ from faceit.types import (
     TypeAlias,
 )
 from faceit.utils import (
+    StrEnum,
     UnsetValue,
     deduplicate_unhashable,
     deep_get,
