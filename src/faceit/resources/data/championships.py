@@ -3,6 +3,7 @@ from __future__ import annotations
 import typing as t
 from abc import ABC
 
+import typing_extensions as te
 from pydantic import AfterValidator, Field, validate_call
 
 from faceit.constants import EventCategory, ExpandedField, GameID
@@ -13,9 +14,8 @@ from faceit.resources.base import (
     FaceitResourcePath,
     ModelPlaceholder,
 )
-from faceit.resources.pagination import MaxItemsType, MaxPages
+from faceit.resources.pagination import MaxItemsType, pages
 from faceit.types import (
-    Annotated,
     APIResponseFormatT,
     ClientT,
     Model,
@@ -23,13 +23,12 @@ from faceit.types import (
     Raw,
     RawAPIItem,
     RawAPIPageResponse,
-    TypeAlias,
     ValidUUID,
 )
 from faceit.utils import create_uuid_validator
 
-_ChampionshipID: TypeAlias = ValidUUID
-_ChampionshipIDValidator: TypeAlias = Annotated[
+_ChampionshipID: te.TypeAlias = ValidUUID
+_ChampionshipIDValidator: te.TypeAlias = te.Annotated[
     _ChampionshipID,
     AfterValidator(create_uuid_validator(arg_name="championship identifier")),
 ]
@@ -95,7 +94,7 @@ class SyncChampionships(
         game: GameID,
         category: EventCategory = EventCategory.ALL,
         *,
-        max_items: MaxItemsType = MaxPages(30),
+        max_items: MaxItemsType = pages(30),
     ) -> RawAPIPageResponse: ...
 
     @t.overload
@@ -104,7 +103,7 @@ class SyncChampionships(
         game: GameID,
         category: EventCategory = EventCategory.ALL,
         *,
-        max_items: MaxItemsType = MaxPages(30),
+        max_items: MaxItemsType = pages(30),
     ) -> ItemPage[Championship]: ...
 
     def all_items(
@@ -112,7 +111,7 @@ class SyncChampionships(
         game: GameID,
         category: EventCategory = EventCategory.ALL,
         *,
-        max_items: MaxItemsType = MaxPages(30),
+        max_items: MaxItemsType = pages(30),
     ) -> t.Union[RawAPIPageResponse, ItemPage[Championship]]:
         return self.__class__._sync_page_iterator.gather_pages(
             self.items, game, category, max_items=max_items
@@ -322,7 +321,7 @@ class AsyncChampionships(
         game: GameID,
         category: EventCategory = EventCategory.ALL,
         *,
-        max_items: MaxItemsType = MaxPages(30),
+        max_items: MaxItemsType = pages(30),
     ) -> RawAPIPageResponse: ...
 
     @t.overload
@@ -331,7 +330,7 @@ class AsyncChampionships(
         game: GameID,
         category: EventCategory = EventCategory.ALL,
         *,
-        max_items: MaxItemsType = MaxPages(30),
+        max_items: MaxItemsType = pages(30),
     ) -> ItemPage[Championship]: ...
 
     def all_items(
@@ -339,7 +338,7 @@ class AsyncChampionships(
         game: GameID,
         category: EventCategory = EventCategory.ALL,
         *,
-        max_items: MaxItemsType = MaxPages(30),
+        max_items: MaxItemsType = pages(30),
     ) -> t.Union[RawAPIPageResponse, ItemPage[Championship]]:
         return self.__class__._async_page_iterator.gather_pages(
             self.items, game, category, max_items=max_items

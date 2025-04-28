@@ -12,6 +12,7 @@ from warnings import warn
 from weakref import WeakSet
 
 import httpx
+import typing_extensions as te
 from pydantic import PositiveInt, validate_call
 from tenacity import (
     AsyncRetrying,
@@ -36,7 +37,6 @@ if t.TYPE_CHECKING:
         RawAPIItem,
         RawAPIPageResponse,
         RawAPIResponse,
-        Self,
         ValidUUID,
     )
 
@@ -91,7 +91,7 @@ class BaseAPIClient(t.Generic[_HttpxClientT], ABC):
 
     __api_key_validator: t.ClassVar[t.Callable[[ValidUUID], str]] = (
         create_uuid_validator(
-            "Invalid FACEIT API key format: '{value}'. "
+            "Invalid FACEIT API key format: {value!r}. "
             "Please visit the official wiki for API key information: "
             f"{BASE_WIKI_URL}/getting-started/authentication/api-keys"
         )
@@ -135,7 +135,7 @@ class BaseAPIClient(t.Generic[_HttpxClientT], ABC):
         return self._client.is_closed if hasattr(self, "_client") else True
 
     def create_endpoint(self, *path_parts: str) -> Endpoint:
-        return Endpoint(*path_parts, base_path=self.base_url)
+        return Endpoint(*path_parts, base=self.base_url)
 
     def _prepare_request(
         self,
@@ -220,7 +220,7 @@ class _BaseSyncClient(BaseAPIClient[httpx.Client]):
             )
         )
 
-    def __enter__(self) -> Self:
+    def __enter__(self) -> te.Self:
         return self
 
     def __exit__(
@@ -388,14 +388,13 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
         )
 
     def close(self) -> None:
-        """
-        This method intentionally raises an error to prevent incorrect usage.
+        """This method intentionally raises an error to prevent incorrect usage.
 
         Async clients should use ``aclose()`` instead.
         """
+        cls_name = self.__class__.__name__
         raise TypeError(
-            f"Use 'await {self.__class__.__name__}.aclose()' "
-            f"instead of '{self.__class__.__name__}.close()'"
+            f"Use 'await {cls_name}.aclose()' instead of '{cls_name}.close()'"
         )
 
     async def aclose(self) -> None:
@@ -412,7 +411,7 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
         await self.__class__._check_connection_recovery()
 
         async def execute() -> RawAPIResponse:
-            assert self.__class__._semaphore is not None  # noqa: S101
+            assert self.__class__._semaphore, "Semaphore not initialized"
             async with self.__class__._semaphore:
                 result = self.__class__._handle_response(
                     await self._client.request(
@@ -613,7 +612,7 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
             )
             # fmt: on
 
-    async def __aenter__(self) -> Self:
+    async def __aenter__(self) -> te.Self:
         return self
 
     async def __aexit__(

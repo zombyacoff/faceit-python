@@ -6,13 +6,13 @@ from dataclasses import dataclass
 from operator import attrgetter
 from warnings import warn
 
+import typing_extensions as te
 from pydantic import Field, validate_call
 
-from .types import TypeAlias  # noqa: TCH001
 from .utils import StrEnum, StrEnumWithAll
 
 if t.TYPE_CHECKING:
-    _EloThreshold: TypeAlias = t.Dict[int, "EloRange"]
+    _EloThreshold: te.TypeAlias = t.Dict[int, "EloRange"]
 
 _logger = logging.getLogger(__name__)
 
@@ -147,8 +147,7 @@ class HighTierLevel(StrEnum):
     """
 
     CHALLENGER = "challenger"
-    """
-    Elite tier reserved for top 1000 players per game/region.
+    """Elite tier reserved for top 1000 players per game/region.
 
     .. note::
         This rank represents a dynamic threshold based on leaderboard position rather
@@ -185,13 +184,13 @@ class EloRange(t.NamedTuple):
     def size(self) -> t.Optional[int]:
         if self.is_open_ended:
             return None
-        assert isinstance(self.upper, int)  # noqa: S101
+        assert isinstance(self.upper, int)
         return self.upper - self.lower + 1
 
     def contains(self, elo: int) -> bool:
         if self.upper in HighTierLevel:
             return elo >= self.lower
-        assert isinstance(self.upper, int)  # noqa: S101
+        assert isinstance(self.upper, int)
         return self.lower <= elo <= self.upper
 
     def __str__(self) -> str:
@@ -319,7 +318,7 @@ class SkillLevel:
             warn(f"Elo {elo} is out of range", UserWarning, stacklevel=4)
             return None
 
-        assert isinstance(self.elo_range.upper, int)  # noqa: S101
+        assert isinstance(self.elo_range.upper, int)
         return (
             (elo - self.elo_range.lower)
             / (self.elo_range.upper - self.elo_range.lower)
@@ -349,7 +348,7 @@ class SkillLevel:
     ) -> t.Optional[SkillLevel]:
         if game_id not in cls._registry:
             warn(
-                f"Game '{game_id}' is not supported", UserWarning, stacklevel=4
+                f"Game {game_id!r} is not supported", UserWarning, stacklevel=4
             )
             return None
 

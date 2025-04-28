@@ -13,7 +13,7 @@ from faceit.resources.base import (
     FaceitResourcePath,
     ModelPlaceholder,
 )
-from faceit.resources.pagination import MaxItemsType, MaxPages
+from faceit.resources.pagination import MaxItemsType, pages
 from faceit.types import (
     APIResponseFormatT,
     ClientT,
@@ -88,7 +88,7 @@ class SyncRankings(BaseRankings[SyncClient], t.Generic[APIResponseFormatT]):
         region: Region,
         country: t.Optional[CountryCode] = None,
         *,
-        max_items: MaxItemsType = MaxPages(10),
+        max_items: MaxItemsType = pages(10),
     ) -> t.List[RawAPIItem]: ...
 
     @t.overload
@@ -98,7 +98,7 @@ class SyncRankings(BaseRankings[SyncClient], t.Generic[APIResponseFormatT]):
         region: Region,
         country: t.Optional[CountryCode] = None,
         *,
-        max_items: MaxItemsType = MaxPages(10),
+        max_items: MaxItemsType = pages(10),
     ) -> ModelNotImplemented: ...
 
     def all_unbounded(
@@ -107,7 +107,7 @@ class SyncRankings(BaseRankings[SyncClient], t.Generic[APIResponseFormatT]):
         region: Region,
         country: t.Optional[CountryCode] = None,
         *,
-        max_items: MaxItemsType = MaxPages(10),
+        max_items: MaxItemsType = pages(10),
     ) -> t.Union[t.List[RawAPIItem], ModelNotImplemented]:
         return self.__class__._sync_page_iterator.gather_pages(
             self.unbounded, game, region, country, max_items=max_items
@@ -212,7 +212,7 @@ class AsyncRankings(BaseRankings[AsyncClient], t.Generic[APIResponseFormatT]):
         region: Region,
         country: t.Optional[CountryCode] = None,
         *,
-        max_items: MaxItemsType = MaxPages(10),
+        max_items: MaxItemsType = pages(10),
     ) -> t.List[RawAPIItem]: ...
 
     @t.overload
@@ -222,7 +222,7 @@ class AsyncRankings(BaseRankings[AsyncClient], t.Generic[APIResponseFormatT]):
         region: Region,
         country: t.Optional[CountryCode] = None,
         *,
-        max_items: MaxItemsType = MaxPages(10),
+        max_items: MaxItemsType = pages(10),
     ) -> ModelNotImplemented: ...
 
     async def all_unbounded(
@@ -231,7 +231,7 @@ class AsyncRankings(BaseRankings[AsyncClient], t.Generic[APIResponseFormatT]):
         region: Region,
         country: t.Optional[CountryCode] = None,
         *,
-        max_items: MaxItemsType = MaxPages(10),
+        max_items: MaxItemsType = pages(10),
     ) -> t.Union[t.List[RawAPIItem], ModelNotImplemented]:
         return self.__class__._async_page_iterator.gather_pages(
             self.unbounded, game, region, country, max_items=max_items

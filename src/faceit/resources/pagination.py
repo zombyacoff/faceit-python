@@ -7,6 +7,7 @@ from inspect import Parameter, signature
 from itertools import chain
 from warnings import warn
 
+import typing_extensions as te
 from annotated_types import Le
 from pydantic import PositiveInt
 from pydantic.fields import FieldInfo
@@ -21,10 +22,8 @@ from faceit.types import (
     PaginationMethodT,
     RawAPIItem,
     RawAPIPageResponse,
-    Self,
     SyncPaginationMethod,
     SyncUnixPaginationMethod,
-    TypeAlias,
 )
 from faceit.utils import (
     StrEnum,
@@ -39,7 +38,22 @@ from faceit.utils import (
 if t.TYPE_CHECKING:
     from .base import BaseResource
 
-    _OptionalTimestampPaginationConfig: TypeAlias = t.Union[
+    class _SupportsTrunc(t.Protocol):
+        def __trunc__(self) -> int: ...
+
+    _ConvertibleToInt: te.TypeAlias = t.Union[
+        str, te.Buffer, t.SupportsInt, t.SupportsIndex, _SupportsTrunc
+    ]
+
+    _CollectReturnFormats: te.TypeAlias = t.Dict[
+        "CollectReturnFormat",
+        t.Callable[
+            ["_PageListType"],
+            t.Union[t.Type[ItemPage], t.Type[RawAPIPageResponse]],
+        ],
+    ]
+
+    _OptionalTimestampPaginationConfig: te.TypeAlias = t.Union[
         "TimestampPaginationConfig", t.Literal[False]
     ]
 
@@ -53,15 +67,15 @@ def _get_base_resource_class() -> t.Type[BaseResource]:
 
 _T = t.TypeVar("_T")
 
-_PageType: TypeAlias = t.Union[ItemPage, RawAPIPageResponse]
-_PageListType: TypeAlias = t.List[_PageType]
+_PageType: te.TypeAlias = t.Union[ItemPage, RawAPIPageResponse]
+_PageListType: te.TypeAlias = t.List[_PageType]
 _PageT = t.TypeVar("_PageT", bound=_PageType)
 
 # We use `PositiveInt` for Pydantic validation where available (e.g., with
 # `@validate_call` in resource methods). However, in this module we implement
 # our own validation logic for greater flexibility, as Pydantic-based validation
 # is not always practical here.
-MaxItemsType: TypeAlias = t.Union["MaxItems", PositiveInt]
+MaxItemsType: te.TypeAlias = t.Union["MaxItems", PositiveInt]
 
 
 @t.final
@@ -77,22 +91,45 @@ class PaginationMaxParams(t.NamedTuple):
 
 
 @t.final
-class MaxPages(int):
-    """
-    Indicates the maximum number of pages to fetch when passed as ``max_items``.
+class pages(int):  # noqa: N801
+    """Represents an explicit page count limit for paginated API requests.
 
-    This class enables explicit page-based limits without introducing a separate
-    ``max_pages`` parameter, allowing for flexible and concise API usage.
-
-    .. admonition:: Developer rationale
-
-        This dedicated class enables explicit page-based limits via the ``max_items``
-        parameter, without introducing a separate ``max_pages`` argument. Using a
-        distinct type allows for clear and robust ``isinstance`` checks, making the
-        API flexible and concise while keeping downstream logic simple and safe.
+    Use this type as the ``max_items`` argument to specify the maximum number of
+    pages to fetch, without introducing a separate ``max_pages`` parameter. This
+    enables concise and flexible API usage, while allowing robust :func:`isinstance`
+    checks to distinguish page-based limits from item-based ones.
     """
 
     __slots__ = ()
+
+    @t.overload
+    def __new__(cls, x: _ConvertibleToInt = ..., /) -> te.Self: ...
+
+    @t.overload
+    def __new__(
+        cls, x: t.Union[str, bytes, bytearray], /, base: t.SupportsIndex
+    ) -> te.Self: ...
+
+    def __new__(
+        cls,
+        x: t.Any = 2,
+        /,
+        base: t.Optional[t.SupportsIndex] = None,
+    ) -> te.Self:
+        x = super().__new__(cls, *(x,) if base is None else (x, base))
+        if x > 1:
+            return x
+        raise ValueError(
+            f"Invalid value for {cls.__name__}: {x}. "
+            f"Expected a positive integer greater than 1."
+        )
+
+
+@te.deprecated(
+    "`MaxPages` is deprecated and will be removed in a future release. "
+    "Use `pages` instead."
+)
+class MaxPages(pages): ...  # type: ignore[misc]
 
 
 class CollectReturnFormat(StrEnum):
@@ -105,8 +142,24 @@ class MaxItems(StrEnum):
     SAFE = "safe"
 
 
+class _MethodCall(t.NamedTuple, t.Generic[PaginationMethodT]):
+    call: PaginationMethodT
+    args: t.Tuple[t.Any, ...]
+    kwargs: t.Dict[str, t.Any]
+
+
+class _MaxItemsInfo(t.NamedTuple):
+    max_items: MaxItemsType
+    last_page_remainder: int
+    is_partial_last_page: bool
+
+    @classmethod
+    def from_max_pages(cls, max_pages: MaxItemsType, /) -> te.Self:
+        return cls(max_pages, 0, False)
+
+
 _UNIX_METHOD_REQUIRED_KEYS: t.Final[t.FrozenSet[str]] = frozenset(
-    TimestampPaginationConfig.__annotations__.keys()
+    TimestampPaginationConfig.__annotations__
 )
 _PAGINATION_ARGS = PaginationMaxParams._fields
 _UNIX_PAGINATION_PARAMS = PaginationTimeRange._fields
@@ -134,32 +187,27 @@ def _extract_pagination_limits(
     # 2. Static typing - enables mypy to verify type correctness
     if limit_param.default is None or offset_param.default is None:
         raise ValueError(
-            f"Function {method_name} missing "
+            f"Function {method_name!r} missing "
             f"default value for limit/offset parameter"
         )
     if not isinstance(limit_param.default, FieldInfo) or not isinstance(
         offset_param.default, FieldInfo
     ):
         raise TypeError(
-            f"Default for limit/offset in {method_name} is not a FieldInfo"
+            f"Default for limit/offset in {method_name!r} is not a FieldInfo"
         )
-
     limit_constraint = _get_le(limit_param)
     if limit_constraint is None:
         raise ValueError(
-            f"In limit metadata of {method_name}, no Le constraint found"
+            f"In limit metadata of {method_name!r}, no Le constraint found"
         )
-    # Cast to `int` is safe because:
-    # - Le constraints only accept numeric types
-    # - Pagination parameters use integers
-    max_limit = t.cast(int, limit_constraint.le)
     offset_constraint = _get_le(offset_param)
-    max_offset = (
+    return PaginationMaxParams(
+        validate_positive_int(limit_constraint.le),
         UnsetValue.UNSET
         if offset_constraint is None
-        else t.cast(int, offset_constraint.le)
+        else validate_positive_int(offset_constraint.le),
     )
-    return PaginationMaxParams(max_limit, max_offset)
 
 
 def check_pagination_support(
@@ -182,22 +230,6 @@ def check_pagination_support(
     )
 
 
-class _MethodCall(t.NamedTuple, t.Generic[PaginationMethodT]):
-    call: PaginationMethodT
-    args: t.Tuple[t.Any, ...]
-    kwargs: t.Dict[str, t.Any]
-
-
-class _MaxItemsInfo(t.NamedTuple):
-    max_items: MaxItemsType
-    last_page_remainder: int
-    is_partial_last_page: bool
-
-    @classmethod
-    def from_max_pages(cls, max_pages: MaxItemsType, /) -> Self:
-        return cls(max_pages, 0, False)
-
-
 _ITERATOR_SLOTS = (
     "_exhausted",
     "_max_items_info",
@@ -215,15 +247,7 @@ class BasePageIterator(t.Generic[PaginationMethodT, _PageT], ABC):
 
     _STOP_ITERATION_EXC: t.ClassVar[t.Type[Exception]]
 
-    _COLLECT_RETURN_FORMATS: t.ClassVar[
-        t.Dict[
-            CollectReturnFormat,
-            t.Callable[
-                [_PageListType],
-                t.Union[t.Type[ItemPage], t.Type[RawAPIPageResponse]],
-            ],
-        ]
-    ] = {
+    _COLLECT_RETURN_FORMATS: t.ClassVar[_CollectReturnFormats] = {
         CollectReturnFormat.FIRST: lambda collection: type(collection[0])
         if collection
         else RawAPIPageResponse,
@@ -232,13 +256,10 @@ class BasePageIterator(t.Generic[PaginationMethodT, _PageT], ABC):
     }
 
     SAFE_MAX_PAGES: t.ClassVar = 100
-
     DEFAULT_MAX_ITEMS: t.ClassVar = 2000
     """
     Selected as an optimal default to balance performance and resource usage
-    when iterating through paginated FACEIT API data. 2000 is a multiple of
-    both 100 and 20, the most common per-request limits in the FACEIT API,
-    ensuring efficient pagination and minimal overhead.
+    when iterating through paginated FACEIT API data.
     """
 
     timestamp_cfg: t.ClassVar = TimestampPaginationConfig
@@ -254,14 +275,11 @@ class BasePageIterator(t.Generic[PaginationMethodT, _PageT], ABC):
         pagination_limits = check_pagination_support(method)
         if pagination_limits is False:
             raise ValueError(
-                f"Method '{method.__name__}' does not support pagination. "
-                f"Ensure it's a BaseResource method "
-                f"with offset and limit parameters."
+                f"Method {method.__name__!r} does not support pagination. "
+                f"Ensure it's a BaseResource method with offset and limit parameters."
             )
         if t.TYPE_CHECKING:
-            # Use a function here because mypy does not allow direct assignment of
-            # `_MethodCall[PaginationMethodT]` due to "Can't use bound type variable"
-            # errors. This preserves type checking without runtime issues.
+
             def method_call(
                 *_: t.Any, **__: t.Any
             ) -> _MethodCall[PaginationMethodT]: ...
@@ -283,10 +301,14 @@ class BasePageIterator(t.Generic[PaginationMethodT, _PageT], ABC):
 
     @property
     def max_items(self) -> int:
-        return self._max_pages * self._pagination_limits.limit
+        return (
+            self._max_items_info.max_items * self._pagination_limits.limit
+            if isinstance(self._max_items_info.max_items, pages)
+            else int(self._max_items_info.max_items)
+        )
 
     @max_items.setter
-    def max_items(self, value: int, /) -> None:
+    def max_items(self, value: MaxItemsType, /) -> None:
         self._max_pages_setter(value)
 
     @property
@@ -303,12 +325,12 @@ class BasePageIterator(t.Generic[PaginationMethodT, _PageT], ABC):
         if self._exhausted:
             raise ValueError(
                 "Pagination offset cannot be set "
-                "after the iterator has been exhausted"
+                "after the iterator has been exhausted."
             )
         if value > self._pagination_limits.limit:
             raise ValueError(
                 f"Pagination offset cannot exceed the maximum limit "
-                f"({self._pagination_limits.limit}): {value}"
+                f"({self._pagination_limits.limit}): {value}."
             )
         self._offset = value
 
@@ -328,10 +350,10 @@ class BasePageIterator(t.Generic[PaginationMethodT, _PageT], ABC):
     def reset(self) -> None:
         self._init_iteration()
 
-    def with_updated_args(self, *args: t.Any, **kwargs: t.Any) -> Self:
+    def with_updated_args(self, *args: t.Any, **kwargs: t.Any) -> te.Self:
         return self.__class__(self._method.call, *args, **kwargs)
 
-    def _max_pages_setter(self, max_items: t.Union[MaxItems, int], /) -> None:
+    def _max_pages_setter(self, max_items: MaxItemsType, /) -> None:
         def set_max_pages(max_pages: int, /) -> None:
             self._max_pages = max_pages
             self._max_items_info = _MaxItemsInfo.from_max_pages(max_pages)
@@ -351,12 +373,11 @@ class BasePageIterator(t.Generic[PaginationMethodT, _PageT], ABC):
             set_max_pages(self.__class__.SAFE_MAX_PAGES)
             return
 
-        validate_positive_int(max_items, param_name="max_items")
-
-        if isinstance(max_items, MaxPages):
+        if isinstance(max_items, pages):
             set_max_pages(warn_if_exceeds_safe(max_items))
             return
 
+        validate_positive_int(max_items, param_name="max_items")
         last_page_remainder = max_items % self._pagination_limits.limit
         self._max_items_info = _MaxItemsInfo(
             max_items, last_page_remainder, last_page_remainder != 0
@@ -419,7 +440,7 @@ class BasePageIterator(t.Generic[PaginationMethodT, _PageT], ABC):
     ) -> None:
         if not _has_unix_pagination_params(method):
             raise ValueError(
-                f"Method {method.__name__} does not appear "
+                f"Method {method.__name__!r} does not appear "
                 f"to support Unix timestamp pagination. "
                 f"Expected start and to parameters."
             )
@@ -427,7 +448,8 @@ class BasePageIterator(t.Generic[PaginationMethodT, _PageT], ABC):
             not isinstance(value, str) or not value for value in (key, attr)
         ):
             raise ValueError(
-                f"Key and attribute parameters must be non-empty strings: {key}, {attr}"
+                f"Key and attribute parameters must "
+                f"be non-empty strings: {key}, {attr}."
             )
         if any(kwargs.pop(arg, None) for arg in _UNIX_PAGINATION_PARAMS):
             warn(
@@ -446,8 +468,8 @@ class BasePageIterator(t.Generic[PaginationMethodT, _PageT], ABC):
             raise ValueError(
                 f"Invalid unix pagination configuration: expected "
                 f"UnixPaginationConfig dictionary or False, got "
-                f"{type(unix_config)}. See pagination.UnixPaginationConfig "
-                "for the required format."
+                f"{type(unix_config).__name__}. "
+                f"See pagination.UnixPaginationConfig for the required format."
             )
         if (
             isinstance(unix_config, dict)
@@ -532,7 +554,7 @@ class BasePageIterator(t.Generic[PaginationMethodT, _PageT], ABC):
         *args: t.Any,
         timestamp: t.Optional[int],
         **kwargs: t.Any,
-    ) -> Self:
+    ) -> te.Self:
         # fmt: off
         return cls(method, *args, **{
             **kwargs,
@@ -568,7 +590,7 @@ class _BaseSyncPageIterator(
             or None
         )
 
-    def __iter__(self) -> Self:
+    def __iter__(self) -> te.Self:
         return self
 
     def __next__(self) -> _PageT:
@@ -601,7 +623,7 @@ class _BasyAsyncPageIterator(
             or None
         )
 
-    def __aiter__(self) -> Self:
+    def __aiter__(self) -> te.Self:
         return self
 
     async def __anext__(self) -> _PageT:

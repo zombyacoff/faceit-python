@@ -13,4 +13,5 @@ from .resources import MaxPages as MaxPages
 from .resources import SyncPageIterator as SyncPageIterator
 from .resources import TimestampPaginationConfig as TimestampPaginationConfig
 from .resources import check_pagination_support as check_pagination_support
+from .resources import pages as pages
 from .version import __version__ as __version__

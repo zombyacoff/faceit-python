@@ -74,14 +74,14 @@ class BaseResource(t.Generic[ClientT], ABC):
         "category": "type",
     }
 
-    PATH: t.ClassVar[Endpoint]
+    if t.TYPE_CHECKING:
+        PATH: t.ClassVar[Endpoint]
 
     def __init_subclass__(
         cls,
         resource_path: t.Optional[FaceitResourcePath] = None,
         **kwargs: t.Any,
     ) -> None:
-        super().__init_subclass__(**kwargs)
         if hasattr(cls, "PATH"):
             return
         if resource_path is None:
@@ -90,6 +90,7 @@ class BaseResource(t.Generic[ClientT], ABC):
                 f"parameter or a parent with 'PATH' defined."
             )
         cls.PATH = Endpoint(resource_path)
+        super().__init_subclass__(**kwargs)
 
     @property
     def is_raw(self) -> bool:
@@ -131,7 +132,7 @@ class BaseResource(t.Generic[ClientT], ABC):
         validator = config.validator_map.get(key)
         if validator is None:
             warn(
-                f"No model defined for {config.key_name} '{key}'. "
+                f"No model defined for {config.key_name} {key!r}. "
                 f"Consider using the raw response.",
                 UserWarning,
                 stacklevel=5,

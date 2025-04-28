@@ -3,6 +3,7 @@ from __future__ import annotations
 import typing as t
 from abc import ABC
 
+import typing_extensions as te
 from pydantic import AfterValidator, Field, validate_call
 
 from faceit.constants import GameID  # noqa: TCH001
@@ -12,9 +13,8 @@ from faceit.resources.base import (
     FaceitResourcePath,
     ModelPlaceholder,
 )
-from faceit.resources.pagination import MaxItemsType, MaxPages
+from faceit.resources.pagination import MaxItemsType, pages
 from faceit.types import (
-    Annotated,
     APIResponseFormatT,
     ClientT,
     Model,
@@ -22,11 +22,10 @@ from faceit.types import (
     Raw,
     RawAPIItem,
     RawAPIPageResponse,
-    TypeAlias,
 )
 
-_TeamID: TypeAlias = str
-_TeamIDValidator: TypeAlias = Annotated[
+_TeamID: te.TypeAlias = str
+_TeamIDValidator: te.TypeAlias = te.Annotated[
     _TeamID, AfterValidator(str)  # TODO: Validation function
 ]
 
@@ -58,6 +57,15 @@ class SyncTeams(BaseTeams[SyncClient], t.Generic[APIResponseFormatT]):
             self._client.get(self.PATH / team_id, expect_item=True),
             ModelPlaceholder,
         )
+
+    __call__ = get
+
+    @te.deprecated(
+        "`details` is deprecated and will be removed in a future release. "
+        "Use `get` instead."
+    )
+    def details(self, team_id: _TeamID) -> t.Any:
+        return self.get(team_id)
 
     @t.overload
     def stats(
@@ -122,7 +130,7 @@ class SyncTeams(BaseTeams[SyncClient], t.Generic[APIResponseFormatT]):
         self: SyncTeams[Raw],
         team_id: _TeamID,
         *,
-        max_items: MaxItemsType = MaxPages(30),
+        max_items: MaxItemsType = pages(30),
     ) -> t.List[RawAPIItem]: ...
 
     @t.overload
@@ -130,14 +138,14 @@ class SyncTeams(BaseTeams[SyncClient], t.Generic[APIResponseFormatT]):
         self: SyncTeams[Model],
         team_id: _TeamID,
         *,
-        max_items: MaxItemsType = MaxPages(30),
+        max_items: MaxItemsType = pages(30),
     ) -> ModelNotImplemented: ...
 
     def all_tournaments(
         self,
         team_id: _TeamIDValidator,
         *,
-        max_items: MaxItemsType = MaxPages(30),
+        max_items: MaxItemsType = pages(30),
     ) -> t.Union[t.List[RawAPIItem], ModelNotImplemented]:
         return self.__class__._sync_page_iterator.gather_pages(
             self.tournaments, team_id, max_items=max_items
@@ -163,6 +171,15 @@ class AsyncTeams(BaseTeams[AsyncClient], t.Generic[APIResponseFormatT]):
             await self._client.get(self.PATH / team_id, expect_item=True),
             ModelPlaceholder,
         )
+
+    __call__ = get
+
+    @te.deprecated(
+        "`details` is deprecated and will be removed in a future release. "
+        "Use `get` instead."
+    )
+    async def details(self, team_id: _TeamID) -> t.Any:
+        return await self.get(team_id)
 
     @t.overload
     async def stats(
@@ -227,7 +244,7 @@ class AsyncTeams(BaseTeams[AsyncClient], t.Generic[APIResponseFormatT]):
         self: AsyncTeams[Raw],
         team_id: _TeamID,
         *,
-        max_items: MaxItemsType = MaxPages(30),
+        max_items: MaxItemsType = pages(30),
     ) -> t.List[RawAPIItem]: ...
 
     @t.overload
@@ -235,14 +252,14 @@ class AsyncTeams(BaseTeams[AsyncClient], t.Generic[APIResponseFormatT]):
         self: AsyncTeams[Model],
         team_id: _TeamID,
         *,
-        max_items: MaxItemsType = MaxPages(30),
+        max_items: MaxItemsType = pages(30),
     ) -> ModelNotImplemented: ...
 
     async def all_tournaments(
         self,
         team_id: _TeamIDValidator,
         *,
-        max_items: MaxItemsType = MaxPages(30),
+        max_items: MaxItemsType = pages(30),
     ) -> t.Union[t.List[RawAPIItem], ModelNotImplemented]:
         return await self.__class__._async_page_iterator.gather_pages(
             self.tournaments, team_id, max_items=max_items

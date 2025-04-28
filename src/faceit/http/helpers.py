@@ -3,6 +3,8 @@ from __future__ import annotations
 import typing as t
 from enum import auto
 
+import typing_extensions as te
+
 from faceit.utils import (
     StrEnum,
     raise_unsupported_operand_error,
@@ -16,15 +18,9 @@ if t.TYPE_CHECKING:
     from tenacity.stop import stop_base
     from tenacity.wait import wait_base
 
-    from faceit.types import EndpointParam, Self, TypeAlias
+    from faceit.types import EndpointParam
 
-    _StopBase: TypeAlias = t.Union[
-        stop_base, t.Callable[[RetryCallState], bool]
-    ]
-    _WaitBase: TypeAlias = t.Union[
-        wait_base, t.Callable[[RetryCallState], t.Union[float, int]]
-    ]
-    _RetryHook: TypeAlias = t.Callable[
+    _RetryHook: te.TypeAlias = t.Callable[
         [RetryCallState], t.Union[None, t.Awaitable[None]]
     ]
 
@@ -32,8 +28,8 @@ if t.TYPE_CHECKING:
 @t.final
 class RetryArgs(t.TypedDict, total=False):
     sleep: t.Callable[[t.Union[int, float]], t.Union[None, t.Awaitable[None]]]
-    stop: _StopBase
-    wait: _WaitBase
+    stop: t.Union[stop_base, t.Callable[[RetryCallState], bool]]
+    wait: t.Union[wait_base, t.Callable[[RetryCallState], t.Union[float, int]]]
     retry: t.Union[
         retry_base,
         async_retry_base,
@@ -55,42 +51,36 @@ class SupportedMethod(StrEnum):
 @t.final
 @representation(use_str=True)
 class Endpoint:
-    __slots__ = ("base_path", "path_parts")
+    __slots__ = ("base", "path_parts")
 
-    def __init__(
-        self, *path_parts: str, base_path: t.Optional[str] = None
-    ) -> None:
+    def __init__(self, *path_parts: str, base: t.Optional[str] = None) -> None:
         self.path_parts = list(filter(None, path_parts))
-        self.base_path = base_path
+        self.base = base
+
+    def add(self, *path_parts: str) -> te.Self:
+        return self.__class__(*self.path_parts, *path_parts, base=self.base)
+
+    def with_base(self, base: str) -> te.Self:
+        return self.__class__(*self.path_parts, base=base)
 
     def __str__(self) -> str:
-        parts = ([self.base_path] if self.base_path else []) + self.path_parts
-        return "/".join(part.strip("/") for part in parts if part)
-
-    def add(self, *path_parts: str) -> Self:
-        return self.__class__(
-            *self.path_parts, *path_parts, base_path=self.base_path
+        return "/".join(
+            part.strip("/") for part in [self.base, *self.path_parts] if part
         )
 
-    def with_base(self, base_path: str) -> Self:
-        return self.__class__(*self.path_parts, base_path=base_path)
-
-    def __truediv__(self, other: EndpointParam) -> Self:
+    def __truediv__(self, other: EndpointParam) -> te.Self:
         if isinstance(other, str):
             return self.add(other)
         if isinstance(other, self.__class__):
             return self.__class__(
-                *self.path_parts, *other.path_parts, base_path=self.base_path
+                *self.path_parts, *other.path_parts, base=self.base
             )
         # Intentional error path - Ruff limitation (RET503)
         raise_unsupported_operand_error(  # noqa: RET503
             "/", self.__class__.__name__, type(other).__name__
         )
 
-    # Ruff cannot detect that we already use `Self` here (PYI034),
-    # likely because it's imported indirectly via a re-exporting module,
-    # not directly from `typing`/`typing_extensions`.
-    def __itruediv__(self, other: EndpointParam) -> Self:  # noqa: PYI034
+    def __itruediv__(self, other: EndpointParam) -> te.Self:
         if isinstance(other, str):
             if other:
                 self.path_parts.append(other)

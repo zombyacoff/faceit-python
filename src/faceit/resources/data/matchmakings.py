@@ -3,6 +3,7 @@ from __future__ import annotations
 import typing as t
 from abc import ABC
 
+import typing_extensions as te
 from pydantic import AfterValidator, validate_call
 
 from faceit.http import AsyncClient, SyncClient
@@ -12,19 +13,17 @@ from faceit.resources.base import (
     ModelPlaceholder,
 )
 from faceit.types import (
-    Annotated,
     APIResponseFormatT,
     ClientT,
     Model,
     ModelNotImplemented,
     Raw,
     RawAPIItem,
-    TypeAlias,
     ValidUUID,
 )
 
-_MatchmakingID: TypeAlias = ValidUUID
-_MatchmakingIDValidator: TypeAlias = Annotated[
+_MatchmakingID: te.TypeAlias = ValidUUID
+_MatchmakingIDValidator: te.TypeAlias = te.Annotated[
     _MatchmakingID, AfterValidator(str)  # TODO: Validation function
 ]
 
@@ -63,6 +62,8 @@ class SyncMatchmakings(
             ModelPlaceholder,
         )
 
+    __call__ = get
+
 
 class AsyncMatchmakings(
     BaseMatchmakings[AsyncClient], t.Generic[APIResponseFormatT]
@@ -89,3 +90,5 @@ class AsyncMatchmakings(
             ),
             ModelPlaceholder,
         )
+
+    __call__ = get

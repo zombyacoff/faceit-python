@@ -5,16 +5,15 @@ from abc import ABC
 from dataclasses import dataclass
 from functools import cached_property
 
-from faceit.http import AsyncClient, SyncClient
-from faceit.types import ClientT, Self
+import typing_extensions as te
 
-from .base import BaseResource
+from faceit.http import AsyncClient, SyncClient
+from faceit.types import ClientT
 
 if t.TYPE_CHECKING:
     from types import TracebackType
 
-_RT = t.TypeVar("_RT", bound=BaseResource)
-_AT = t.TypeVar("_AT", bound="BaseResources")
+_AggregatorT = t.TypeVar("_AggregatorT", bound="BaseResources")
 
 
 @dataclass(eq=False, frozen=True)
@@ -44,7 +43,7 @@ class BaseResources(t.Generic[ClientT], ABC):
 class SyncResources(BaseResources[SyncClient]):
     __slots__ = ()
 
-    def __enter__(self) -> Self:
+    def __enter__(self) -> te.Self:
         self._client.__enter__()
         return self
 
@@ -60,7 +59,7 @@ class SyncResources(BaseResources[SyncClient]):
 class AsyncResources(BaseResources[AsyncClient]):
     __slots__ = ()
 
-    async def __aenter__(self) -> Self:
+    async def __aenter__(self) -> te.Self:
         await self._client.__aenter__()
         return self
 
@@ -73,7 +72,7 @@ class AsyncResources(BaseResources[AsyncClient]):
         await self._client.__aexit__(typ, exc, tb)
 
 
-def resource_aggregator(cls: t.Type[_AT]) -> t.Type[_AT]:
+def resource_aggregator(cls: t.Type[_AggregatorT]) -> t.Type[_AggregatorT]:
     if getattr(cls, "__annotations__", None) is None:
         raise ValueError("Class must have annotations")
 
@@ -81,7 +80,7 @@ def resource_aggregator(cls: t.Type[_AT]) -> t.Type[_AT]:
 
         def make_property(
             is_raw: bool,
-            resource_type: t.Type[_RT] = resource_type,
+            resource_type: t.Type[t.Any] = resource_type,
         ) -> cached_property:
             return cached_property(
                 lambda self: resource_type(self._client, is_raw)

@@ -5,6 +5,7 @@ import typing as t
 from abc import ABC
 from warnings import warn
 
+import typing_extensions as te
 from pydantic import AfterValidator, Field, validate_call
 
 from faceit.constants import GameID
@@ -29,9 +30,8 @@ from faceit.resources.base import (
     ModelPlaceholder,
     RequestPayload,
 )
-from faceit.resources.pagination import MaxItems, MaxItemsType, MaxPages
+from faceit.resources.pagination import MaxItems, MaxItemsType, pages
 from faceit.types import (
-    Annotated,
     APIResponseFormatT,
     ClientT,
     Model,
@@ -39,7 +39,6 @@ from faceit.types import (
     Raw,
     RawAPIItem,
     RawAPIPageResponse,
-    TypeAlias,
     ValidUUID,
 )
 from faceit.utils import create_uuid_validator, is_valid_uuid
@@ -49,18 +48,18 @@ _logger = logging.getLogger(__name__)
 # Type alias for player ID.
 # Improves code self-documentation and keeps resource modules consistent.
 # Allows flexible substitution (e.g., `ValidUUID`, `str`) as in other modules.
-PlayerID: TypeAlias = ValidUUID
+PlayerID: te.TypeAlias = ValidUUID
 # Pydantic validator for `player_id`.
 # Centralizes validation and normalization at the parameter level,
 # so resource methods always receive a valid, normalized ID.
 # Also matches `validate_call` usage for pagination params, reducing boilerplate.
-PlayerIDValidator: TypeAlias = Annotated[
+PlayerIDValidator: te.TypeAlias = te.Annotated[
     PlayerID,
     AfterValidator(create_uuid_validator(arg_name="player identifier")),
 ]
 # Alias for FACEIT ID (`UUID`, `bytes`, `str`) or nickname (`str`).
 # Used for clarity when both forms are accepted by resource methods.
-NicknameOrPlayerID: TypeAlias = t.Union[str, ValidUUID]
+NicknameOrPlayerID: te.TypeAlias = t.Union[str, ValidUUID]
 
 
 class BasePlayers(
@@ -300,7 +299,7 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
         player_id: PlayerID,
         game: GameID,
         *,
-        max_items: MaxItemsType = MaxPages(50),
+        max_items: MaxItemsType = pages(50),
     ) -> t.List[RawAPIItem]: ...
 
     @t.overload
@@ -309,7 +308,7 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
         player_id: PlayerID,
         game: GameID,
         *,
-        max_items: MaxItemsType = MaxPages(50),
+        max_items: MaxItemsType = pages(50),
     ) -> ItemPage[AbstractMatchPlayerStats]: ...
 
     def all_matches_stats(
@@ -317,7 +316,7 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
         player_id: PlayerID,
         game: GameID,
         *,
-        max_items: MaxItemsType = MaxPages(50),
+        max_items: MaxItemsType = pages(50),
     ) -> t.Union[t.List[RawAPIItem], ItemPage[AbstractMatchPlayerStats]]:
         return self.__class__._sync_page_iterator.gather_pages(
             self.matches_stats,
@@ -379,7 +378,7 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
         player_id: PlayerID,
         game: GameID,
         *,
-        max_items: MaxItemsType = MaxPages(50),
+        max_items: MaxItemsType = pages(50),
     ) -> t.List[RawAPIItem]: ...
 
     @t.overload
@@ -388,7 +387,7 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
         player_id: PlayerID,
         game: GameID,
         *,
-        max_items: MaxItemsType = MaxPages(50),
+        max_items: MaxItemsType = pages(50),
     ) -> ItemPage[Match]: ...
 
     def all_history(
@@ -396,7 +395,7 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
         player_id: PlayerID,
         game: GameID,
         *,
-        max_items: MaxItemsType = MaxPages(50),
+        max_items: MaxItemsType = pages(50),
     ) -> t.Union[t.List[RawAPIItem], ItemPage[Match]]:
         return self.__class__._sync_page_iterator.gather_pages(
             self.history,
@@ -765,7 +764,7 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
         player_id: PlayerID,
         game: GameID,
         *,
-        max_items: MaxItemsType = MaxPages(50),
+        max_items: MaxItemsType = pages(50),
     ) -> t.List[RawAPIItem]: ...
 
     @t.overload
@@ -774,7 +773,7 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
         player_id: PlayerID,
         game: GameID,
         *,
-        max_items: MaxItemsType = MaxPages(50),
+        max_items: MaxItemsType = pages(50),
     ) -> ItemPage[AbstractMatchPlayerStats]: ...
 
     async def all_matches_stats(
@@ -782,7 +781,7 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
         player_id: PlayerID,
         game: GameID,
         *,
-        max_items: MaxItemsType = MaxPages(50),
+        max_items: MaxItemsType = pages(50),
     ) -> t.Union[t.List[RawAPIItem], ItemPage[AbstractMatchPlayerStats]]:
         return await self.__class__._async_page_iterator.gather_pages(
             self.matches_stats,
@@ -844,7 +843,7 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
         player_id: PlayerID,
         game: GameID,
         *,
-        max_items: MaxItemsType = MaxPages(50),
+        max_items: MaxItemsType = pages(50),
     ) -> t.List[RawAPIItem]: ...
 
     @t.overload
@@ -853,7 +852,7 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
         player_id: PlayerID,
         game: GameID,
         *,
-        max_items: MaxItemsType = MaxPages(50),
+        max_items: MaxItemsType = pages(50),
     ) -> ItemPage[Match]: ...
 
     async def all_history(
@@ -861,7 +860,7 @@ class AsyncPlayers(BasePlayers[AsyncClient], t.Generic[APIResponseFormatT]):
         player_id: PlayerID,
         game: GameID,
         *,
-        max_items: MaxItemsType = MaxPages(50),
+        max_items: MaxItemsType = pages(50),
     ) -> t.Union[t.List[RawAPIItem], ItemPage[Match]]:
         return await self.__class__._async_page_iterator.gather_pages(
             self.history,

@@ -5,10 +5,10 @@ from functools import cached_property
 from itertools import chain, starmap
 from random import choice
 
+import typing_extensions as te
 from pydantic import BaseModel, Field, field_validator
 
 from faceit.constants import RAW_RESPONSE_ITEMS_KEY
-from faceit.types import Annotated, Self, TypeAlias
 from faceit.utils import UnsetValue, get_nested_property
 
 _T = t.TypeVar("_T")
@@ -17,7 +17,7 @@ if t.TYPE_CHECKING:
     _R = t.TypeVar("_R")
 
 
-_PaginationLimit: TypeAlias = Annotated[int, Field(ge=UnsetValue.UNSET)]
+_PaginationLimit: te.TypeAlias = te.Annotated[int, Field(ge=UnsetValue.UNSET)]
 
 
 @t.final
@@ -35,13 +35,13 @@ class PaginationMetadata(t.NamedTuple):
 
 @t.final
 class ItemPage(BaseModel, t.Generic[_T], frozen=True):
-    items: Annotated[t.List[_T], Field(alias=RAW_RESPONSE_ITEMS_KEY)]
+    items: te.Annotated[t.List[_T], Field(alias=RAW_RESPONSE_ITEMS_KEY)]
 
-    _offset: Annotated[_PaginationLimit, Field(alias="start")]
-    _limit: Annotated[_PaginationLimit, Field(alias="end")]
+    _offset: te.Annotated[_PaginationLimit, Field(alias="start")]
+    _limit: te.Annotated[_PaginationLimit, Field(alias="end")]
 
     __time_range_description: t.ClassVar = "Unix timestamp in milliseconds"
-    _time_from: Annotated[
+    _time_from: te.Annotated[
         _PaginationLimit,
         Field(
             UnsetValue.UNSET,
@@ -49,7 +49,7 @@ class ItemPage(BaseModel, t.Generic[_T], frozen=True):
             description=__time_range_description,
         ),
     ]
-    _time_to: Annotated[
+    _time_to: te.Annotated[
         _PaginationLimit,
         Field(
             UnsetValue.UNSET,
@@ -135,12 +135,12 @@ class ItemPage(BaseModel, t.Generic[_T], frozen=True):
             list(map(func, self.items))
         )
 
-    def filter(self, predicate: t.Callable[[_T], bool], /) -> Self:
+    def filter(self, predicate: t.Callable[[_T], bool], /) -> te.Self:
         return self.__class__._construct_without_metadata(
             list(filter(predicate, self.items))
         )
 
-    def with_items(self, new_items: t.List[_T], /) -> Self:
+    def with_items(self, new_items: t.List[_T], /) -> te.Self:
         return self.model_copy(update={"items": new_items})
 
     @classmethod
@@ -150,13 +150,13 @@ class ItemPage(BaseModel, t.Generic[_T], frozen=True):
     def _construct_without_metadata(
         cls, items: t.Optional[t.List[_R]] = None, /
     ) -> ItemPage[_R]:
+        # fmt: off
         return cls.model_construct(  # type: ignore[return-value]
             items=items or [],
-            _offset=UnsetValue.UNSET,
-            _limit=UnsetValue.UNSET,
-            _time_from=UnsetValue.UNSET,
-            _time_to=UnsetValue.UNSET,
+            _offset=UnsetValue.UNSET, _limit=UnsetValue.UNSET,
+            _time_from=UnsetValue.UNSET, _time_to=UnsetValue.UNSET,
         )
+        # fmt: on
 
     @classmethod
     def merge(cls, pages: t.Iterable[ItemPage[_T]], /) -> ItemPage[_T]:
@@ -170,24 +170,24 @@ class ItemPage(BaseModel, t.Generic[_T], frozen=True):
     def __len__(self) -> int:
         return len(self.items)
 
-    def __reversed__(self) -> Self:
+    def __reversed__(self) -> te.Self:
         return self.with_items(list(reversed(self.items)))
 
     @t.overload
     def __getitem__(self, index: t.SupportsIndex) -> _T: ...
 
     @t.overload
-    def __getitem__(self, index: slice) -> Self: ...
+    def __getitem__(self, index: slice) -> te.Self: ...
 
     def __getitem__(
         self, index: t.Union[t.SupportsIndex, slice]
-    ) -> t.Union[_T, Self]:
+    ) -> t.Union[_T, te.Self]:
         if isinstance(index, slice):
             return self.with_items(self.items[index])
         try:
             return self.items[index.__index__()]
-        except IndexError as e:
-            raise IndexError(f"ItemPage index out of range: {index}") from e
+        except IndexError:
+            raise IndexError(f"ItemPage index out of range: {index}") from None
         except (TypeError, AttributeError) as e:
             raise TypeError(
                 f"ItemPage indices must be objects supporting "
@@ -218,7 +218,7 @@ class ItemPage(BaseModel, t.Generic[_T], frozen=True):
                     f"be a dictionary, got {type(item).__name__}"
                 )
 
-            if len(item) == 1:  # Flatten single-item dictionaries
+            if len(item) == 1:
                 value = next(iter(item.values()))
                 if isinstance(value, dict):
                     return value

@@ -11,12 +11,12 @@ from hashlib import sha256
 from uuid import UUID
 
 if t.TYPE_CHECKING:
-    from .types import Self, TypeAlias
+    import typing_extensions as te
 
     _T = t.TypeVar("_T")
     _ClassT = t.TypeVar("_ClassT", bound=t.Type)
 
-_RepresentationMethod: TypeAlias = t.Callable[[], str]
+_RepresentationMethod: te.TypeAlias = t.Callable[[], str]
 
 _UUID_BYTES: t.Final = 16
 _UNINITIALIZED_MARKER: t.Final = "uninitialized"
@@ -27,13 +27,15 @@ _UNINITIALIZED_MARKER: t.Final = "uninitialized"
 # Previously depended on `StrEnum`, but only core features were needed -
 # now implemented inline to avoid extra dependencies.
 class StrEnum(str, Enum):
-    def __new__(cls, value: t.Any, *args: t.Any, **kwargs: t.Any) -> Self:
-        if not isinstance(value, (str, auto)):
-            raise TypeError(
-                f"StrEnum values must be of type 'str', "
-                f"but got {type(value).__name__}: {value!r}"
-            )
-        return super().__new__(cls, value, *args, **kwargs)
+    def __new__(
+        cls, value: t.Union[str, auto], *args: t.Any, **kwargs: t.Any
+    ) -> te.Self:
+        if isinstance(value, (str, auto)):
+            return super().__new__(cls, value, *args, **kwargs)
+        raise TypeError(
+            f"StrEnum values must be of type 'str', "
+            f"but got {type(value).__name__}: {value!r}"
+        )
 
     @staticmethod
     def _generate_next_value_(name: str, *_: t.Any) -> str:
@@ -45,7 +47,7 @@ class StrEnum(str, Enum):
 
 class StrEnumWithAll(StrEnum):
     @classmethod
-    def all(cls) -> t.Tuple[Self, ...]:
+    def all(cls) -> t.Tuple[te.Self, ...]:
         return tuple(cls)
 
 
@@ -65,7 +67,7 @@ def raise_unsupported_operand_error(
 ) -> t.NoReturn:
     raise TypeError(
         f"unsupported operand type(s) for {sign}: "
-        f"'{self_name}' and '{other_name}'"
+        f"{self_name!r} and {other_name!r}"
     )
 
 
@@ -182,7 +184,7 @@ def create_uuid_validator(
             )
         if isinstance(value, (UUID, str)):
             return str(value)
-        assert isinstance(value, bytes)  # noqa: S101
+        assert isinstance(value, bytes)
         return str(to_uuid(value))
 
     return validator
@@ -208,7 +210,7 @@ def validate_positive_int(
 
 
 def _format_fields(
-    obj: t.Any, fields: t.Tuple[str, ...], /, *, joiner: str
+    obj: object, fields: t.Tuple[str, ...], /, *, joiner: str
 ) -> str:
     return (
         joiner.join(

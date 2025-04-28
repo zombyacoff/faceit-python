@@ -39,8 +39,7 @@ class BaseFaceit(t.Generic[ClientT, DataResourceT], ABC):
         client: t.Optional[ClientT] = None,
         **client_options: t.Any,
     ) -> DataResourceT:
-        """
-        Create and return a Faceit Data API resource.
+        """Create and return a Faceit Data API resource.
 
         .. important::
             You must provide either an ``api_key`` OR a pre-configured HTTP client instance - **not both**.
@@ -79,12 +78,12 @@ class BaseFaceit(t.Generic[ClientT, DataResourceT], ABC):
     ) -> ClientT:
         if auth is None and client is None:
             raise ValueError(
-                f"Either '{auth_name}' or 'client' must be provided"
+                f"Either {auth_name!r} or 'client' must be provided"
             )
 
         if auth is not None and client is not None:
             raise ValueError(
-                f"Provide either '{auth_name}' or 'client', not both"
+                f"Provide either {auth_name!r} or 'client', not both"
             )
 
         if client is None:
@@ -104,8 +103,7 @@ class BaseFaceit(t.Generic[ClientT, DataResourceT], ABC):
 
 @t.final
 class Faceit(BaseFaceit[SyncClient, SyncDataResource]):
-    """
-    Synchronous Faceit API interface.
+    """Synchronous Faceit API interface.
 
     Example (Data API)::
 
@@ -123,8 +121,7 @@ class Faceit(BaseFaceit[SyncClient, SyncDataResource]):
 
 @t.final
 class AsyncFaceit(BaseFaceit[AsyncClient, AsyncDataResource]):
-    """
-    Asynchronous Faceit API interface.
+    """Asynchronous Faceit API interface.
 
     Example (Data API)::
 

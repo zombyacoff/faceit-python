@@ -91,6 +91,7 @@ lint.ignore = [
     "RUF012",
     "SLF001",
     "TD",
+    "S101",
     "TRY003"
 ]
 
@@ -109,10 +110,10 @@ keep-runtime-typing = true
 convention = "google"
 
 [tool.ruff.lint.flake8-bugbear]
-extend-immutable-calls = ["faceit.resources.pagination.MaxPages"] 
+extend-immutable-calls = ["faceit.resources.pagination.pages"] 
 
 [tool.ruff.lint.flake8-import-conventions]
-banned-from = ["typing"]
+banned-from = ["typing", "typing_extensions"]
 
 [tool.ruff.format]
 docstring-code-format = true

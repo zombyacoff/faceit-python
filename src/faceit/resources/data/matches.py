@@ -3,6 +3,7 @@ from __future__ import annotations
 import typing as t
 from abc import ABC
 
+import typing_extensions as te
 from pydantic import AfterValidator, validate_call
 
 from faceit.http import AsyncClient, SyncClient
@@ -13,21 +14,19 @@ from faceit.resources.base import (
     ModelPlaceholder,
 )
 from faceit.types import (
-    Annotated,
     APIResponseFormatT,
     ClientT,
     Model,
     ModelNotImplemented,
     Raw,
     RawAPIItem,
-    TypeAlias,
 )
 
-_MatchID: TypeAlias = str
+_MatchID: te.TypeAlias = str
 # We use `AfterValidator` with the `_MatchID` type alias instead of `FaceitMatchID` directly
 # to avoid mypy complaints. Mypy cannot fully recognize our custom type as compatible
 # with str, so this approach ensures proper type checking and validation.
-_MatchIDValidator: TypeAlias = Annotated[
+_MatchIDValidator: te.TypeAlias = te.Annotated[
     _MatchID, AfterValidator(FaceitMatchID._validate)
 ]
 
@@ -59,6 +58,15 @@ class SyncMatches(BaseMatches[SyncClient], t.Generic[APIResponseFormatT]):
             self._client.get(self.PATH / match_id, expect_item=True),
             ModelPlaceholder,
         )
+
+    __call__ = get
+
+    @te.deprecated(
+        "`details` is deprecated and will be removed in a future release. "
+        "Use `get` instead."
+    )
+    def details(self, match_id: _MatchID) -> t.Any:
+        return self.get(match_id)
 
     @t.overload
     def stats(self: SyncMatches[Raw], match_id: _MatchID) -> RawAPIItem: ...
@@ -99,6 +107,15 @@ class AsyncMatches(BaseMatches[AsyncClient], t.Generic[APIResponseFormatT]):
             await self._client.get(self.PATH / match_id, expect_item=True),
             ModelPlaceholder,
         )
+
+    __call__ = get
+
+    @te.deprecated(
+        "`details` is deprecated and will be removed in a future release. "
+        "Use `get` instead."
+    )
+    async def details(self, match_id: _MatchID) -> t.Any:
+        return await self.get(match_id)
 
     @t.overload
     async def stats(

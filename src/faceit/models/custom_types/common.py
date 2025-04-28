@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import typing as t
 
+import typing_extensions as te
 from pydantic import (
     AfterValidator,
     AnyHttpUrl,
@@ -11,23 +12,18 @@ from pydantic import (
 from pydantic_core import core_schema
 from pydantic_extra_types.country import CountryAlpha2
 
-from faceit.types import Annotated, TypeAlias
-
-from .utils import build_validatable_string_type_schema
-
 _T = t.TypeVar("_T")
 
 if t.TYPE_CHECKING:
     _R = t.TypeVar("_R")
 
 # TODO: Integrate this type alias into all data models in the future
-CountryCode: TypeAlias = Annotated[
+CountryCode: te.TypeAlias = te.Annotated[
     # I assume that there must be a better implementation than this.
     # It is necessary to study this issue in more detail.
     CountryAlpha2, AfterValidator(lambda x: t.cast(str, x).lower())
 ]
-"""
-Type alias for country codes that are always validated and converted to lowercase.
+"""Type alias for country codes that are always validated and converted to lowercase.
 
 Used because Faceit API requires country codes to be in lowercase.
 """
@@ -69,25 +65,28 @@ class ResponseContainer(RootModel[t.Dict[str, _T]]):
 class LangFormattedAnyHttpUrl:
     __slots__ = ()
 
-    _DEFAULT_LANG = "en"
+    _DEFAULT_LANG: t.ClassVar = "en"
+    _LANG_PLACEHOLDER: t.ClassVar = "{lang}"
 
     @classmethod
-    def validate(cls, value: str) -> AnyHttpUrl:
-        try:
-            return AnyHttpUrl(
-                value.format(lang=cls._DEFAULT_LANG)
-                if "{lang}" in value
-                else value
-            )
-        except ValueError as e:
-            raise ValueError(f"Invalid URL: {e}") from e
+    def _validate(cls, value: str) -> AnyHttpUrl:
+        return AnyHttpUrl(
+            value.format(lang=cls._DEFAULT_LANG)
+            if cls._LANG_PLACEHOLDER in value
+            else value
+        )
 
     @classmethod
     def __get_pydantic_core_schema__(
         cls, source_type: t.Type[t.Any], handler: GetCoreSchemaHandler
     ) -> core_schema.CoreSchema:
-        del source_type, handler
-        return build_validatable_string_type_schema(cls)
+        del source_type
+        return core_schema.union_schema([
+            core_schema.str_schema(max_length=0),
+            core_schema.no_info_after_validator_function(
+                cls._validate, handler(str)
+            ),
+        ])
 
 
 @t.final
@@ -97,7 +96,7 @@ class NullableList(t.List[_T]):
         cls, source_type: t.Type[t.Any], handler: GetCoreSchemaHandler
     ) -> core_schema.CoreSchema:
         return core_schema.no_info_before_validator_function(
-            lambda value: value or [],
+            lambda x: x or [],
             core_schema.list_schema(
                 # NOTE: Current implementation relies on type
                 # argument extraction which may be fragile.

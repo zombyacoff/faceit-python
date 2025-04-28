@@ -3,6 +3,7 @@ from __future__ import annotations
 import typing as t
 from abc import ABC
 
+import typing_extensions as te
 from pydantic import AfterValidator, Field, validate_call
 
 from faceit.http import AsyncClient, SyncClient
@@ -12,26 +13,24 @@ from faceit.resources.base import (
     ModelPlaceholder,
 )
 from faceit.types import (
-    Annotated,
     APIResponseFormatT,
     ClientT,
     Model,
     ModelNotImplemented,
     Raw,
     RawAPIItem,
-    TypeAlias,
     ValidUUID,
 )
 from faceit.utils import create_uuid_validator
 
 from .players import PlayerID, PlayerIDValidator  # noqa: TCH001
 
-_LeagueID: TypeAlias = ValidUUID
-_LeagueIDValidator: TypeAlias = Annotated[
+_LeagueID: te.TypeAlias = ValidUUID
+_LeagueIDValidator: te.TypeAlias = te.Annotated[
     _LeagueID,
     AfterValidator(create_uuid_validator(arg_name="league identifier")),
 ]
-_SeasonID: TypeAlias = Annotated[int, Field(ge=1)]
+_SeasonID: te.TypeAlias = te.Annotated[int, Field(ge=1)]
 
 
 class BaseLeagues(
@@ -65,6 +64,8 @@ class SyncLeagues(BaseLeagues[SyncClient], t.Generic[APIResponseFormatT]):
             ),
             ModelPlaceholder,
         )
+
+    __call__ = get
 
     @t.overload
     def season(
@@ -149,6 +150,8 @@ class AsyncLeagues(BaseLeagues[AsyncClient], t.Generic[APIResponseFormatT]):
             ),
             ModelPlaceholder,
         )
+
+    __call__ = get
 
     @t.overload
     async def season(
