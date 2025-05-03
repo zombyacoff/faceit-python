@@ -4,23 +4,20 @@ from uuid import UUID
 import typing_extensions as te
 from pydantic import AnyHttpUrl, BaseModel, Field
 
-# NOTE: We plan to migrate to using the `Doc` annotation for documentation
-# as soon as it is officially supported in Python (i.e., after PEP 727 is accepted
-# and implemented in type checkers and major IDEs such as VSCode and PyCharm).
-# Until then, we will continue to rely on traditional docstrings and comments.
-
 if t.TYPE_CHECKING:
-    from .http import Endpoint as _Endpoint
-    from .http.client import BaseAPIClient as _BaseAPIClient
-    from .resources import AsyncDataResource as _AsyncDataResource
-    from .resources import SyncDataResource as _SyncDataResource
+    from .http import Endpoint
+    from .http.client import BaseAPIClient
+    from .resources import AsyncDataResource, SyncDataResource
+    from .resources.base import BaseResource
 
+_T = t.TypeVar("_T")
+_R = t.TypeVar("_R")
 _T_co = t.TypeVar("_T_co", covariant=True)
 
 ModelT = t.TypeVar("ModelT", bound=BaseModel)
-ClientT = t.TypeVar("ClientT", bound="_BaseAPIClient")
+ClientT = t.TypeVar("ClientT", bound="BaseAPIClient")
 DataResourceT = t.TypeVar(
-    "DataResourceT", bound=t.Union["_SyncDataResource", "_AsyncDataResource"]
+    "DataResourceT", bound=t.Union["SyncDataResource", "AsyncDataResource"]
 )
 
 APIResponseFormatT = t.TypeVar("APIResponseFormatT", "Raw", "Model")
@@ -29,7 +26,7 @@ PaginationMethodT = t.TypeVar("PaginationMethodT", bound="BaseMethodProtocol")
 EmptyString: te.TypeAlias = t.Literal[""]
 UrlOrEmpty: te.TypeAlias = t.Union[AnyHttpUrl, EmptyString]
 UUIDOrEmpty: te.TypeAlias = t.Union[UUID, EmptyString]
-EndpointParam: te.TypeAlias = t.Union[str, "_Endpoint"]
+EndpointParam: te.TypeAlias = t.Union[str, "Endpoint"]
 ValidUUID: te.TypeAlias = t.Union[UUID, str, bytes]
 
 Raw = t.NewType("Raw", bool)
@@ -57,6 +54,7 @@ RawAPIResponse: te.TypeAlias = t.Union[RawAPIItem, RawAPIPageResponse]
 
 class BaseMethodProtocol(t.Protocol):
     __name__: str
+    __self__: "BaseResource"
     __call__: t.Callable[..., t.Any]
 
 

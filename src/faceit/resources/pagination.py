@@ -16,6 +16,7 @@ from faceit.constants import RAW_RESPONSE_ITEMS_KEY
 from faceit.models import ItemPage
 from faceit.models.item_page import PaginationTimeRange
 from faceit.types import (
+    _T,
     AsyncPaginationMethod,
     AsyncUnixPaginationMethod,
     BaseUnixPaginationMethod,
@@ -30,13 +31,15 @@ from faceit.utils import (
     UnsetValue,
     deduplicate_unhashable,
     deep_get,
-    lazy_import,
     representation,
     validate_positive_int,
 )
 
+_PageType: te.TypeAlias = t.Union[ItemPage, RawAPIPageResponse]
+_PageListType: te.TypeAlias = t.List[_PageType]
+_PageT = t.TypeVar("_PageT", bound=_PageType)
+
 if t.TYPE_CHECKING:
-    from .base import BaseResource
 
     class _SupportsTrunc(t.Protocol):
         def __trunc__(self) -> int: ...
@@ -56,20 +59,6 @@ if t.TYPE_CHECKING:
     _OptionalTimestampPaginationConfig: te.TypeAlias = t.Union[
         "TimestampPaginationConfig", t.Literal[False]
     ]
-
-
-@lazy_import
-def _get_base_resource_class() -> t.Type[BaseResource]:
-    from .base import BaseResource  # noqa: PLC0415
-
-    return BaseResource
-
-
-_T = t.TypeVar("_T")
-
-_PageType: te.TypeAlias = t.Union[ItemPage, RawAPIPageResponse]
-_PageListType: te.TypeAlias = t.List[_PageType]
-_PageT = t.TypeVar("_PageT", bound=_PageType)
 
 # We use `PositiveInt` for Pydantic validation where available (e.g., with
 # `@validate_call` in resource methods). However, in this module we implement
@@ -103,7 +92,7 @@ class pages(int):  # noqa: N801
     __slots__ = ()
 
     @t.overload
-    def __new__(cls, x: _ConvertibleToInt = ..., /) -> te.Self: ...
+    def __new__(cls, x: _ConvertibleToInt, /) -> te.Self: ...
 
     @t.overload
     def __new__(
@@ -112,7 +101,7 @@ class pages(int):  # noqa: N801
 
     def __new__(
         cls,
-        x: t.Any = 2,
+        x: t.Any,
         /,
         base: t.Optional[t.SupportsIndex] = None,
     ) -> te.Self:
@@ -129,7 +118,8 @@ class pages(int):  # noqa: N801
     "`MaxPages` is deprecated and will be removed in a future release. "
     "Use `pages` instead."
 )
-class MaxPages(pages): ...  # type: ignore[misc]
+class MaxPages(pages):  # type: ignore[misc]
+    __slots__ = ()
 
 
 class CollectReturnFormat(StrEnum):
@@ -213,8 +203,12 @@ def _extract_pagination_limits(
 def check_pagination_support(
     func: t.Callable[..., t.Any], /
 ) -> t.Union[PaginationMaxParams, t.Literal[False]]:
+    # Imported here to avoid circular dependency: `base` imports iterators and config
+    # to integrate them into `BaseResource` for convenient use in subclasses.
+    from .base import BaseResource  # noqa: PLC0415
+
     if not hasattr(func, "__self__") or not issubclass(
-        func.__self__.__class__, _get_base_resource_class()
+        func.__self__.__class__, BaseResource
     ):
         return False
 
@@ -280,9 +274,7 @@ class BasePageIterator(t.Generic[PaginationMethodT, _PageT], ABC):
             )
         if t.TYPE_CHECKING:
 
-            def method_call(
-                *_: t.Any, **__: t.Any
-            ) -> _MethodCall[PaginationMethodT]: ...
+            def method_call(**_: t.Any) -> _MethodCall[PaginationMethodT]: ...
         else:
             method_call = _MethodCall
         self._method = method_call(
@@ -340,11 +332,26 @@ class BasePageIterator(t.Generic[PaginationMethodT, _PageT], ABC):
 
     @property
     def _effective_limit(self) -> int:
-        return (
-            self._max_items_info.last_page_remainder
-            if self._max_items_info.is_partial_last_page
+        """
+        Returns an effective limit for the last page to ensure the offset
+        is a multiple of the limit, as required by the API
+        ("400 Bad pagination request: 'offset' must be a multiple of 'limit'").
+        """
+        if not (
+            self._max_items_info.is_partial_last_page
             and self._page_index == self._max_pages - 1
-            else self._pagination_limits.limit
+        ):
+            return self._pagination_limits.limit
+        return next(
+            (
+                possible_limit
+                for possible_limit in range(
+                    self._max_items_info.last_page_remainder,
+                    self._pagination_limits.limit + 1,
+                )
+                if self._offset % possible_limit == 0
+            ),
+            self._max_items_info.last_page_remainder,
         )
 
     def reset(self) -> None:
@@ -401,12 +408,21 @@ class BasePageIterator(t.Generic[PaginationMethodT, _PageT], ABC):
             )
             < self._pagination_limits.limit
         )
+
         is_offset_exceeded = (
             False
             if self._pagination_limits.offset == UnsetValue.UNSET
             else self._offset >= self._pagination_limits.offset
         )
+
         is_max_items_reached = self._page_index >= self._max_pages
+        if is_max_items_reached and self._max_items_info.is_partial_last_page:
+            # Considering post-filtering extra items on the last page when the limit
+            # is increased due to offset/limit constraints (see `_effective_limit`).
+            # For now, we leave this to the user and warn that the response may
+            # contain more items than requested in such cases.
+            pass
+
         self._exhausted = (
             is_page_smaller_than_limit
             or is_offset_exceeded
@@ -669,24 +685,29 @@ class SyncPageIterator(_BaseSyncPageIterator[_PageT]):
         kwargs["max_items"] = max_items
 
         current_timestamp = None
+        total_yielded = 0
+
         while True:
-            pages = list(
-                cls._create_unix_timestamp_iterator(
-                    method, *args, timestamp=current_timestamp, **kwargs
-                )
+            iterator = cls._create_unix_timestamp_iterator(
+                method, *args, timestamp=current_timestamp, **kwargs
             )
+            pages = list(iterator)
 
-            if not pages:
+            for page in pages:
+                if total_yielded >= iterator.max_items:
+                    return
+                yield page
+                total_yielded += iterator._effective_limit
+
+            if not pages or total_yielded >= iterator.max_items:
                 break
-
-            yield from pages
 
             new_timestamp = cls._extract_unix_timestamp(pages[-1], key, attr)
-
             if new_timestamp is None or new_timestamp == current_timestamp:
                 break
-
             current_timestamp = new_timestamp
+
+            kwargs["max_items"] = iterator.max_items - total_yielded
 
     @t.overload
     @classmethod
@@ -856,26 +877,29 @@ class AsyncPageIterator(_BasyAsyncPageIterator[_PageT]):
         kwargs["max_items"] = max_items
 
         current_timestamp = None
-        while True:
-            pages = [
-                page
-                async for page in cls._create_unix_timestamp_iterator(
-                    method, *args, timestamp=current_timestamp, **kwargs
-                )
-            ]
+        total_yielded = 0
 
-            if not pages:
-                break
+        while True:
+            iterator = cls._create_unix_timestamp_iterator(
+                method, *args, timestamp=current_timestamp, **kwargs
+            )
+            pages = [page async for page in iterator]
 
             for page in pages:
+                if total_yielded >= iterator.max_items:
+                    return
                 yield page
+                total_yielded += iterator._effective_limit
 
-            new_timestamp = cls._extract_unix_timestamp(pages[-1], key, attr)
-
-            if new_timestamp is None or new_timestamp == current_timestamp:
+            if not pages or total_yielded >= iterator.max_items:
                 break
 
+            new_timestamp = cls._extract_unix_timestamp(pages[-1], key, attr)
+            if new_timestamp is None or new_timestamp == current_timestamp:
+                break
             current_timestamp = new_timestamp
+
+            kwargs["max_items"] = iterator.max_items - total_yielded
 
     @t.overload
     @classmethod

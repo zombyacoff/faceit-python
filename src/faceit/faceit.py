@@ -24,12 +24,18 @@ class BaseFaceit(t.Generic[ClientT, DataResourceT], ABC):
     @t.overload
     @classmethod
     def data(
-        cls, api_key: ValidUUID, **client_options: t.Any
+        cls,
+        api_key: ValidUUID,
+        **client_options: t.Any,
     ) -> DataResourceT: ...
 
     @t.overload
     @classmethod
-    def data(cls, *, client: ClientT) -> DataResourceT: ...
+    def data(
+        cls,
+        *,
+        client: ClientT,
+    ) -> DataResourceT: ...
 
     @classmethod
     def data(

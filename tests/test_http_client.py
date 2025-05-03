@@ -428,7 +428,7 @@ class TestAsyncClient:
 
             client = AsyncClient(valid_uuid)
             try:
-                with pytest.raises(TypeError) as excinfo:
+                with pytest.raises(RuntimeError) as excinfo:
                     client.close()
                 assert "Use 'await AsyncClient.aclose()'" in str(excinfo.value)
             finally:

@@ -70,12 +70,10 @@ class BasePlayers(
     __slots__ = ()
 
     if t.TYPE_CHECKING:
-        mapped_validator_cfg = MappedValidatorConfig[
-            GameID, AbstractMatchPlayerStats
-        ]
+        mvcfg = MappedValidatorConfig[GameID, AbstractMatchPlayerStats]
     else:
-        mapped_validator_cfg = MappedValidatorConfig
-    _matches_stats_validator_cfg: t.ClassVar = mapped_validator_cfg(
+        mvcfg = MappedValidatorConfig
+    _matches_stats_validator_cfg: t.ClassVar = mvcfg(
         validator_map={
             GameID.CS2: CS2MatchPlayerStats,
             # TODO: Add other games (e.g. CSGO)
@@ -83,6 +81,7 @@ class BasePlayers(
         is_paged=True,
         key_name="game",
     )
+    del mvcfg
 
     _matches_stats_timestamp_cfg: t.ClassVar = BaseResource._timestamp_cfg(
         key="stats.Match Finished At", attr="match_finished_at"
@@ -182,7 +181,7 @@ class SyncPlayers(BasePlayers[SyncClient], t.Generic[APIResponseFormatT]):
     # method is generally preferred for clarity. NOTE: The alias is maintained for convenience
     __call__ = get
 
-    # Using `Field(...)` as default value rather than `Annotated[T, Field(...)]`
+    # Using `Field(...)` as default value rather than `Annotated[..., Field(...)]`
     # to expose constraints in IDE tooltips and improve developer experience
     @t.overload
     def bans(

@@ -11,8 +11,32 @@ from faceit.models.custom_types import (
     FaceitID,
     FaceitMatchID,
     FaceitTeamID,
+    LangFormattedAnyHttpUrl,
 )
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, ValidationError, AnyHttpUrl
+
+
+@pytest.mark.parametrize(
+    "input_value,expected",
+    [
+        ("https://example.com/{lang}/docs", "https://example.com/docs"),
+        ("http://{lang}/foo/bar", "http://foo/bar"),
+        ("{lang}/foo/{lang}/bar", "foo/bar"),
+        ("https://example.com/foo/bar", "https://example.com/foo/bar"),
+        ("foo/bar", "foo/bar"),
+        ("foo/{lang}/bar", "foo/bar"),
+        ("foo/{lang}", "foo"),
+        ("{lang}/foo", "foo"),
+    ],
+)
+def test_validate_success(input_value, expected):
+    if expected == "" or expected.startswith("http"):
+        assert LangFormattedAnyHttpUrl._validate(input_value) == AnyHttpUrl(
+            expected
+        )
+        return
+    with pytest.raises(ValidationError):
+        LangFormattedAnyHttpUrl._validate(input_value)
 
 
 class TestFaceitID:

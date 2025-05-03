@@ -51,7 +51,7 @@ class Results(BaseModel):
     score: Score
 
     @field_validator("winner", mode="before")
-    def convert_winner(cls, value: t.Any) -> str:  # noqa: N805
+    def convert_winner(cls, value: t.Any) -> str:
         if value in _RESULT_MAP:
             return _RESULT_MAP[value]
         raise ValueError(f"Invalid winner value: {value}")

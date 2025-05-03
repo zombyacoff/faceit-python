@@ -6,14 +6,15 @@ import typing as t
 from contextlib import suppress
 from datetime import datetime, timezone
 from enum import Enum, IntEnum, auto
-from functools import lru_cache, reduce
+from functools import reduce
 from hashlib import sha256
 from uuid import UUID
 
-if t.TYPE_CHECKING:
-    import typing_extensions as te
+import typing_extensions as te
 
-    _T = t.TypeVar("_T")
+if t.TYPE_CHECKING:
+    from .types import _T
+
     _ClassT = t.TypeVar("_ClassT", bound=t.Type)
 
 _RepresentationMethod: te.TypeAlias = t.Callable[[], str]
@@ -42,7 +43,7 @@ class StrEnum(str, Enum):
         return name
 
     def __str__(self) -> str:
-        return str(self.value)
+        return self.value
 
 
 class StrEnumWithAll(StrEnum):
@@ -55,8 +56,14 @@ class UnsetValue(IntEnum):
     UNSET = -1
 
 
-def lazy_import(func: t.Callable[[], _T]) -> t.Callable[[], _T]:
-    return lru_cache(maxsize=1)(func)
+def noop(*_: t.Any, **__: t.Any) -> None:
+    """A no-operation function that ignores all arguments."""
+
+
+async def anoop(*_: t.Any, **__: t.Any) -> None:
+    """A no-operation function that ignores all arguments."""
+    # Not used anywhere in the project yet, but kept for future use
+    # and for consistency with the synchronous version.
 
 
 def raise_unsupported_operand_error(

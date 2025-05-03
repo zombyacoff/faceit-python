@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from faceit.constants import Region
 from faceit.models.custom_types import (
     FaceitID,
+    LangFormattedAnyHttpUrl,
     NullableList,
     ResponseContainer,
 )
@@ -71,7 +72,7 @@ class Championship(BaseModel):
     total_groups: int
     subscriptions_locked: bool
     seeding_strategy: str
-    faceit_url: str
+    faceit_url: LangFormattedAnyHttpUrl
     prizes: NullableList[Prize]
     total_prizes: int
     stream: Stream

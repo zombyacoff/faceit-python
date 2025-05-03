@@ -4,7 +4,7 @@ import asyncio
 import logging
 import ssl
 import typing as t
-from abc import ABC, abstractmethod
+from abc import ABC
 from inspect import iscoroutinefunction
 from threading import Lock
 from time import time
@@ -25,7 +25,7 @@ from tenacity import (
 
 from faceit.constants import BASE_WIKI_URL
 from faceit.exceptions import APIError
-from faceit.utils import StrEnum, create_uuid_validator, representation
+from faceit.utils import StrEnum, create_uuid_validator, noop, representation
 
 from .helpers import Endpoint, RetryArgs, SupportedMethod
 
@@ -80,8 +80,8 @@ class BaseAPIClient(t.Generic[_HttpxClientT], ABC):
         ),
         reraise=True,
         before_sleep=lambda s: _logger.warning(
-            "Retry attempt %d failed; sleeping for %.2f "
-            "seconds before next attempt",
+            "Retry attempt %d failed; "
+            "sleeping for %.2f seconds before next attempt",
             s.attempt_number,
             s.next_action.sleep if s.next_action else 0,
         ),
@@ -178,10 +178,6 @@ class BaseAPIClient(t.Generic[_HttpxClientT], ABC):
             raise APIError(
                 response.status_code, "Invalid JSON response"
             ) from None
-
-    @abstractmethod
-    def close(self) -> None:
-        raise NotImplementedError
 
 
 class _BaseSyncClient(BaseAPIClient[httpx.Client]):
@@ -387,16 +383,6 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
             before_sleep=ssl_before_sleep,
         )
 
-    def close(self) -> None:
-        """This method intentionally raises an error to prevent incorrect usage.
-
-        Async clients should use ``aclose()`` instead.
-        """
-        cls_name = self.__class__.__name__
-        raise TypeError(
-            f"Use 'await {cls_name}.aclose()' instead of '{cls_name}.close()'"
-        )
-
     async def aclose(self) -> None:
         if not self.is_closed:
             await self._client.aclose()
@@ -516,6 +502,17 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
             return max_concurrent_requests
 
     @classmethod
+    def close(cls) -> t.NoReturn:
+        """This method intentionally raises an error to prevent incorrect usage.
+
+        Async clients should use ``aclose()`` instead.
+        """
+        raise RuntimeError(
+            f"Use 'await {cls.__name__}.aclose()' "
+            f"instead of '{cls.__name__}.close()'."
+        )
+
+    @classmethod
     async def close_all(cls) -> None:
         if cls._instances:
             await asyncio.gather(*[
@@ -611,6 +608,11 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
                 cls._adaptive_limit_enabled, cls._recovery_interval,
             )
             # fmt: on
+
+    def __enter__(self) -> t.NoReturn:
+        raise RuntimeError("Use 'async with' instead.")
+
+    __exit__ = noop
 
     async def __aenter__(self) -> te.Self:
         return self

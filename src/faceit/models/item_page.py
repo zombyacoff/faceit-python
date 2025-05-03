@@ -9,13 +9,8 @@ import typing_extensions as te
 from pydantic import BaseModel, Field, field_validator
 
 from faceit.constants import RAW_RESPONSE_ITEMS_KEY
+from faceit.types import _R, _T
 from faceit.utils import UnsetValue, get_nested_property
-
-_T = t.TypeVar("_T")
-
-if t.TYPE_CHECKING:
-    _R = t.TypeVar("_R")
-
 
 _PaginationLimit: te.TypeAlias = te.Annotated[int, Field(ge=UnsetValue.UNSET)]
 
@@ -83,23 +78,10 @@ class ItemPage(BaseModel, t.Generic[_T], frozen=True):
     ) -> t.Union[_T, _R]: ...
 
     def find(self, attr: str, value: t.Any, default: t.Any = None) -> t.Any:
-        if not self.items:
-            return default
-        return next(
-            (
-                item
-                for item in self.items
-                if get_nested_property(item, attr) == value
-            ),
-            default,
-        )
+        return next(self._find_items(attr, value), default)
 
     def find_all(self, attr: str, value: t.Any) -> t.List[_T]:
-        return [
-            item
-            for item in self.items
-            if get_nested_property(item, attr) == value
-        ]
+        return list(self._find_items(attr, value))
 
     @t.overload
     def first(self) -> t.Optional[_T]: ...
@@ -108,7 +90,7 @@ class ItemPage(BaseModel, t.Generic[_T], frozen=True):
     def first(self, default: _R, /) -> t.Union[_T, _R]: ...
 
     def first(self, default: t.Any = None) -> t.Any:
-        return self.items[0] if self.items else default
+        return self[0] if self else default
 
     @t.overload
     def last(self) -> t.Optional[_T]: ...
@@ -117,7 +99,7 @@ class ItemPage(BaseModel, t.Generic[_T], frozen=True):
     def last(self, default: _R, /) -> t.Union[_T, _R]: ...
 
     def last(self, default: t.Any = None) -> t.Any:
-        return self.items[-1] if self.items else default
+        return self[-1] if self else default
 
     @t.overload
     def random(self) -> t.Optional[_T]: ...
@@ -128,20 +110,31 @@ class ItemPage(BaseModel, t.Generic[_T], frozen=True):
     def random(self, default: t.Any = None) -> t.Any:
         # Intentionally using non-cryptographic RNG as this is for
         # convenience sampling rather than security-sensitive operations
-        return choice(self.items) if self.items else default  # noqa: S311
+        return choice(self) if self else default  # noqa: S311
 
     def map(self, func: t.Callable[[_T], _R], /) -> ItemPage[_R]:
         return self.__class__._construct_without_metadata(
-            list(map(func, self.items))
+            list(map(func, self))
         )
 
     def filter(self, predicate: t.Callable[[_T], bool], /) -> te.Self:
         return self.__class__._construct_without_metadata(
-            list(filter(predicate, self.items))
+            list(filter(predicate, self))
         )
 
     def with_items(self, new_items: t.List[_T], /) -> te.Self:
         return self.model_copy(update={"items": new_items})
+
+    def _find_items(self, attr: str, value: t.Any, /) -> t.Iterator[_T]:
+        return (
+            item for item in self if get_nested_property(item, attr) == value
+        )
+
+    @classmethod
+    def merge(cls, pages: t.Iterable[ItemPage[_T]], /) -> ItemPage[_T]:
+        return cls._construct_without_metadata(
+            list(chain.from_iterable(pages))
+        )
 
     @classmethod
     # Using `ItemPage[_R]` return type and `type: ignore`
@@ -158,12 +151,6 @@ class ItemPage(BaseModel, t.Generic[_T], frozen=True):
         )
         # fmt: on
 
-    @classmethod
-    def merge(cls, pages: t.Iterable[ItemPage[_T]], /) -> ItemPage[_T]:
-        return cls._construct_without_metadata(
-            list(chain.from_iterable(pages))
-        )
-
     def __iter__(self) -> t.Iterator[_T]:  # type: ignore[override]
         yield from self.items
 
@@ -171,7 +158,7 @@ class ItemPage(BaseModel, t.Generic[_T], frozen=True):
         return len(self.items)
 
     def __reversed__(self) -> te.Self:
-        return self.with_items(list(reversed(self.items)))
+        return self.with_items(list(reversed(self)))
 
     @t.overload
     def __getitem__(self, index: t.SupportsIndex) -> _T: ...
@@ -186,8 +173,8 @@ class ItemPage(BaseModel, t.Generic[_T], frozen=True):
             return self.with_items(self.items[index])
         try:
             return self.items[index.__index__()]
-        except IndexError:
-            raise IndexError(f"ItemPage index out of range: {index}") from None
+        except IndexError as e:
+            raise IndexError(f"ItemPage index out of range: {index}") from e
         except (TypeError, AttributeError) as e:
             raise TypeError(
                 f"ItemPage indices must be objects supporting "
@@ -195,7 +182,7 @@ class ItemPage(BaseModel, t.Generic[_T], frozen=True):
             ) from e
 
     def __contains__(self, item: t.Any) -> bool:
-        return item in self.items
+        return item in self
 
     def __bool__(self) -> bool:
         return bool(self.items)
@@ -204,7 +191,7 @@ class ItemPage(BaseModel, t.Generic[_T], frozen=True):
         return str(self.items)
 
     @field_validator(RAW_RESPONSE_ITEMS_KEY, mode="before")
-    def _normalize_items(cls, items: t.Any) -> t.List[t.Dict[str, t.Any]]:  # noqa: N805
+    def _normalize_items(cls, items: t.Any) -> t.List[t.Dict[str, t.Any]]:
         if not isinstance(items, list):
             raise TypeError(
                 f"Expected {RAW_RESPONSE_ITEMS_KEY} "

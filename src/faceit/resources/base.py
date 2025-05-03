@@ -10,7 +10,13 @@ from pydantic import ValidationError
 
 from faceit.http import Endpoint
 from faceit.models import ItemPage
-from faceit.types import ClientT, ModelT, RawAPIPageResponse, RawAPIResponse
+from faceit.types import (
+    _T,
+    ClientT,
+    ModelT,
+    RawAPIPageResponse,
+    RawAPIResponse,
+)
 from faceit.utils import StrEnum
 
 from .pagination import (
@@ -23,8 +29,6 @@ if t.TYPE_CHECKING:
     _ResponseT = t.TypeVar("_ResponseT", bound=RawAPIResponse)
 
 _logger = logging.getLogger(__name__)
-
-_KT = t.TypeVar("_KT")
 
 # Temporary placeholder type for unimplemented models.
 # Serves as a stub during development and should be replaced with
@@ -39,8 +43,8 @@ class RequestPayload(t.TypedDict):
 
 
 @t.final
-class MappedValidatorConfig(t.NamedTuple, t.Generic[_KT, ModelT]):
-    validator_map: t.Dict[_KT, t.Type[ModelT]]
+class MappedValidatorConfig(t.NamedTuple, t.Generic[_T, ModelT]):
+    validator_map: t.Dict[_T, t.Type[ModelT]]
     is_paged: bool
     key_name: str = "key"
 
@@ -104,8 +108,8 @@ class BaseResource(t.Generic[ClientT], ABC):
     def _process_response_with_mapped_validator(
         self,
         response: RawAPIPageResponse,
-        key: _KT,
-        config: MappedValidatorConfig[_KT, ModelT],
+        key: _T,
+        config: MappedValidatorConfig[_T, ModelT],
         /,
     ) -> t.Union[ModelT, RawAPIPageResponse]: ...
 
@@ -113,22 +117,21 @@ class BaseResource(t.Generic[ClientT], ABC):
     def _process_response_with_mapped_validator(
         self,
         response: RawAPIPageResponse,
-        key: _KT,
-        config: MappedValidatorConfig[_KT, ModelT],
+        key: _T,
+        config: MappedValidatorConfig[_T, ModelT],
         /,
     ) -> t.Union[ItemPage[ModelT], RawAPIPageResponse]: ...
 
     def _process_response_with_mapped_validator(
         self,
         response: RawAPIPageResponse,
-        key: _KT,
-        config: MappedValidatorConfig[_KT, ModelT],
+        key: _T,
+        config: MappedValidatorConfig[_T, ModelT],
         /,
     ) -> t.Union[ModelT, ItemPage[ModelT], RawAPIPageResponse]:
         _logger.debug(
             "Processing response with mapped validator for key: %s", key
         )
-
         validator = config.validator_map.get(key)
         if validator is None:
             warn(
@@ -138,7 +141,6 @@ class BaseResource(t.Generic[ClientT], ABC):
                 stacklevel=5,
             )
             return response
-
         # Suppressing type checking warning because we're using a
         # dynamic runtime subscript `ItemPage` is being subscripted
         # with a variable (`validator`) which mypy cannot statically verify

@@ -58,6 +58,9 @@ cover/
 # Sphinx documentation
 docs/_build/
 docs/api/
+# TODO
+docs/ 
+output_dir
 
 # PyBuilder
 .pybuilder/

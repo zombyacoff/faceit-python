@@ -9,6 +9,7 @@ import typing_extensions as te
 
 from faceit.http import AsyncClient, SyncClient
 from faceit.types import ClientT
+from faceit.utils import noop
 
 if t.TYPE_CHECKING:
     from types import TracebackType
@@ -58,6 +59,11 @@ class SyncResources(BaseResources[SyncClient]):
 
 class AsyncResources(BaseResources[AsyncClient]):
     __slots__ = ()
+
+    def __enter__(self) -> t.NoReturn:
+        self._client.__enter__()
+
+    __exit__ = noop
 
     async def __aenter__(self) -> te.Self:
         await self._client.__aenter__()

@@ -12,10 +12,7 @@ from pydantic import (
 from pydantic_core import core_schema
 from pydantic_extra_types.country import CountryAlpha2
 
-_T = t.TypeVar("_T")
-
-if t.TYPE_CHECKING:
-    _R = t.TypeVar("_R")
+from faceit.types import _R, _T
 
 # TODO: Integrate this type alias into all data models in the future
 CountryCode: te.TypeAlias = te.Annotated[
@@ -65,15 +62,12 @@ class ResponseContainer(RootModel[t.Dict[str, _T]]):
 class LangFormattedAnyHttpUrl:
     __slots__ = ()
 
-    _DEFAULT_LANG: t.ClassVar = "en"
     _LANG_PLACEHOLDER: t.ClassVar = "{lang}"
 
     @classmethod
     def _validate(cls, value: str) -> AnyHttpUrl:
         return AnyHttpUrl(
-            value.format(lang=cls._DEFAULT_LANG)
-            if cls._LANG_PLACEHOLDER in value
-            else value
+            "/".join(v for v in value.split("/") if v != cls._LANG_PLACEHOLDER)
         )
 
     @classmethod
