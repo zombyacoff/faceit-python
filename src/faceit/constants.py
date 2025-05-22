@@ -1,28 +1,31 @@
 from __future__ import annotations
 
 import logging
-import typing as t
+import re
+import typing
 from dataclasses import dataclass
 from operator import attrgetter
+from types import MappingProxyType
 from warnings import warn
 
-import typing_extensions as te
 from pydantic import Field, validate_call
+from typing_extensions import Self, TypeAlias
 
 from .utils import StrEnum, StrEnumWithAll
 
-if t.TYPE_CHECKING:
-    _EloThreshold: te.TypeAlias = t.Dict[int, "EloRange"]
+if typing.TYPE_CHECKING:
+    _EloThreshold: TypeAlias = typing.Dict[int, "EloRange"]
 
 _logger = logging.getLogger(__name__)
 
-BASE_WIKI_URL: t.Final = "https://docs.faceit.com"
-
-RAW_RESPONSE_ITEMS_KEY: t.Final = "items"
-
-MIN_ELO: t.Final = 100
+BASE_WIKI_URL: typing.Final = "https://docs.faceit.com"
+RAW_RESPONSE_ITEMS_KEY: typing.Final = "items"
+FACEIT_USERNAME_REGEX: typing.Final = re.compile(r"^[a-zA-Z0-9_-]{1,24}$")
+"""Regex pattern for validating FACEIT usernames.
+Matches 1 to 24 characters: letters, digits, underscores, or hyphens.
 """
-Minimum ELO value across all FACEIT games.
+MIN_ELO: typing.Final = 100
+"""Minimum ELO value across all FACEIT games.
 Players cannot drop below this threshold regardless of consecutive losses.
 """
 
@@ -141,8 +144,7 @@ class GameID(StrEnum):
 
 class HighTierLevel(StrEnum):
     ABSENT = "absent"
-    """
-    Indicates the absence of a defined top-tier rank in this discipline.
+    """Indicates the absence of a defined top-tier rank in this discipline.
     Used when there is no distinct elite or highest rank in the ranking structure.
     """
 
@@ -171,17 +173,17 @@ class Region(StrEnum):
     SOUTH_AMERICA = "SA"
 
 
-@t.final
-class EloRange(t.NamedTuple):
+@typing.final
+class EloRange(typing.NamedTuple):
     lower: int
-    upper: t.Union[int, HighTierLevel]
+    upper: typing.Union[int, HighTierLevel]
 
     @property
     def is_open_ended(self) -> bool:
         return self.upper in HighTierLevel
 
     @property
-    def size(self) -> t.Optional[int]:
+    def size(self) -> typing.Optional[int]:
         if self.is_open_ended:
             return None
         assert isinstance(self.upper, int)
@@ -194,13 +196,15 @@ class EloRange(t.NamedTuple):
         return self.lower <= elo <= self.upper
 
     def __str__(self) -> str:
-        if self.is_open_ended:
-            return f"{self.lower}+"
-        return f"{self.lower}-{self.upper}"
+        return (
+            f"{self.lower}+"
+            if self.is_open_ended
+            else f"{self.lower}-{self.upper}"
+        )
 
 
-_DEFAULT_FIRST_ELO_RANGE: t.Final = EloRange(MIN_ELO, 800)
-_DEFAULT_TEN_LEVEL_LOWER: t.Final = 2001
+_DEFAULT_FIRST_ELO_RANGE: typing.Final = EloRange(MIN_ELO, 800)
+_DEFAULT_TEN_LEVEL_LOWER: typing.Final = 2001
 
 
 def _create_default_elo_tiers() -> _EloThreshold:
@@ -209,20 +213,19 @@ def _create_default_elo_tiers() -> _EloThreshold:
     for level in range(2, 10):
         # `cast(int, ...)` tells the type checker that we know `upper` is
         # definitely an `int` for levels 1-9, not the full
-        # `t.Union[int, HighTierLevel]` type
-        lower_bound = t.cast(int, tier_ranges[level - 1].upper) + 1
+        # `typing.Union[int, HighTierLevel]` type
+        lower_bound = typing.cast("int", tier_ranges[level - 1].upper) + 1
         tier_ranges[level] = EloRange(lower_bound, lower_bound + 149)
 
     return tier_ranges
 
 
-_BASE_ELO_RANGES: t.Final = _create_default_elo_tiers()
+_BASE_ELO_RANGES: typing.Final = _create_default_elo_tiers()
 
 
 def _append_elite_tier(
     elite_upper_bound: HighTierLevel,
     base_tiers: _EloThreshold = _BASE_ELO_RANGES,
-    /,
 ) -> _EloThreshold:
     return {
         **base_tiers,
@@ -230,33 +233,40 @@ def _append_elite_tier(
     }
 
 
-CHALLENGER_CAPPED_ELO_RANGES: t.Final = _append_elite_tier(
+CHALLENGER_CAPPED_ELO_RANGES: typing.Final[_EloThreshold] = _append_elite_tier(
     HighTierLevel.CHALLENGER
 )
 # Pre-generating this range configuration for future implementation needs
 # Exposed as a constant for both internal use and potential library consumers
-OPEN_ENDED_ELO_RANGES: t.Final = _append_elite_tier(HighTierLevel.ABSENT)
+OPEN_ENDED_ELO_RANGES: typing.Final[_EloThreshold] = _append_elite_tier(
+    HighTierLevel.ABSENT
+)
+ELO_THRESHOLDS: typing.Final[typing.Mapping[GameID, _EloThreshold]] = (
+    MappingProxyType({
+        GameID.CS2: {
+            1: EloRange(MIN_ELO, 500),
+            2: EloRange(501, 750),
+            3: EloRange(751, 900),
+            4: EloRange(901, 1050),
+            5: EloRange(1051, 1200),
+            6: EloRange(1201, 1350),
+            7: EloRange(1351, 1530),
+            8: EloRange(1531, 1750),
+            9: EloRange(1751, 2000),
+            10: EloRange(_DEFAULT_TEN_LEVEL_LOWER, HighTierLevel.CHALLENGER),
+        },
+        # These default ELO ranges (level 1: up to 800, subsequent levels: +150) are
+        # standard across most games with few exceptions. CS2 demonstrates one such
+        # exception where FACEIT adjusted boundaries following the transition from
+        # CSGO. This implementation accounts for both standard patterns and known
+        # variations in the platform's ranking system
+        GameID.CSGO: CHALLENGER_CAPPED_ELO_RANGES,
+        # TODO: Add more games (e.g. Dota 2)
+    })
+)
 
-# fmt: off
-ELO_THRESHOLDS: t.Final[t.Dict[GameID, _EloThreshold]] = {
-    GameID.CS2: {
-        1: EloRange(MIN_ELO, 500), 2: EloRange(501, 750), 3: EloRange(751, 900),
-        4: EloRange(901, 1050), 5: EloRange(1051, 1200), 6: EloRange(1201, 1350),
-        7: EloRange(1351, 1530), 8: EloRange(1531, 1750), 9: EloRange(1751, 2000),
-        10: EloRange(_DEFAULT_TEN_LEVEL_LOWER, HighTierLevel.CHALLENGER)
-    },
-    # These default ELO ranges (level 1: up to 800, subsequent levels: +150) are
-    # standard across most games with few exceptions. CS2 demonstrates one such
-    # exception where FACEIT adjusted boundaries following the transition from
-    # CSGO. This implementation accounts for both standard patterns and known
-    # variations in the platform's ranking system
-    GameID.CSGO: CHALLENGER_CAPPED_ELO_RANGES,
-    # TODO: Add more games (e.g. Dota 2)
-}
-# fmt: on
 
-
-@t.final
+@typing.final
 @dataclass(frozen=True)
 class SkillLevel:
     __slots__ = ("elo_range", "game_id", "level", "name")
@@ -266,30 +276,33 @@ class SkillLevel:
     elo_range: EloRange
     name: str
 
-    _registry: t.ClassVar[t.Dict[GameID, t.Dict[int, SkillLevel]]] = {}
+    if typing.TYPE_CHECKING:
+        _registry: typing.ClassVar[
+            typing.Mapping[GameID, typing.Mapping[int, Self]]
+        ]
 
     @property
     def is_highest_level(self) -> bool:
         return self.elo_range.is_open_ended
 
     @property
-    def range_size(self) -> t.Optional[int]:
+    def range_size(self) -> typing.Optional[int]:
         return self.elo_range.size
 
     @property
-    def next_level(self) -> t.Optional[SkillLevel]:
+    def next_level(self) -> typing.Optional[Self]:
         if self.is_highest_level:
             return None
         return self.get_level(self.game_id, self.level + 1)
 
     @property
-    def previous_level(self) -> t.Optional[SkillLevel]:
+    def previous_level(self) -> typing.Optional[Self]:
         if self.level <= 1:
             return None
         return self.get_level(self.game_id, self.level - 1)
 
     @property
-    def elo_needed_for_next_level(self) -> t.Optional[int]:
+    def elo_needed_for_next_level(self) -> typing.Optional[int]:
         if self.is_highest_level:
             return None
 
@@ -305,7 +318,7 @@ class SkillLevel:
     @validate_call
     def progress_percentage(
         self, elo: int = Field(ge=MIN_ELO), /
-    ) -> t.Optional[float]:
+    ) -> typing.Optional[float]:
         if self.is_highest_level:
             warn(
                 "Cannot calculate progress percentage for highest level",
@@ -324,28 +337,29 @@ class SkillLevel:
             / (self.elo_range.upper - self.elo_range.lower)
         ) * 100
 
-    @t.overload
+    @typing.overload
     @classmethod
     def get_level(
         cls,
         game_id: GameID,
         level: int = Field(ge=1, le=10),
-    ) -> t.Optional[SkillLevel]: ...
+    ) -> typing.Optional[Self]: ...
 
-    @t.overload
+    @typing.overload
     @classmethod
     def get_level(
         cls, game_id: GameID, *, elo: int = Field(ge=MIN_ELO)
-    ) -> t.Optional[SkillLevel]: ...
+    ) -> typing.Optional[Self]: ...
 
     @classmethod
+    @validate_call
     def get_level(
         cls,
         game_id: GameID,
-        level: t.Optional[int] = Field(None, ge=1, le=10),
+        level: typing.Optional[int] = Field(None, ge=1, le=10),
         *,
-        elo: t.Optional[int] = Field(None, ge=MIN_ELO),
-    ) -> t.Optional[SkillLevel]:
+        elo: typing.Optional[int] = Field(None, ge=MIN_ELO),
+    ) -> typing.Optional[Self]:
         if game_id not in cls._registry:
             warn(
                 f"Game {game_id!r} is not supported", UserWarning, stacklevel=4
@@ -362,7 +376,10 @@ class SkillLevel:
 
         if level is not None:
             _logger.debug("Getting level %s for game %s", level, game_id)
-            return cls._registry.get(game_id, {}).get(level)
+            levels = cls._registry.get(game_id)
+            if levels is None:
+                return None
+            return levels.get(level)
 
         if elo is not None:
             _logger.debug("Getting level for game %s and elo %s", game_id, elo)
@@ -378,7 +395,8 @@ class SkillLevel:
         raise ValueError("Either level or elo must be specified")
 
     @classmethod
-    def get_all_levels(cls, game_id: GameID, /) -> t.List[SkillLevel]:
+    @validate_call
+    def get_all_levels(cls, game_id: GameID, /) -> typing.List[Self]:
         return sorted(
             cls._registry.get(game_id, {}).values(), key=attrgetter("level")
         )
@@ -388,24 +406,16 @@ class SkillLevel:
 
     @classmethod
     def _initialize_skill_levels_registry(cls) -> None:
-        cls._registry = {
-            game_id: {
+        cls._registry = MappingProxyType({
+            game_id: MappingProxyType({
                 level_num: cls(
                     level_num, game_id, elo_range, f"Level {level_num}"
                 )
                 for level_num, elo_range in thresholds.items()
-            }
+            })
             for game_id, thresholds in ELO_THRESHOLDS.items()
-        }
+        })
 
-
-# We must wrap `get_level` and `get_all_levels` with `validate_call` after class creation
-# because using `@validate_call` directly on classmethods with forward references
-# (e.g., return type "SkillLevel") causes `NameError: the class is not yet defined`
-# when Pydantic tries to resolve type annotations. Wrapping after definition
-# ensures all references are resolvable and avoids import-time errors.
-SkillLevel.get_level = validate_call(SkillLevel.get_level)  # type: ignore[method-assign]
-SkillLevel.get_all_levels = validate_call(SkillLevel.get_all_levels)  # type: ignore[method-assign]
 
 # Initialize the `SkillLevel` registry when the module is imported.
 # This ensures all skill levels are available immediately without requiring

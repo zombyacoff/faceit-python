@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import typing as t
+import typing
 from abc import ABC
 
-import typing_extensions as te
 from pydantic import AfterValidator, validate_call
+from typing_extensions import Annotated, TypeAlias, deprecated
 
 from faceit.http import AsyncClient, SyncClient
 from faceit.models.custom_types import FaceitMatchID
@@ -22,11 +22,11 @@ from faceit.types import (
     RawAPIItem,
 )
 
-_MatchID: te.TypeAlias = str
+_MatchID: TypeAlias = str
 # We use `AfterValidator` with the `_MatchID` type alias instead of `FaceitMatchID` directly
 # to avoid mypy complaints. Mypy cannot fully recognize our custom type as compatible
 # with str, so this approach ensures proper type checking and validation.
-_MatchIDValidator: te.TypeAlias = te.Annotated[
+_MatchIDValidated: TypeAlias = Annotated[
     _MatchID, AfterValidator(FaceitMatchID._validate)
 ]
 
@@ -39,21 +39,21 @@ class BaseMatches(
     __slots__ = ()
 
 
-class SyncMatches(BaseMatches[SyncClient], t.Generic[APIResponseFormatT]):
+class SyncMatches(BaseMatches[SyncClient], typing.Generic[APIResponseFormatT]):
     __slots__ = ()
 
-    @t.overload
+    @typing.overload
     def get(self: SyncMatches[Raw], match_id: _MatchID) -> RawAPIItem: ...
 
-    @t.overload
+    @typing.overload
     def get(
         self: SyncMatches[Model], match_id: _MatchID
     ) -> ModelNotImplemented: ...
 
     @validate_call
     def get(
-        self, match_id: _MatchIDValidator
-    ) -> t.Union[RawAPIItem, ModelNotImplemented]:
+        self, match_id: _MatchIDValidated
+    ) -> typing.Union[RawAPIItem, ModelNotImplemented]:
         return self._validate_response(
             self._client.get(self.PATH / match_id, expect_item=True),
             ModelPlaceholder,
@@ -61,48 +61,50 @@ class SyncMatches(BaseMatches[SyncClient], t.Generic[APIResponseFormatT]):
 
     __call__ = get
 
-    @te.deprecated(
+    @deprecated(
         "`details` is deprecated and will be removed in a future release. "
         "Use `get` instead."
     )
-    def details(self, match_id: _MatchID) -> t.Any:
+    def details(self, match_id: typing.Any) -> typing.Any:
         return self.get(match_id)
 
-    @t.overload
+    @typing.overload
     def stats(self: SyncMatches[Raw], match_id: _MatchID) -> RawAPIItem: ...
 
-    @t.overload
+    @typing.overload
     def stats(
         self: SyncMatches[Model], match_id: _MatchID
     ) -> ModelNotImplemented: ...
 
     @validate_call
     def stats(
-        self, match_id: _MatchIDValidator
-    ) -> t.Union[RawAPIItem, ModelNotImplemented]:
+        self, match_id: _MatchIDValidated
+    ) -> typing.Union[RawAPIItem, ModelNotImplemented]:
         return self._validate_response(
             self._client.get(self.PATH / match_id / "stats", expect_item=True),
             ModelPlaceholder,
         )
 
 
-class AsyncMatches(BaseMatches[AsyncClient], t.Generic[APIResponseFormatT]):
+class AsyncMatches(
+    BaseMatches[AsyncClient], typing.Generic[APIResponseFormatT]
+):
     __slots__ = ()
 
-    @t.overload
+    @typing.overload
     async def get(
         self: AsyncMatches[Raw], match_id: _MatchID
     ) -> RawAPIItem: ...
 
-    @t.overload
+    @typing.overload
     async def get(
         self: AsyncMatches[Model], match_id: _MatchID
     ) -> ModelNotImplemented: ...
 
     @validate_call
     async def get(
-        self, match_id: _MatchIDValidator
-    ) -> t.Union[RawAPIItem, ModelNotImplemented]:
+        self, match_id: _MatchIDValidated
+    ) -> typing.Union[RawAPIItem, ModelNotImplemented]:
         return self._validate_response(
             await self._client.get(self.PATH / match_id, expect_item=True),
             ModelPlaceholder,
@@ -110,27 +112,27 @@ class AsyncMatches(BaseMatches[AsyncClient], t.Generic[APIResponseFormatT]):
 
     __call__ = get
 
-    @te.deprecated(
+    @deprecated(
         "`details` is deprecated and will be removed in a future release. "
         "Use `get` instead."
     )
-    async def details(self, match_id: _MatchID) -> t.Any:
+    async def details(self, match_id: typing.Any) -> typing.Any:
         return await self.get(match_id)
 
-    @t.overload
+    @typing.overload
     async def stats(
         self: AsyncMatches[Raw], match_id: _MatchID
     ) -> RawAPIItem: ...
 
-    @t.overload
+    @typing.overload
     async def stats(
         self: AsyncMatches[Model], match_id: _MatchID
     ) -> ModelNotImplemented: ...
 
     @validate_call
     async def stats(
-        self, match_id: _MatchIDValidator
-    ) -> t.Union[RawAPIItem, ModelNotImplemented]:
+        self, match_id: _MatchIDValidated
+    ) -> typing.Union[RawAPIItem, ModelNotImplemented]:
         return self._validate_response(
             await self._client.get(
                 self.PATH / match_id / "stats", expect_item=True

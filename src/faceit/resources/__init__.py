@@ -6,5 +6,4 @@ from .pagination import MaxItems as MaxItems
 from .pagination import MaxPages as MaxPages
 from .pagination import SyncPageIterator as SyncPageIterator
 from .pagination import TimestampPaginationConfig as TimestampPaginationConfig
-from .pagination import check_pagination_support as check_pagination_support
 from .pagination import pages as pages

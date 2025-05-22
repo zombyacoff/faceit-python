@@ -4,3 +4,5 @@ from .client import SyncClient as SyncClient
 from .helpers import Endpoint as Endpoint
 from .helpers import RetryArgs as RetryArgs
 from .helpers import SupportedMethod as SupportedMethod
+
+TokenEnv = SyncClient.env

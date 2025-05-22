@@ -3,7 +3,12 @@
 
 
 class FaceitError(Exception):
-    pass
+    """Base exception for all Faceit-related errors."""
+
+
+class MissingAuthTokenError(FaceitError):
+    """Raised when the required authorization token is missing from the
+    environment or configuration files."""
 
 
 class APIError(FaceitError):

@@ -1,25 +1,13 @@
-[build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
-
 [project]
 name = "faceit"
-version = "0.1.1"
+version = "0.1.2"
 description = "The Python wrapper for the Faceit API"
+readme = "README.rst"
+requires-python = ">=3.8"
 authors = [
     { name = "zombyacoff", email = "zombyacoff@gmail.com" }
 ]
-readme = "README.md"
 license = { text = "Apache-2.0" }
-requires-python = ">=3.8"
-dependencies = [
-    "httpx (>=0.27.0,<1.0.0)",
-    "pycountry (>=24.6.1,<25.0.0)",
-    "pydantic-extra-types (>=2.10.3,<3.0.0)",
-    "pydantic (>=2.7.1,<3.0.0)",
-    "tenacity (>=8.2.3,<9.0.0)",
-    "typing-extensions (>=4.11.0,<5.0.0)"
-]
 keywords = ["faceit", "api", "wrapper"]
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -31,34 +19,68 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: Apache Software License",
-    "Operating System :: OS Independent"
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "httpx>=0.27.0,<1.0.0",
+    "pycountry>=24.6.1,<25.0.0",
+    "pydantic-extra-types>=2.10.3,<3.0.0",
+    "pydantic>=2.7.1,<3.0.0",
+    "tenacity>=8.2.3,<9.0.0",
+    "typing-extensions>=4.11.0,<5.0.0",
 ]
 
 [project.urls]
 Documentation = "https://docs.faceit.com/docs"
 
-[tool.poetry]
-packages = [{ include = "faceit", from = "src" }]
+[dependency-groups]
+build = ["hatch"]
+dev = [
+    "mypy>=1.5.1",
+    "pre-commit==3.5.0",
+    "ruff>=0.4.8",
+]
+test = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.1",
+]
 
-[tool.poetry.group.dev.dependencies]
-mypy = "^1.5.1"
-pre-commit = "3.5.0"
-pytest = "^7.4.0"
-pytest-asyncio = "^0.21.1"
-python-dotenv = "^1.0.0"
-ruff = "^0.4.8"
-sphinx = "^7.1.2"
+[project.optional-dependencies]
+env = [
+    "python-decouple-typed>=3.11.0",
+]
+
+[tool.hatch.build]
+sources = ["src"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src/faceit",
+    "/README.rst",
+    "/LICENSE",
+]
+exclude = [
+    "/tests",
+    "/examples",
+    "/docs",
+    "/output_dir",
+    ".*",
+]
 
 [tool.mypy]
-python_version = "3.8"
-no_implicit_reexport = true
 exclude = [
     "_.py",
     "_async.py",
     "docs/*",
     "examples/*",
-    "tests/*"
+    "tests/*",
 ]
+mypy_path = "./stubs"
+python_version = "3.8"
+local_partial_types = true
+no_implicit_reexport = true
+strict = true
+warn_unreachable = true
 
 [tool.pytest.ini_options]
 pythonpath = "."
@@ -67,8 +89,10 @@ pythonpath = "."
 line-length = 79
 preview = true
 target-version = "py38"
-lint.select = ["ALL"]
-lint.ignore = [
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
     "ANN401",
     "PYI058",
     "PYI059",
@@ -76,6 +100,7 @@ lint.ignore = [
     "COM812",
     "CPY001",
     "D",
+    "DOC",
     "EM101",
     "EM102",
     "E501",
@@ -94,32 +119,48 @@ lint.ignore = [
     "SLF001",
     "TD",
     "S101",
-    "TRY003"
+    "TRY003",
 ]
 
 [tool.ruff.lint.per-file-ignores]
 "docs/*" = ["ALL"]
 "examples/*" = ["ALL"]
 "tests/*" = ["ALL"]
-"types.py" = ["F401", "PLC041", "ICN003", "PYI018"]
-"__init__.py" = ["F401", "PLC041"]
+"types.py" = [
+    "F401",
+    "PLC041",
+    "ICN003",
+    "PYI018",
+]
+"__init__.py" = [
+    "F401",
+    "PLC041",
+]
 "_.py" = ["ALL"]
 "_async.py" = ["ALL"]
 
 [tool.ruff.lint.pyupgrade]
 keep-runtime-typing = true
 
-[tool.ruff.lint.pydocstyle]
-convention = "google"
-
 [tool.ruff.lint.flake8-bugbear]
 extend-immutable-calls = [
-    "faceit.resources.pagination.pages", 
-    "faceit.resources.pagination.MaxPages"  # Deprecated. Remove when support is discontinued.
-] 
+    "faceit.http.client.env",
+    "faceit.resources.pagination.pages",
+    "faceit.resources.pagination.MaxPages",
+]
 
 [tool.ruff.lint.flake8-import-conventions]
-banned-from = ["typing", "typing_extensions"]
+banned-from = [
+    "asyncio",
+    "httpx",
+    "json",
+    "logging",
+    "math",
+    "os",
+    "re",
+    "reprlib",
+    "typing",
+]
 
 [tool.ruff.lint.pep8-naming]
 classmethod-decorators = ["field_validator"]
@@ -129,3 +170,7 @@ docstring-code-format = true
 docstring-code-line-length = 100
 quote-style = "double"
 line-ending = "auto"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

@@ -1,98 +1,98 @@
-import typing as t
+import typing
 from uuid import UUID
 
-import typing_extensions as te
 from pydantic import AnyHttpUrl, BaseModel, Field
+from typing_extensions import NotRequired, ParamSpec, TypeAlias
 
-if t.TYPE_CHECKING:
+if typing.TYPE_CHECKING:
     from .http import Endpoint
     from .http.client import BaseAPIClient
     from .resources import AsyncDataResource, SyncDataResource
     from .resources.base import BaseResource
 
-_T = t.TypeVar("_T")
-_R = t.TypeVar("_R")
-_T_co = t.TypeVar("_T_co", covariant=True)
+_T = typing.TypeVar("_T")
+_R = typing.TypeVar("_R")
+_T_co = typing.TypeVar("_T_co", covariant=True)
+_P = ParamSpec("_P")
 
-ModelT = t.TypeVar("ModelT", bound=BaseModel)
-ClientT = t.TypeVar("ClientT", bound="BaseAPIClient")
-DataResourceT = t.TypeVar(
-    "DataResourceT", bound=t.Union["SyncDataResource", "AsyncDataResource"]
+ModelT = typing.TypeVar("ModelT", bound=BaseModel)
+ClientT = typing.TypeVar("ClientT", bound="BaseAPIClient[typing.Any]")
+DataResourceT = typing.TypeVar(
+    "DataResourceT",
+    bound=typing.Union["SyncDataResource", "AsyncDataResource"],
 )
 
-APIResponseFormatT = t.TypeVar("APIResponseFormatT", "Raw", "Model")
-PaginationMethodT = t.TypeVar("PaginationMethodT", bound="BaseMethodProtocol")
+APIResponseFormatT = typing.TypeVar("APIResponseFormatT", "Raw", "Model")
+PaginationMethodT = typing.TypeVar(
+    "PaginationMethodT", bound="BaseMethodProtocol"
+)
 
-EmptyString: te.TypeAlias = t.Literal[""]
-UrlOrEmpty: te.TypeAlias = t.Union[AnyHttpUrl, EmptyString]
-UUIDOrEmpty: te.TypeAlias = t.Union[UUID, EmptyString]
-EndpointParam: te.TypeAlias = t.Union[str, "Endpoint"]
-ValidUUID: te.TypeAlias = t.Union[UUID, str, bytes]
+EmptyString: TypeAlias = typing.Literal[""]
+UrlOrEmpty: TypeAlias = typing.Union[AnyHttpUrl, EmptyString]
+UUIDOrEmpty: TypeAlias = typing.Union[UUID, EmptyString]
+EndpointParam: TypeAlias = typing.Union[str, "Endpoint"]
+ValidUUID: TypeAlias = typing.Union[UUID, str, bytes]
 
-Raw = t.NewType("Raw", bool)
-Model = t.NewType("Model", bool)
+Raw = typing.NewType("Raw", bool)
+Model = typing.NewType("Model", bool)
 
 # Placeholder type that signals developers to implement a proper model
 # for a resource method. Acts as a temporary stub during development.
-ModelNotImplemented: te.TypeAlias = BaseModel
+ModelNotImplemented: TypeAlias = BaseModel
 
-RawAPIItem = t.NewType("RawAPIItem", t.Dict[str, t.Any])
-RawAPIPageResponse = t.TypedDict(
+RawAPIItem = typing.NewType("RawAPIItem", typing.Dict[str, typing.Any])
+RawAPIPageResponse = typing.TypedDict(
     "RawAPIPageResponse",
     {
-        "items": t.List[RawAPIItem],
+        "items": typing.List[RawAPIItem],
         # Required pagination parameters (cursor based)
         "start": int,
         "end": int,
         # Unix timestamps (in milliseconds)
-        "from": te.NotRequired[int],
-        "to": te.NotRequired[int],
+        "from": NotRequired[int],
+        "to": NotRequired[int],
     },
 )
-RawAPIResponse: te.TypeAlias = t.Union[RawAPIItem, RawAPIPageResponse]
+RawAPIResponse: TypeAlias = typing.Union[RawAPIItem, RawAPIPageResponse]
 
 
-class BaseMethodProtocol(t.Protocol):
+class BaseMethodProtocol(typing.Protocol):
     __name__: str
-    __self__: "BaseResource"
-    __call__: t.Callable[..., t.Any]
+    __self__: "BaseResource[typing.Any]"
+    __call__: typing.Callable[..., typing.Any]
 
 
-class BasePaginationMethod(BaseMethodProtocol, t.Protocol[_T_co]):
+# fmt: off
+class BasePaginationMethod(BaseMethodProtocol, typing.Protocol[_T_co]):
     def __call__(
         self,
-        *args: t.Any,
+        *args: typing.Any,
         offset: int = Field(...),
         limit: int = Field(...),
-        **kwargs: t.Any,
+        **kwargs: typing.Any,
     ) -> _T_co: ...
 
 
-class SyncPaginationMethod(BasePaginationMethod[_T_co], t.Protocol): ...
+class SyncPaginationMethod(BasePaginationMethod[_T_co], typing.Protocol): ...
 
 
-class AsyncPaginationMethod(
-    BasePaginationMethod[t.Awaitable[_T_co]], t.Protocol
-): ...
+class AsyncPaginationMethod(BasePaginationMethod[typing.Awaitable[_T_co]], typing.Protocol): ...
 
 
-class BaseUnixPaginationMethod(BaseMethodProtocol, t.Protocol[_T_co]):
+class BaseUnixPaginationMethod(BaseMethodProtocol, typing.Protocol[_T_co]):
     def __call__(
         self,
-        *args: t.Any,
+        *args: typing.Any,
         offset: int = Field(...),
         limit: int = Field(...),
-        start: t.Optional[int] = None,
-        to: t.Optional[int] = None,
-        **kwargs: t.Any,
+        start: typing.Optional[int] = None,
+        to: typing.Optional[int] = None,
+        **kwargs: typing.Any,
     ) -> _T_co: ...
 
 
-class SyncUnixPaginationMethod(
-    BaseUnixPaginationMethod[_T_co], t.Protocol
-): ...
+class SyncUnixPaginationMethod(BaseUnixPaginationMethod[_T_co], typing.Protocol): ...
 
 
-class AsyncUnixPaginationMethod(
-    BaseUnixPaginationMethod[t.Awaitable[_T_co]], t.Protocol
-): ...
+class AsyncUnixPaginationMethod(BaseUnixPaginationMethod[typing.Awaitable[_T_co]], typing.Protocol): ...
+# fmt: on

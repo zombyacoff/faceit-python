@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-import typing as t
+import typing
 from abc import ABC
 from dataclasses import dataclass
 from warnings import warn
@@ -25,8 +25,8 @@ from .pagination import (
     TimestampPaginationConfig,
 )
 
-if t.TYPE_CHECKING:
-    _ResponseT = t.TypeVar("_ResponseT", bound=RawAPIResponse)
+if typing.TYPE_CHECKING:
+    _ResponseT = typing.TypeVar("_ResponseT", bound=RawAPIResponse)
 
 _logger = logging.getLogger(__name__)
 
@@ -36,15 +36,16 @@ _logger = logging.getLogger(__name__)
 ModelPlaceholder: None = None
 
 
-@t.final
-class RequestPayload(t.TypedDict):
+@typing.final
+class RequestPayload(typing.TypedDict):
     endpoint: Endpoint
-    params: t.Dict[str, t.Any]
+    params: typing.Mapping[str, typing.Any]
 
 
-@t.final
-class MappedValidatorConfig(t.NamedTuple, t.Generic[_T, ModelT]):
-    validator_map: t.Dict[_T, t.Type[ModelT]]
+@typing.final
+@dataclass(eq=False, frozen=True)
+class MappedValidatorConfig(typing.Generic[_T, ModelT]):
+    validator_map: typing.Mapping[_T, typing.Type[ModelT]]
     is_paged: bool
     key_name: str = "key"
 
@@ -63,35 +64,35 @@ class FaceitResourcePath(StrEnum):
 # other than Data is required, since the current implementation is
 # too Data-centric.
 @dataclass(eq=False, frozen=True)
-class BaseResource(t.Generic[ClientT], ABC):
+class BaseResource(typing.Generic[ClientT], ABC):
     __slots__ = ("_client", "_raw")
 
     _client: ClientT
     _raw: bool
 
-    _sync_page_iterator: t.ClassVar = SyncPageIterator
-    _async_page_iterator: t.ClassVar = AsyncPageIterator
-    _timestamp_cfg: t.ClassVar = TimestampPaginationConfig
+    _sync_page_iterator: typing.ClassVar = SyncPageIterator
+    _async_page_iterator: typing.ClassVar = AsyncPageIterator
+    _timestamp_cfg: typing.ClassVar = TimestampPaginationConfig
 
-    _PARAM_NAME_MAP: t.ClassVar[t.Dict[str, str]] = {
+    _PARAM_NAME_MAP: typing.ClassVar[typing.Dict[str, str]] = {
         "start": "from",
         "category": "type",
     }
 
-    if t.TYPE_CHECKING:
-        PATH: t.ClassVar[Endpoint]
+    if typing.TYPE_CHECKING:
+        PATH: typing.ClassVar[Endpoint]
 
     def __init_subclass__(
         cls,
-        resource_path: t.Optional[FaceitResourcePath] = None,
-        **kwargs: t.Any,
+        resource_path: typing.Optional[FaceitResourcePath] = None,
+        **kwargs: typing.Any,
     ) -> None:
         if hasattr(cls, "PATH"):
             return
         if resource_path is None:
             raise TypeError(
                 f"Class {cls.__name__} requires 'path' "
-                f"parameter or a parent with 'PATH' defined."
+                "parameter or a parent with 'PATH' defined."
             )
         cls.PATH = Endpoint(resource_path)
         super().__init_subclass__(**kwargs)
@@ -104,23 +105,23 @@ class BaseResource(t.Generic[ClientT], ABC):
     # methods, where typing must be strict for public API. Current implementation
     # is sufficient, though alternative typing approaches could be considered.
 
-    @t.overload
+    @typing.overload
     def _process_response_with_mapped_validator(
         self,
         response: RawAPIPageResponse,
         key: _T,
         config: MappedValidatorConfig[_T, ModelT],
         /,
-    ) -> t.Union[ModelT, RawAPIPageResponse]: ...
+    ) -> typing.Union[ModelT, RawAPIPageResponse]: ...
 
-    @t.overload
+    @typing.overload
     def _process_response_with_mapped_validator(
         self,
         response: RawAPIPageResponse,
         key: _T,
         config: MappedValidatorConfig[_T, ModelT],
         /,
-    ) -> t.Union[ItemPage[ModelT], RawAPIPageResponse]: ...
+    ) -> typing.Union[ItemPage[ModelT], RawAPIPageResponse]: ...
 
     def _process_response_with_mapped_validator(
         self,
@@ -128,7 +129,7 @@ class BaseResource(t.Generic[ClientT], ABC):
         key: _T,
         config: MappedValidatorConfig[_T, ModelT],
         /,
-    ) -> t.Union[ModelT, ItemPage[ModelT], RawAPIPageResponse]:
+    ) -> typing.Union[ModelT, ItemPage[ModelT], RawAPIPageResponse]:
         _logger.debug(
             "Processing response with mapped validator for key: %s", key
         )
@@ -136,7 +137,7 @@ class BaseResource(t.Generic[ClientT], ABC):
         if validator is None:
             warn(
                 f"No model defined for {config.key_name} {key!r}. "
-                f"Consider using the raw response.",
+                "Consider using the raw response.",
                 UserWarning,
                 stacklevel=5,
             )
@@ -146,7 +147,7 @@ class BaseResource(t.Generic[ClientT], ABC):
         # with a variable (`validator`) which mypy cannot statically verify
         return self._validate_response(
             response,
-            t.cast(t.Type[ModelT], ItemPage[validator])  # type: ignore[valid-type]
+            typing.cast("typing.Type[ModelT]", ItemPage[validator])  # type: ignore[valid-type]
             if config.is_paged
             else validator,
         )
@@ -154,12 +155,11 @@ class BaseResource(t.Generic[ClientT], ABC):
     def _validate_response(
         self,
         response: _ResponseT,
-        validator: t.Optional[t.Type[ModelT]],
+        validator: typing.Optional[typing.Type[ModelT]],
         /,
-    ) -> t.Union[_ResponseT, ModelT]:
+    ) -> typing.Union[_ResponseT, ModelT]:
         if self._raw:
             return response
-
         if validator is None:
             warn(
                 "No model defined for this response. Validation and model "
@@ -169,7 +169,6 @@ class BaseResource(t.Generic[ClientT], ABC):
                 stacklevel=5,
             )
             return response
-
         try:
             return validator.model_validate(response)
         except ValidationError:
@@ -177,7 +176,9 @@ class BaseResource(t.Generic[ClientT], ABC):
             return response
 
     @classmethod
-    def _build_params(cls, **params: t.Any) -> t.Dict[str, t.Any]:
+    def _build_params(
+        cls, **params: typing.Any
+    ) -> typing.Dict[str, typing.Any]:
         return {
             cls._PARAM_NAME_MAP.get(key, key): value
             for key, value in params.items()

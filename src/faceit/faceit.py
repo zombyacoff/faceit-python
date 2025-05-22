@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import typing as t
+import typing
 from abc import ABC
 from warnings import warn
 
@@ -8,66 +8,54 @@ from .http import AsyncClient, SyncClient
 from .resources import AsyncDataResource, SyncDataResource
 from .types import ClientT, DataResourceT, ValidUUID
 
+if typing.TYPE_CHECKING:
+    from .http.client import BaseAPIClient
 
-class BaseFaceit(t.Generic[ClientT, DataResourceT], ABC):
+
+class BaseFaceit(typing.Generic[ClientT, DataResourceT], ABC):
     __slots__ = ()
 
-    _client_cls: t.Type[ClientT]
-    _data_cls: t.Type[DataResourceT]
+    if typing.TYPE_CHECKING:
+        _client_cls: typing.Type[ClientT]
+        _data_cls: typing.Type[DataResourceT]
 
-    def __new__(cls) -> t.NoReturn:
+    def __new__(cls) -> typing.NoReturn:
         raise TypeError(
             f"Direct instantiation of {cls.__name__} is not allowed. "
-            f"Use classmethods or factory methods instead."
+            "Use classmethods or factory methods instead."
         )
 
-    @t.overload
+    @typing.overload
+    @classmethod
+    def data(cls) -> DataResourceT: ...
+
+    @typing.overload
+    @classmethod
+    def data(cls, *, client: ClientT) -> DataResourceT: ...
+
+    @typing.overload
     @classmethod
     def data(
         cls,
-        api_key: ValidUUID,
-        **client_options: t.Any,
+        api_key: typing.Union[ValidUUID, BaseAPIClient.env],
+        **client_options: typing.Any,
     ) -> DataResourceT: ...
 
-    @t.overload
     @classmethod
     def data(
         cls,
+        api_key: typing.Union[ValidUUID, BaseAPIClient.env, None] = None,
         *,
-        client: ClientT,
-    ) -> DataResourceT: ...
-
-    @classmethod
-    def data(
-        cls,
-        api_key: t.Optional[ValidUUID] = None,
-        *,
-        client: t.Optional[ClientT] = None,
-        **client_options: t.Any,
+        client: typing.Optional[ClientT] = None,
+        **client_options: typing.Any,
     ) -> DataResourceT:
-        """Create and return a Faceit Data API resource.
-
-        .. important::
-            You must provide either an ``api_key`` OR a pre-configured HTTP client instance - **not both**.
-
-            * If ``api_key`` is provided, a new HTTP client will be initialized with the given options.
-            * If ``client`` is provided, all ``client_options`` will be ignored.
-
-        This method gives you access to the Faceit Data API endpoints. For more information, see:
-
-        * `Faceit Data API documentation <https://docs.faceit.com/docs/data-api/data>`_
-        * `API key instructions <https://docs.faceit.com/getting-started/authentication/api-keys>`_
-
-        :param api_key: FACEIT Data API key used to create a new HTTP client
-        :param client: Pre-configured HTTP client instance (cannot be used with ``api_key``)
-        :param client_options: Additional options for HTTP client initialization
-                            (e.g., timeouts, proxies) - ignored if ``client`` is provided
-        :return: A configured Faceit Data API resource instance
-        """
-        return cls._data_cls(
-            cls._initialize_client(
-                api_key, client, auth_name="api_key", **client_options
-            )
+        return typing.cast(
+            "DataResourceT",
+            cls._data_cls(
+                cls._initialize_client(
+                    api_key, client, auth_name="api_key", **client_options
+                )
+            ),
         )
 
     # TODO: The client initialization logic should be revisited when support
@@ -75,25 +63,25 @@ class BaseFaceit(t.Generic[ClientT, DataResourceT], ABC):
     @classmethod
     def _initialize_client(
         cls,
-        auth: t.Optional[ValidUUID] = None,
-        client: t.Optional[ClientT] = None,
+        auth: typing.Union[ValidUUID, BaseAPIClient.env, None] = None,
+        client: typing.Optional[ClientT] = None,
         /,
         *,
         auth_name: str,
-        **client_options: t.Any,
+        **client_options: typing.Any,
     ) -> ClientT:
-        if auth is None and client is None:
-            raise ValueError(
-                f"Either {auth_name!r} or 'client' must be provided"
-            )
-
         if auth is not None and client is not None:
             raise ValueError(
                 f"Provide either {auth_name!r} or 'client', not both"
             )
 
         if client is None:
-            return cls._client_cls(auth, **client_options)
+            return typing.cast(
+                "ClientT",
+                cls._client_cls(
+                    *() if auth is None else (auth,), **client_options
+                ),
+            )
 
         if client_options:
             warn(
@@ -107,7 +95,7 @@ class BaseFaceit(t.Generic[ClientT, DataResourceT], ABC):
         return client
 
 
-@t.final
+@typing.final
 class Faceit(BaseFaceit[SyncClient, SyncDataResource]):
     """Synchronous Faceit API interface.
 
@@ -125,7 +113,7 @@ class Faceit(BaseFaceit[SyncClient, SyncDataResource]):
     _data_cls = SyncDataResource
 
 
-@t.final
+@typing.final
 class AsyncFaceit(BaseFaceit[AsyncClient, AsyncDataResource]):
     """Asynchronous Faceit API interface.
 

@@ -15,6 +15,8 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import httpx
 import pytest
+from tenacity import stop_after_attempt
+
 from faceit.constants import BASE_WIKI_URL
 from faceit.exceptions import APIError
 from faceit.http import AsyncClient, Endpoint, SupportedMethod, SyncClient
@@ -22,9 +24,9 @@ from faceit.http.client import (
     BaseAPIClient,
     _BaseAsyncClient,
     _BaseSyncClient,
-    _is_ssl_error,
+    is_ssl_error,
 )
-from tenacity import stop_after_attempt
+from faceit.utils import REDACTED_MARKER
 
 
 @pytest.fixture
@@ -135,9 +137,7 @@ class TestBaseAPIClient:
         client = SyncClient(valid_uuid)
         masked_key = client.api_key
         assert masked_key != valid_uuid
-        assert masked_key.startswith(valid_uuid[:4])
-        assert masked_key.endswith(valid_uuid[-4:])
-        assert "..." in masked_key
+        assert masked_key == REDACTED_MARKER
         client.close()  # Ensure proper cleanup
 
     def test_base_headers(self, valid_uuid):
@@ -503,19 +503,19 @@ class TestAsyncClient:
 class TestSSLErrorHandling:
     """Tests for SSL error handling functionality."""
 
-    def test_is_ssl_error(self):
-        """Test the _is_ssl_error function."""
+    def testis_ssl_error(self):
+        """Test the is_ssl_error function."""
         # Test with SSLError
-        assert _is_ssl_error(ssl.SSLError("SSL Error"))
+        assert is_ssl_error(ssl.SSLError("SSL Error"))
 
         # Test with ConnectError containing SSL in message
-        assert _is_ssl_error(httpx.ConnectError("SSL connection failed"))
+        assert is_ssl_error(httpx.ConnectError("SSL connection failed"))
 
         # Test with ConnectError containing TLS in message
-        assert _is_ssl_error(httpx.ConnectError("TLS handshake failed"))
+        assert is_ssl_error(httpx.ConnectError("TLS handshake failed"))
 
         # Test with non-SSL error
-        assert not _is_ssl_error(ValueError("Not an SSL error"))
+        assert not is_ssl_error(ValueError("Not an SSL error"))
 
     @pytest.mark.asyncio
     @patch("httpx.AsyncClient")

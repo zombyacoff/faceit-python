@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import typing as t
+import typing
 from abc import ABC
 
-import typing_extensions as te
 from pydantic import AfterValidator, validate_call
+from typing_extensions import Annotated, TypeAlias
 
 from faceit.http import AsyncClient, SyncClient
 from faceit.resources.base import (
@@ -22,8 +22,8 @@ from faceit.types import (
     ValidUUID,
 )
 
-_MatchmakingID: te.TypeAlias = ValidUUID
-_MatchmakingIDValidator: te.TypeAlias = te.Annotated[
+_MatchmakingID: TypeAlias = ValidUUID
+_MatchmakingIDValidated: TypeAlias = Annotated[
     _MatchmakingID, AfterValidator(str)  # TODO: Validation function
 ]
 
@@ -37,24 +37,24 @@ class BaseMatchmakings(
 
 
 class SyncMatchmakings(
-    BaseMatchmakings[SyncClient], t.Generic[APIResponseFormatT]
+    BaseMatchmakings[SyncClient], typing.Generic[APIResponseFormatT]
 ):
     __slots__ = ()
 
-    @t.overload
+    @typing.overload
     def get(
         self: SyncMatchmakings[Raw], matchmaking_id: _MatchmakingID
     ) -> RawAPIItem: ...
 
-    @t.overload
+    @typing.overload
     def get(
         self: SyncMatchmakings[Model], matchmaking_id: _MatchmakingID
     ) -> ModelNotImplemented: ...
 
     @validate_call
     def get(
-        self, matchmaking_id: _MatchmakingIDValidator
-    ) -> t.Union[RawAPIItem, ModelNotImplemented]:
+        self, matchmaking_id: _MatchmakingIDValidated
+    ) -> typing.Union[RawAPIItem, ModelNotImplemented]:
         return self._validate_response(
             self._client.get(
                 self.PATH / str(matchmaking_id), expect_item=True
@@ -66,24 +66,24 @@ class SyncMatchmakings(
 
 
 class AsyncMatchmakings(
-    BaseMatchmakings[AsyncClient], t.Generic[APIResponseFormatT]
+    BaseMatchmakings[AsyncClient], typing.Generic[APIResponseFormatT]
 ):
     __slots__ = ()
 
-    @t.overload
+    @typing.overload
     async def get(
         self: AsyncMatchmakings[Raw], matchmaking_id: _MatchmakingID
     ) -> RawAPIItem: ...
 
-    @t.overload
+    @typing.overload
     async def get(
         self: AsyncMatchmakings[Model], matchmaking_id: _MatchmakingID
     ) -> ModelNotImplemented: ...
 
     @validate_call
     async def get(
-        self, matchmaking_id: _MatchmakingIDValidator
-    ) -> t.Union[RawAPIItem, ModelNotImplemented]:
+        self, matchmaking_id: _MatchmakingIDValidated
+    ) -> typing.Union[RawAPIItem, ModelNotImplemented]:
         return self._validate_response(
             await self._client.get(
                 self.PATH / str(matchmaking_id), expect_item=True

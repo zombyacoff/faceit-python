@@ -1,4 +1,4 @@
-import typing as t
+import typing
 
 from pydantic import BaseModel
 
@@ -15,12 +15,12 @@ from faceit.types import UrlOrEmpty, UUIDOrEmpty
 class JoinChecks(BaseModel):
     min_skill_level: int
     max_skill_level: int
-    whitelist_geo_countries: t.List[str]
+    whitelist_geo_countries: typing.List[str]
     whitelist_geo_countries_min_players: int
-    blacklist_geo_countries: t.List[str]
+    blacklist_geo_countries: typing.List[str]
     join_policy: str
     membership_type: str
-    allowed_team_types: t.List[str]
+    allowed_team_types: typing.List[str]
 
 
 class SubstitutionConfiguration(BaseModel):
@@ -68,7 +68,7 @@ class Championship(BaseModel):
     full: bool
     checkin_enabled: bool
     total_rounds: int
-    schedule: ResponseContainer
+    schedule: ResponseContainer[typing.Any]
     total_groups: int
     subscriptions_locked: bool
     seeding_strategy: str

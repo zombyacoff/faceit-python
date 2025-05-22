@@ -1,27 +1,28 @@
 from __future__ import annotations
 
-import typing as t
+import typing
 from abc import ABC, abstractmethod
+from collections import UserString
 from uuid import UUID
 
-import typing_extensions as te
 from pydantic_core import core_schema
+from typing_extensions import Self
 
 from faceit.utils import is_valid_uuid, representation
 
-if t.TYPE_CHECKING:
+if typing.TYPE_CHECKING:
     from pydantic import GetCoreSchemaHandler
 
 
 class _BaseFaceitUUIDValidator(ABC):
     __slots__ = ()
 
-    _PREFIX: t.ClassVar = ""
-    _SUFFIX: t.ClassVar = ""
+    _PREFIX: typing.ClassVar = ""
+    _SUFFIX: typing.ClassVar = ""
 
     @classmethod
     @abstractmethod
-    def _validate(cls, value: str, /) -> te.Self:
+    def _validate(cls, value: str, /) -> Self:
         raise NotImplementedError
 
     @classmethod
@@ -46,14 +47,13 @@ class _BaseFaceitUUIDValidator(ABC):
         return value[start:end]
 
     @classmethod
-    def __pydantic_parse(cls, value: str, /) -> te.Self:
+    def __pydantic_parse(cls, value: str, /) -> Self:
         return cls._validate(cls.__remove_prefix_and_suffix(value))
 
     @classmethod
     def __get_pydantic_core_schema__(
-        cls, source_type: t.Type[t.Any], handler: GetCoreSchemaHandler
+        cls, _: typing.Type[typing.Any], handler: GetCoreSchemaHandler
     ) -> core_schema.CoreSchema:
-        del source_type
         return core_schema.union_schema([
             core_schema.str_schema(max_length=0),
             core_schema.no_info_after_validator_function(
@@ -70,32 +70,32 @@ class BaseFaceitID(_BaseFaceitUUIDValidator):
     _SUFFIX = "gui"
 
 
-@t.final
+@typing.final
 class FaceitID(UUID, BaseFaceitID):
     __slots__ = ()
 
     @classmethod
-    def _validate(cls, value: str, /) -> te.Self:
+    def _validate(cls, value: str, /) -> Self:
         if is_valid_uuid(value):
-            return cls(value)
+            return cls(str(value))
         raise ValueError(
             f"Invalid {cls.__name__}: {value!r} is not a valid UUID format."
         )
 
 
 @representation(use_str=True)
-class _FaceitIDWithUniquePrefix(str, BaseFaceitID, ABC):
+class _FaceitIDWithUniquePrefix(UserString, BaseFaceitID, ABC):
     __slots__ = ()
 
-    if t.TYPE_CHECKING:
-        UNIQUE_PREFIX: t.ClassVar[str]
+    if typing.TYPE_CHECKING:
+        UNIQUE_PREFIX: typing.ClassVar[str]
 
-    def __init_subclass__(cls, prefix: str, **kwargs: t.Any) -> None:
+    def __init_subclass__(cls, prefix: str, **kwargs: typing.Any) -> None:
         cls.UNIQUE_PREFIX = prefix
         super().__init_subclass__(**kwargs)
 
     @classmethod
-    def _validate(cls, value: str, /) -> te.Self:
+    def _validate(cls, value: str, /) -> Self:
         if not value.startswith(cls.UNIQUE_PREFIX):
             raise ValueError(
                 f"Invalid {cls.__name__}: "
@@ -109,11 +109,11 @@ class _FaceitIDWithUniquePrefix(str, BaseFaceitID, ABC):
         return cls(value)
 
 
-@t.final
+@typing.final
 class FaceitTeamID(_FaceitIDWithUniquePrefix, prefix="team-"):
     __slots__ = ()
 
 
-@t.final
+@typing.final
 class FaceitMatchID(_FaceitIDWithUniquePrefix, prefix="1-"):
     __slots__ = ()

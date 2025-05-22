@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import typing as t
+import typing
 from abc import ABC
 
-import typing_extensions as te
 from pydantic import AfterValidator, Field, validate_call
+from typing_extensions import Annotated, TypeAlias
 
 from faceit.http import AsyncClient, SyncClient
 from faceit.resources.base import (
@@ -23,14 +23,14 @@ from faceit.types import (
 )
 from faceit.utils import create_uuid_validator
 
-from .players import PlayerID, PlayerIDValidator  # noqa: TCH001
+from .players import PlayerID, PlayerIDValidated  # noqa: TC001
 
-_LeagueID: te.TypeAlias = ValidUUID
-_LeagueIDValidator: te.TypeAlias = te.Annotated[
+_LeagueID: TypeAlias = ValidUUID
+_LeagueIDValidated: TypeAlias = Annotated[
     _LeagueID,
-    AfterValidator(create_uuid_validator(arg_name="league identifier")),
+    AfterValidator(create_uuid_validator(arg_name="league ID")),
 ]
-_SeasonID: te.TypeAlias = te.Annotated[int, Field(ge=1)]
+_SeasonID: TypeAlias = Annotated[int, Field(ge=1)]
 
 
 class BaseLeagues(
@@ -41,23 +41,23 @@ class BaseLeagues(
     __slots__ = ()
 
 
-class SyncLeagues(BaseLeagues[SyncClient], t.Generic[APIResponseFormatT]):
+class SyncLeagues(BaseLeagues[SyncClient], typing.Generic[APIResponseFormatT]):
     __slots__ = ()
 
-    @t.overload
+    @typing.overload
     def get(
         self: SyncLeagues[Raw], matchmaking_id: _LeagueID
     ) -> RawAPIItem: ...
 
-    @t.overload
+    @typing.overload
     def get(
         self: SyncLeagues[Model], matchmaking_id: _LeagueID
     ) -> ModelNotImplemented: ...
 
     @validate_call
     def get(
-        self, matchmaking_id: _LeagueIDValidator
-    ) -> t.Union[RawAPIItem, ModelNotImplemented]:
+        self, matchmaking_id: _LeagueIDValidated
+    ) -> typing.Union[RawAPIItem, ModelNotImplemented]:
         return self._validate_response(
             self._client.get(
                 self.PATH / str(matchmaking_id), expect_item=True
@@ -67,14 +67,14 @@ class SyncLeagues(BaseLeagues[SyncClient], t.Generic[APIResponseFormatT]):
 
     __call__ = get
 
-    @t.overload
+    @typing.overload
     def season(
         self: SyncLeagues[Raw],
         matchmaking_id: _LeagueID,
         season_id: _SeasonID,
     ) -> RawAPIItem: ...
 
-    @t.overload
+    @typing.overload
     def season(
         self: SyncLeagues[Model],
         matchmaking_id: _LeagueID,
@@ -83,8 +83,8 @@ class SyncLeagues(BaseLeagues[SyncClient], t.Generic[APIResponseFormatT]):
 
     @validate_call
     def season(
-        self, matchmaking_id: _LeagueIDValidator, season_id: _SeasonID
-    ) -> t.Union[RawAPIItem, ModelNotImplemented]:
+        self, matchmaking_id: _LeagueIDValidated, season_id: _SeasonID
+    ) -> typing.Union[RawAPIItem, ModelNotImplemented]:
         return self._validate_response(
             self._client.get(
                 self.PATH / str(matchmaking_id) / "seasons" / str(season_id),
@@ -93,7 +93,7 @@ class SyncLeagues(BaseLeagues[SyncClient], t.Generic[APIResponseFormatT]):
             ModelPlaceholder,
         )
 
-    @t.overload
+    @typing.overload
     def player(
         self: SyncLeagues[Raw],
         matchmaking_id: _LeagueID,
@@ -101,7 +101,7 @@ class SyncLeagues(BaseLeagues[SyncClient], t.Generic[APIResponseFormatT]):
         player_id: PlayerID,
     ) -> RawAPIItem: ...
 
-    @t.overload
+    @typing.overload
     def player(
         self: SyncLeagues[Model],
         matchmaking_id: _LeagueID,
@@ -112,10 +112,10 @@ class SyncLeagues(BaseLeagues[SyncClient], t.Generic[APIResponseFormatT]):
     @validate_call
     def player(
         self,
-        matchmaking_id: _LeagueIDValidator,
+        matchmaking_id: _LeagueIDValidated,
         season_id: _SeasonID,
-        player_id: PlayerIDValidator,
-    ) -> t.Union[RawAPIItem, ModelNotImplemented]:
+        player_id: PlayerIDValidated,
+    ) -> typing.Union[RawAPIItem, ModelNotImplemented]:
         # fmt: off
         return self._validate_response(
             self._client.get(
@@ -127,23 +127,25 @@ class SyncLeagues(BaseLeagues[SyncClient], t.Generic[APIResponseFormatT]):
         # fmt: on
 
 
-class AsyncLeagues(BaseLeagues[AsyncClient], t.Generic[APIResponseFormatT]):
+class AsyncLeagues(
+    BaseLeagues[AsyncClient], typing.Generic[APIResponseFormatT]
+):
     __slots__ = ()
 
-    @t.overload
+    @typing.overload
     async def get(
         self: AsyncLeagues[Raw], matchmaking_id: _LeagueID
     ) -> RawAPIItem: ...
 
-    @t.overload
+    @typing.overload
     async def get(
         self: AsyncLeagues[Model], matchmaking_id: _LeagueID
     ) -> ModelNotImplemented: ...
 
     @validate_call
     async def get(
-        self, matchmaking_id: _LeagueIDValidator
-    ) -> t.Union[RawAPIItem, ModelNotImplemented]:
+        self, matchmaking_id: _LeagueIDValidated
+    ) -> typing.Union[RawAPIItem, ModelNotImplemented]:
         return self._validate_response(
             await self._client.get(
                 self.PATH / str(matchmaking_id), expect_item=True
@@ -153,14 +155,14 @@ class AsyncLeagues(BaseLeagues[AsyncClient], t.Generic[APIResponseFormatT]):
 
     __call__ = get
 
-    @t.overload
+    @typing.overload
     async def season(
         self: AsyncLeagues[Raw],
         matchmaking_id: _LeagueID,
         season_id: _SeasonID,
     ) -> RawAPIItem: ...
 
-    @t.overload
+    @typing.overload
     async def season(
         self: AsyncLeagues[Model],
         matchmaking_id: _LeagueID,
@@ -169,8 +171,8 @@ class AsyncLeagues(BaseLeagues[AsyncClient], t.Generic[APIResponseFormatT]):
 
     @validate_call
     async def season(
-        self, matchmaking_id: _LeagueIDValidator, season_id: _SeasonID
-    ) -> t.Union[RawAPIItem, ModelNotImplemented]:
+        self, matchmaking_id: _LeagueIDValidated, season_id: _SeasonID
+    ) -> typing.Union[RawAPIItem, ModelNotImplemented]:
         return self._validate_response(
             await self._client.get(
                 self.PATH / str(matchmaking_id) / "seasons" / str(season_id),
@@ -179,7 +181,7 @@ class AsyncLeagues(BaseLeagues[AsyncClient], t.Generic[APIResponseFormatT]):
             ModelPlaceholder,
         )
 
-    @t.overload
+    @typing.overload
     async def player(
         self: AsyncLeagues[Raw],
         matchmaking_id: _LeagueID,
@@ -187,7 +189,7 @@ class AsyncLeagues(BaseLeagues[AsyncClient], t.Generic[APIResponseFormatT]):
         player_id: PlayerID,
     ) -> RawAPIItem: ...
 
-    @t.overload
+    @typing.overload
     async def player(
         self: AsyncLeagues[Model],
         matchmaking_id: _LeagueID,
@@ -198,10 +200,10 @@ class AsyncLeagues(BaseLeagues[AsyncClient], t.Generic[APIResponseFormatT]):
     @validate_call
     async def player(
         self,
-        matchmaking_id: _LeagueIDValidator,
+        matchmaking_id: _LeagueIDValidated,
         season_id: _SeasonID,
-        player_id: PlayerIDValidator,
-    ) -> t.Union[RawAPIItem, ModelNotImplemented]:
+        player_id: PlayerIDValidated,
+    ) -> typing.Union[RawAPIItem, ModelNotImplemented]:
         # fmt: off
         return self._validate_response(
             await self._client.get(

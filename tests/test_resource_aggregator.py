@@ -1,8 +1,10 @@
+from dataclasses import dataclass
+
 import pytest
 
 from faceit.resources.resource_aggregator import (
-    resource_aggregator,
     BaseResources,
+    resource_aggregator,
 )
 
 
@@ -10,10 +12,10 @@ class DummyClient:
     pass
 
 
+@dataclass(eq=False, frozen=True)
 class DummyResource:
-    def __init__(self, client: DummyClient, raw: bool = False):
-        self.client = client
-        self.raw = raw
+    client: DummyClient
+    raw: bool = False
 
 
 @resource_aggregator
