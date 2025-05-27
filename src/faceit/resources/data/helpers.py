@@ -13,6 +13,5 @@ def validate_player_id_or_nickname(value: typing.Any, /) -> str:
     if FACEIT_USERNAME_REGEX.fullmatch(value) is not None:
         return str(value)
     raise ValueError(
-        f"Invalid identifier: {value!r} "
-        "must be a valid UUID or Faceit username."
+        f"Invalid identifier: {value!r} must be a valid UUID or Faceit username."
     )

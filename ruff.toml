@@ -1,0 +1,69 @@
+line-length = 88
+preview = true
+target-version = "py38"
+
+[format]
+docstring-code-format = true
+docstring-code-line-length = 100
+line-ending = "auto"
+
+[lint]
+select = ["ALL"]
+ignore = [
+    "ANN401",
+    "B024",
+    "COM812",
+    "CPY001",
+    "D",
+    "DOC",
+    "EM101",
+    "EM102",
+    "E501",
+    "ERA001",
+    "FBT001",
+    "FBT003",
+    "FIX002",
+    "PLR0904",
+    "PLR0913",
+    "PLW3201",
+    "PT001",
+    "RUF003",
+    "SLF001",
+    "S101",
+    "TD",
+    "TRY003",
+]
+
+[lint.flake8-bugbear]
+extend-immutable-calls = [
+    "faceit.http.client.env",
+    "faceit.resources.pagination.MaxPages",
+    "faceit.resources.pagination.pages",
+]
+
+[lint.flake8-import-conventions]
+banned-from = [
+    "asyncio",
+    "decouple",
+    "httpx",
+    "json",
+    "logging",
+    "math",
+    "os",
+    "re",
+    "reprlib",
+    "typing",
+]
+
+[lint.pep8-naming]
+classmethod-decorators = ["field_validator"]
+
+[lint.per-file-ignores]
+"__init__.py" = ["F401", "PLC041"]
+"types.py" = ["F401", "ICN003", "PLC041", "PYI018"]
+"docs/*" = ["ALL"]
+"examples/*" = ["ALL"]
+"tests/*" = ["ALL"]
+
+[lint.pyupgrade]
+keep-runtime-typing = true

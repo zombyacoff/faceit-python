@@ -10,11 +10,7 @@ from typing_extensions import Annotated, TypeAlias
 from faceit.constants import EventCategory, ExpandedField, GameID
 from faceit.http import AsyncClient, SyncClient
 from faceit.models import Championship, ItemPage
-from faceit.resources.base import (
-    BaseResource,
-    FaceitResourcePath,
-    ModelPlaceholder,
-)
+from faceit.resources.base import BaseResource, FaceitResourcePath, ModelPlaceholder
 from faceit.resources.pagination import MaxItemsType, pages
 from faceit.types import (
     APIResponseFormatT,
@@ -80,7 +76,7 @@ class SyncChampionships(
     ) -> typing.Union[RawAPIPageResponse, ItemPage[Championship]]:
         return self._validate_response(
             self._client.get(
-                self.PATH,
+                self.__class__.PATH,
                 params=self.__class__._build_params(
                     game=game, category=category, offset=offset, limit=limit
                 ),
@@ -143,7 +139,7 @@ class SyncChampionships(
     ) -> typing.Union[RawAPIItem, ModelNotImplemented]:
         return self._validate_response(
             self._client.get(
-                self.PATH / str(championship_id),
+                self.__class__.PATH / str(championship_id),
                 params=self.__class__._build_params(expanded=expanded),
                 expect_item=True,
             ),
@@ -183,7 +179,7 @@ class SyncChampionships(
     ) -> typing.Union[RawAPIPageResponse, ModelNotImplemented]:
         return self._validate_response(
             self._client.get(
-                self.PATH / str(championship_id) / "matches",
+                self.__class__.PATH / str(championship_id) / "matches",
                 params=self.__class__._build_params(
                     category=category, offset=offset, limit=limit
                 ),
@@ -220,10 +216,8 @@ class SyncChampionships(
     ) -> typing.Union[RawAPIPageResponse, ModelNotImplemented]:
         return self._validate_response(
             self._client.get(
-                self.PATH / str(championship_id) / "results",
-                params=self.__class__._build_params(
-                    offset=offset, limit=limit
-                ),
+                self.__class__.PATH / str(championship_id) / "results",
+                params=self.__class__._build_params(offset=offset, limit=limit),
                 expect_page=True,
             ),
             ModelPlaceholder,
@@ -257,10 +251,8 @@ class SyncChampionships(
     ) -> typing.Union[RawAPIPageResponse, ModelNotImplemented]:
         return self._validate_response(
             self._client.get(
-                self.PATH / str(championship_id) / "subscriptions",
-                params=self.__class__._build_params(
-                    offset=offset, limit=limit
-                ),
+                self.__class__.PATH / str(championship_id) / "subscriptions",
+                params=self.__class__._build_params(offset=offset, limit=limit),
                 expect_page=True,
             ),
             ModelPlaceholder,
@@ -304,7 +296,7 @@ class AsyncChampionships(
     ) -> typing.Union[RawAPIPageResponse, ItemPage[Championship]]:
         return self._validate_response(
             await self._client.get(
-                self.PATH,
+                self.__class__.PATH,
                 params=self.__class__._build_params(
                     game=game, category=category, offset=offset, limit=limit
                 ),
@@ -314,7 +306,7 @@ class AsyncChampionships(
         )
 
     @typing.overload
-    def all_items(
+    async def all_items(
         self: AsyncChampionships[Raw],
         game: GameID,
         category: EventCategory = EventCategory.ALL,
@@ -322,20 +314,20 @@ class AsyncChampionships(
     ) -> RawAPIPageResponse: ...
 
     @typing.overload
-    def all_items(
+    async def all_items(
         self: AsyncChampionships[Model],
         game: GameID,
         category: EventCategory = EventCategory.ALL,
         max_items: MaxItemsType = pages(30),
     ) -> ItemPage[Championship]: ...
 
-    def all_items(
+    async def all_items(
         self,
         game: GameID,
         category: EventCategory = EventCategory.ALL,
         max_items: MaxItemsType = pages(30),
     ) -> typing.Union[RawAPIPageResponse, ItemPage[Championship]]:
-        return self.__class__._async_page_iterator.gather_pages(
+        return await self.__class__._async_page_iterator.gather_pages(
             self.items, game, category, max_items=max_items
         )
 
@@ -367,7 +359,7 @@ class AsyncChampionships(
     ) -> typing.Union[RawAPIItem, ModelNotImplemented]:
         return self._validate_response(
             await self._client.get(
-                self.PATH / str(championship_id),
+                self.__class__.PATH / str(championship_id),
                 params=self.__class__._build_params(expanded=expanded),
                 expect_item=True,
             ),
@@ -407,7 +399,7 @@ class AsyncChampionships(
     ) -> typing.Union[RawAPIPageResponse, ModelNotImplemented]:
         return self._validate_response(
             await self._client.get(
-                self.PATH / str(championship_id) / "matches",
+                self.__class__.PATH / str(championship_id) / "matches",
                 params=self.__class__._build_params(
                     category=category, offset=offset, limit=limit
                 ),
@@ -444,10 +436,8 @@ class AsyncChampionships(
     ) -> typing.Union[RawAPIPageResponse, ModelNotImplemented]:
         return self._validate_response(
             await self._client.get(
-                self.PATH / str(championship_id) / "results",
-                params=self.__class__._build_params(
-                    offset=offset, limit=limit
-                ),
+                self.__class__.PATH / str(championship_id) / "results",
+                params=self.__class__._build_params(offset=offset, limit=limit),
                 expect_page=True,
             ),
             ModelPlaceholder,
@@ -481,10 +471,8 @@ class AsyncChampionships(
     ) -> typing.Union[RawAPIPageResponse, ModelNotImplemented]:
         return self._validate_response(
             await self._client.get(
-                self.PATH / str(championship_id) / "subscriptions",
-                params=self.__class__._build_params(
-                    offset=offset, limit=limit
-                ),
+                self.__class__.PATH / str(championship_id) / "subscriptions",
+                params=self.__class__._build_params(offset=offset, limit=limit),
                 expect_page=True,
             ),
             ModelPlaceholder,

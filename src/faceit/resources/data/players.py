@@ -51,9 +51,9 @@ PlayerIDValidated: TypeAlias = Annotated[
     PlayerID,
     AfterValidator(validate_player_id),
 ]
-PlayerIdentifier: TypeAlias = typing.Union[str, ValidUUID]
-PlayerIdentifierValidated: TypeAlias = Annotated[
-    PlayerIdentifier, AfterValidator(validate_player_id_or_nickname)
+_PlayerIdentifier: TypeAlias = typing.Union[str, ValidUUID]
+_PlayerIdentifierValidated: TypeAlias = Annotated[
+    _PlayerIdentifier, AfterValidator(validate_player_id_or_nickname)
 ]
 
 
@@ -75,10 +75,8 @@ class BasePlayers(
         key_name="game",
     )
 
-    _matches_stats_timestamp_cfg: typing.ClassVar = (
-        BaseResource._timestamp_cfg(
-            key="stats.Match Finished At", attr="match_finished_at"
-        )
+    _matches_stats_timestamp_cfg: typing.ClassVar = BaseResource._timestamp_cfg(
+        key="stats.Match Finished At", attr="match_finished_at"
     )
     _history_timestamp_cfg: typing.ClassVar = BaseResource._timestamp_cfg(
         key="finished_at", attr="finished_at"
@@ -90,9 +88,7 @@ class BasePlayers(
         game: typing.Optional[GameID],
         game_player_id: typing.Optional[str],
     ) -> RequestPayload:
-        params = self.__class__._build_params(
-            game=game, game_player_id=game_player_id
-        )
+        params = self.__class__._build_params(game=game, game_player_id=game_player_id)
 
         if player_lookup_key is None:
             if game is None or game_player_id is None:
@@ -105,7 +101,7 @@ class BasePlayers(
                 game,
                 game_player_id,
             )
-            return RequestPayload(endpoint=self.PATH, params=params)
+            return RequestPayload(endpoint=self.__class__.PATH, params=params)
 
         if game is not None or game_player_id is not None:
             warn(
@@ -119,13 +115,13 @@ class BasePlayers(
         if is_valid_uuid(player_lookup_key):
             _logger.debug("Fetching player by UUID: %s", player_lookup_key)
             return RequestPayload(
-                endpoint=self.PATH / str(player_lookup_key),
+                endpoint=self.__class__.PATH / str(player_lookup_key),
                 params=params,
             )
 
         _logger.debug("Fetching player by nickname: %s", player_lookup_key)
         params["nickname"] = str(player_lookup_key)
-        return RequestPayload(endpoint=self.PATH, params=params)
+        return RequestPayload(endpoint=self.__class__.PATH, params=params)
 
 
 @typing.final
@@ -134,7 +130,7 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
 
     @typing.overload
     def get(
-        self: SyncPlayers[Raw], player_lookup_key: PlayerIdentifier
+        self: SyncPlayers[Raw], player_lookup_key: _PlayerIdentifier
     ) -> RawAPIItem: ...
 
     @typing.overload
@@ -144,7 +140,7 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
 
     @typing.overload
     def get(
-        self: SyncPlayers[Model], player_lookup_key: PlayerIdentifier
+        self: SyncPlayers[Model], player_lookup_key: _PlayerIdentifier
     ) -> Player: ...
 
     @typing.overload
@@ -155,16 +151,14 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
     @validate_call
     def get(
         self,
-        player_lookup_key: typing.Optional[PlayerIdentifierValidated] = None,
+        player_lookup_key: typing.Optional[_PlayerIdentifierValidated] = None,
         *,
         game: typing.Optional[GameID] = None,
         game_player_id: typing.Optional[str] = None,
     ) -> typing.Union[RawAPIItem, Player]:
         return self._validate_response(
             self._client.get(
-                **self._process_get_request(
-                    player_lookup_key, game, game_player_id
-                ),
+                **self._process_get_request(player_lookup_key, game, game_player_id),
                 expect_item=True,
             ),
             Player,
@@ -207,10 +201,8 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
             self._client.get(
                 # `player_id` is validated and normalized;
                 # str() is only for mypy type narrowing.
-                self.PATH / str(player_id) / "bans",
-                params=self.__class__._build_params(
-                    offset=offset, limit=limit
-                ),
+                self.__class__.PATH / str(player_id) / "bans",
+                params=self.__class__._build_params(offset=offset, limit=limit),
                 expect_page=True,
             ),
             ItemPage[BanEntry],
@@ -274,7 +266,7 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
     ) -> typing.Union[ItemPage[AbstractMatchPlayerStats], RawAPIPageResponse]:
         return self._process_response_with_mapped_validator(
             self._client.get(
-                self.PATH / str(player_id) / "games" / game / "stats",
+                self.__class__.PATH / str(player_id) / "games" / game / "stats",
                 params=self.__class__._build_params(
                     offset=offset, limit=limit, start=start, to=to
                 ),
@@ -305,9 +297,7 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
         player_id: PlayerID,
         game: GameID,
         max_items: MaxItemsType = pages(50),
-    ) -> typing.Union[
-        typing.List[RawAPIItem], ItemPage[AbstractMatchPlayerStats]
-    ]:
+    ) -> typing.Union[typing.List[RawAPIItem], ItemPage[AbstractMatchPlayerStats]]:
         return self.__class__._sync_page_iterator.gather_pages(
             self.matches_stats,
             player_id,
@@ -353,7 +343,7 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
     ) -> typing.Union[RawAPIPageResponse, ItemPage[Match]]:
         return self._validate_response(
             self._client.get(
-                self.PATH / str(player_id) / "history",
+                self.__class__.PATH / str(player_id) / "history",
                 params=self.__class__._build_params(
                     game=game, offset=offset, limit=limit, start=start, to=to
                 ),
@@ -420,10 +410,8 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
     ) -> typing.Union[RawAPIPageResponse, ItemPage[Hub]]:
         return self._validate_response(
             self._client.get(
-                self.PATH / str(player_id) / "hubs",
-                params=self.__class__._build_params(
-                    offset=offset, limit=limit
-                ),
+                self.__class__.PATH / str(player_id) / "hubs",
+                params=self.__class__._build_params(offset=offset, limit=limit),
                 expect_page=True,
             ),
             ItemPage[Hub],
@@ -466,7 +454,7 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
     ) -> typing.Union[RawAPIPageResponse, ModelNotImplemented]:
         return self._validate_response(
             self._client.get(
-                self.PATH / str(player_id) / "stats" / game,
+                self.__class__.PATH / str(player_id) / "stats" / game,
                 expect_page=True,
             ),
             ModelPlaceholder,
@@ -500,10 +488,8 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
     ) -> typing.Union[RawAPIPageResponse, ItemPage[GeneralTeam]]:
         return self._validate_response(
             self._client.get(
-                self.PATH / str(player_id) / "teams",
-                params=self.__class__._build_params(
-                    offset=offset, limit=limit
-                ),
+                self.__class__.PATH / str(player_id) / "teams",
+                params=self.__class__._build_params(offset=offset, limit=limit),
                 expect_page=True,
             ),
             ItemPage[GeneralTeam],
@@ -558,10 +544,8 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
     ) -> typing.Union[RawAPIPageResponse, ItemPage[Tournament]]:
         return self._validate_response(
             self._client.get(
-                self.PATH / str(player_id) / "tournaments",
-                params=self.__class__._build_params(
-                    offset=offset, limit=limit
-                ),
+                self.__class__.PATH / str(player_id) / "tournaments",
+                params=self.__class__._build_params(offset=offset, limit=limit),
                 expect_page=True,
             ),
             ItemPage[Tournament],
@@ -590,14 +574,12 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
 
 
 @typing.final
-class AsyncPlayers(
-    BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT]
-):
+class AsyncPlayers(BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT]):
     __slots__ = ()
 
     @typing.overload
     async def get(
-        self: AsyncPlayers[Raw], player_lookup_key: PlayerIdentifier
+        self: AsyncPlayers[Raw], player_lookup_key: _PlayerIdentifier
     ) -> RawAPIItem: ...
 
     @typing.overload
@@ -607,7 +589,7 @@ class AsyncPlayers(
 
     @typing.overload
     async def get(
-        self: AsyncPlayers[Model], player_lookup_key: PlayerIdentifier
+        self: AsyncPlayers[Model], player_lookup_key: _PlayerIdentifier
     ) -> Player: ...
 
     @typing.overload
@@ -618,16 +600,14 @@ class AsyncPlayers(
     @validate_call
     async def get(
         self,
-        player_lookup_key: typing.Optional[PlayerIdentifierValidated] = None,
+        player_lookup_key: typing.Optional[_PlayerIdentifierValidated] = None,
         *,
         game: typing.Optional[GameID] = None,
         game_player_id: typing.Optional[str] = None,
     ) -> typing.Union[RawAPIItem, Player]:
         return self._validate_response(
             await self._client.get(
-                **self._process_get_request(
-                    player_lookup_key, game, game_player_id
-                ),
+                **self._process_get_request(player_lookup_key, game, game_player_id),
                 expect_item=True,
             ),
             Player,
@@ -663,10 +643,8 @@ class AsyncPlayers(
     ) -> typing.Union[RawAPIPageResponse, ItemPage[BanEntry]]:
         return self._validate_response(
             await self._client.get(
-                self.PATH / str(player_id) / "bans",
-                params=self.__class__._build_params(
-                    offset=offset, limit=limit
-                ),
+                self.__class__.PATH / str(player_id) / "bans",
+                params=self.__class__._build_params(offset=offset, limit=limit),
                 expect_page=True,
             ),
             ItemPage[BanEntry],
@@ -730,7 +708,7 @@ class AsyncPlayers(
     ) -> typing.Union[RawAPIPageResponse, ItemPage[AbstractMatchPlayerStats]]:
         return self._process_response_with_mapped_validator(
             await self._client.get(
-                self.PATH / str(player_id) / "games" / game / "stats",
+                self.__class__.PATH / str(player_id) / "games" / game / "stats",
                 params=self.__class__._build_params(
                     offset=offset, limit=limit, start=start, to=to
                 ),
@@ -761,9 +739,7 @@ class AsyncPlayers(
         player_id: PlayerID,
         game: GameID,
         max_items: MaxItemsType = pages(50),
-    ) -> typing.Union[
-        typing.List[RawAPIItem], ItemPage[AbstractMatchPlayerStats]
-    ]:
+    ) -> typing.Union[typing.List[RawAPIItem], ItemPage[AbstractMatchPlayerStats]]:
         return await self.__class__._async_page_iterator.gather_pages(
             self.matches_stats,
             player_id,
@@ -809,7 +785,7 @@ class AsyncPlayers(
     ) -> typing.Union[RawAPIPageResponse, ItemPage[Match]]:
         return self._validate_response(
             await self._client.get(
-                self.PATH / str(player_id) / "history",
+                self.__class__.PATH / str(player_id) / "history",
                 params=self.__class__._build_params(
                     game=game, offset=offset, limit=limit, start=start, to=to
                 ),
@@ -876,10 +852,8 @@ class AsyncPlayers(
     ) -> typing.Union[RawAPIPageResponse, ItemPage[Hub]]:
         return self._validate_response(
             await self._client.get(
-                self.PATH / str(player_id) / "hubs",
-                params=self.__class__._build_params(
-                    offset=offset, limit=limit
-                ),
+                self.__class__.PATH / str(player_id) / "hubs",
+                params=self.__class__._build_params(offset=offset, limit=limit),
                 expect_page=True,
             ),
             ItemPage[Hub],
@@ -922,7 +896,7 @@ class AsyncPlayers(
     ) -> typing.Union[RawAPIPageResponse, ModelNotImplemented]:
         return self._validate_response(
             await self._client.get(
-                self.PATH / str(player_id) / "stats" / game,
+                self.__class__.PATH / str(player_id) / "stats" / game,
                 expect_page=True,
             ),
             ModelPlaceholder,
@@ -956,10 +930,8 @@ class AsyncPlayers(
     ) -> typing.Union[RawAPIPageResponse, ItemPage[GeneralTeam]]:
         return self._validate_response(
             await self._client.get(
-                self.PATH / str(player_id) / "teams",
-                params=self.__class__._build_params(
-                    offset=offset, limit=limit
-                ),
+                self.__class__.PATH / str(player_id) / "teams",
+                params=self.__class__._build_params(offset=offset, limit=limit),
                 expect_page=True,
             ),
             ItemPage[GeneralTeam],
@@ -1014,10 +986,8 @@ class AsyncPlayers(
     ) -> typing.Union[RawAPIPageResponse, ItemPage[Tournament]]:
         return self._validate_response(
             await self._client.get(
-                self.PATH / str(player_id) / "tournaments",
-                params=self.__class__._build_params(
-                    offset=offset, limit=limit
-                ),
+                self.__class__.PATH / str(player_id) / "tournaments",
+                params=self.__class__._build_params(offset=offset, limit=limit),
                 expect_page=True,
             ),
             ItemPage[Tournament],

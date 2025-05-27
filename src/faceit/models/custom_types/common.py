@@ -2,12 +2,7 @@ from __future__ import annotations
 
 import typing
 
-from pydantic import (
-    AfterValidator,
-    AnyHttpUrl,
-    GetCoreSchemaHandler,
-    RootModel,
-)
+from pydantic import AfterValidator, AnyHttpUrl, GetCoreSchemaHandler, RootModel
 from pydantic_core import core_schema
 from pydantic_extra_types.country import CountryAlpha2
 from typing_extensions import Annotated, TypeAlias
@@ -53,7 +48,7 @@ class ResponseContainer(RootModel[typing.Dict[str, _T]]):
     def __getattr__(self, name: str) -> typing.Optional[_T]:
         return self.root.get(name)
 
-    def __iter__(self) -> typing.Generator[typing.Tuple[str, _T], None, None]:
+    def __iter__(self) -> typing.Generator[typing.Tuple[str, _T], None, None]:  # noqa: PYI058
         yield from self.items()
 
     def __getitem__(self, key: str) -> _T:
@@ -78,9 +73,7 @@ class LangFormattedAnyHttpUrl:
     ) -> core_schema.CoreSchema:
         return core_schema.union_schema([
             core_schema.str_schema(max_length=0),
-            core_schema.no_info_after_validator_function(
-                cls._validate, handler(str)
-            ),
+            core_schema.no_info_after_validator_function(cls._validate, handler(str)),
         ])
 
 

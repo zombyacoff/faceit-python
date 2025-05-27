@@ -12,7 +12,7 @@ if typing.TYPE_CHECKING:
     from .http.client import BaseAPIClient
 
 
-class BaseFaceit(typing.Generic[ClientT, DataResourceT], ABC):
+class BaseFaceit(ABC, typing.Generic[ClientT, DataResourceT]):
     __slots__ = ()
 
     if typing.TYPE_CHECKING:
@@ -53,7 +53,10 @@ class BaseFaceit(typing.Generic[ClientT, DataResourceT], ABC):
             "DataResourceT",
             cls._data_cls(
                 cls._initialize_client(
-                    api_key, client, auth_name="api_key", **client_options
+                    api_key,
+                    client,
+                    secret="api_key",  # noqa: S106
+                    **client_options,
                 )
             ),
         )
@@ -67,20 +70,16 @@ class BaseFaceit(typing.Generic[ClientT, DataResourceT], ABC):
         client: typing.Optional[ClientT] = None,
         /,
         *,
-        auth_name: str,
+        secret: str,
         **client_options: typing.Any,
     ) -> ClientT:
         if auth is not None and client is not None:
-            raise ValueError(
-                f"Provide either {auth_name!r} or 'client', not both"
-            )
+            raise ValueError(f"Provide either {secret!r} or 'client', not both")
 
         if client is None:
             return typing.cast(
                 "ClientT",
-                cls._client_cls(
-                    *() if auth is None else (auth,), **client_options
-                ),
+                cls._client_cls(*() if auth is None else (auth,), **client_options),
             )
 
         if client_options:

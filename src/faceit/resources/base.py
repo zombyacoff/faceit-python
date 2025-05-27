@@ -4,6 +4,7 @@ import logging
 import typing
 from abc import ABC
 from dataclasses import dataclass
+from types import MappingProxyType
 from warnings import warn
 
 from pydantic import ValidationError
@@ -19,11 +20,7 @@ from faceit.types import (
 )
 from faceit.utils import StrEnum
 
-from .pagination import (
-    AsyncPageIterator,
-    SyncPageIterator,
-    TimestampPaginationConfig,
-)
+from .pagination import AsyncPageIterator, SyncPageIterator, TimestampPaginationConfig
 
 if typing.TYPE_CHECKING:
     _ResponseT = typing.TypeVar("_ResponseT", bound=RawAPIResponse)
@@ -64,7 +61,7 @@ class FaceitResourcePath(StrEnum):
 # other than Data is required, since the current implementation is
 # too Data-centric.
 @dataclass(eq=False, frozen=True)
-class BaseResource(typing.Generic[ClientT], ABC):
+class BaseResource(ABC, typing.Generic[ClientT]):
     __slots__ = ("_client", "_raw")
 
     _client: ClientT
@@ -74,10 +71,10 @@ class BaseResource(typing.Generic[ClientT], ABC):
     _async_page_iterator: typing.ClassVar = AsyncPageIterator
     _timestamp_cfg: typing.ClassVar = TimestampPaginationConfig
 
-    _PARAM_NAME_MAP: typing.ClassVar[typing.Dict[str, str]] = {
+    _PARAM_NAME_MAP: typing.ClassVar[typing.Mapping[str, str]] = MappingProxyType({
         "start": "from",
         "category": "type",
-    }
+    })
 
     if typing.TYPE_CHECKING:
         PATH: typing.ClassVar[Endpoint]
@@ -91,8 +88,7 @@ class BaseResource(typing.Generic[ClientT], ABC):
             return
         if resource_path is None:
             raise TypeError(
-                f"Class {cls.__name__} requires 'path' "
-                "parameter or a parent with 'PATH' defined."
+                f"Class {cls.__name__} requires 'path' parameter or a parent with 'PATH' defined."
             )
         cls.PATH = Endpoint(resource_path)
         super().__init_subclass__(**kwargs)
@@ -130,14 +126,11 @@ class BaseResource(typing.Generic[ClientT], ABC):
         config: MappedValidatorConfig[_T, ModelT],
         /,
     ) -> typing.Union[ModelT, ItemPage[ModelT], RawAPIPageResponse]:
-        _logger.debug(
-            "Processing response with mapped validator for key: %s", key
-        )
+        _logger.debug("Processing response with mapped validator for key: %s", key)
         validator = config.validator_map.get(key)
         if validator is None:
             warn(
-                f"No model defined for {config.key_name} {key!r}. "
-                "Consider using the raw response.",
+                f"No model defined for {config.key_name} {key!r}. Consider using the raw response.",
                 UserWarning,
                 stacklevel=5,
             )
@@ -176,9 +169,7 @@ class BaseResource(typing.Generic[ClientT], ABC):
             return response
 
     @classmethod
-    def _build_params(
-        cls, **params: typing.Any
-    ) -> typing.Dict[str, typing.Any]:
+    def _build_params(cls, **params: typing.Any) -> typing.Dict[str, typing.Any]:
         return {
             cls._PARAM_NAME_MAP.get(key, key): value
             for key, value in params.items()

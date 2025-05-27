@@ -7,11 +7,7 @@ from pydantic import AfterValidator, validate_call
 from typing_extensions import Annotated, TypeAlias
 
 from faceit.http import AsyncClient, SyncClient
-from faceit.resources.base import (
-    BaseResource,
-    FaceitResourcePath,
-    ModelPlaceholder,
-)
+from faceit.resources.base import BaseResource, FaceitResourcePath, ModelPlaceholder
 from faceit.types import (
     APIResponseFormatT,
     ClientT,
@@ -57,7 +53,7 @@ class SyncMatchmakings(
     ) -> typing.Union[RawAPIItem, ModelNotImplemented]:
         return self._validate_response(
             self._client.get(
-                self.PATH / str(matchmaking_id), expect_item=True
+                self.__class__.PATH / str(matchmaking_id), expect_item=True
             ),
             ModelPlaceholder,
         )
@@ -86,7 +82,7 @@ class AsyncMatchmakings(
     ) -> typing.Union[RawAPIItem, ModelNotImplemented]:
         return self._validate_response(
             await self._client.get(
-                self.PATH / str(matchmaking_id), expect_item=True
+                self.__class__.PATH / str(matchmaking_id), expect_item=True
             ),
             ModelPlaceholder,
         )

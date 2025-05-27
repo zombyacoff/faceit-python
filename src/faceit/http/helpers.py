@@ -7,11 +7,7 @@ from ssl import SSLError
 import httpx
 from typing_extensions import Self, TypeAlias
 
-from faceit.utils import (
-    StrEnum,
-    UnsupportedOperationTypeError,
-    representation,
-)
+from faceit.utils import StrEnum, UnsupportedOperationTypeError, representation
 
 if typing.TYPE_CHECKING:
     from tenacity import RetryCallState, RetryError
@@ -37,18 +33,14 @@ class RetryArgs(typing.TypedDict, total=False):
     ]
     retry: typing.Union[
         retry_base,
-        typing.Callable[
-            [RetryCallState], typing.Union[typing.Awaitable[bool], bool]
-        ],
+        typing.Callable[[RetryCallState], typing.Union[typing.Awaitable[bool], bool]],
     ]
     before: _RetryHook
     after: _RetryHook
     before_sleep: typing.Optional[_RetryHook]
     reraise: bool
     retry_error_cls: typing.Type[RetryError]
-    retry_error_callback: typing.Optional[
-        typing.Callable[[RetryCallState], typing.Any]
-    ]
+    retry_error_callback: typing.Optional[typing.Callable[[RetryCallState], typing.Any]]
 
 
 @typing.runtime_checkable
@@ -68,9 +60,7 @@ class SupportedMethod(StrEnum):
 class Endpoint:
     __slots__ = ("base", "path_parts")
 
-    def __init__(
-        self, *path_parts: str, base: typing.Optional[str] = None
-    ) -> None:
+    def __init__(self, *path_parts: str, base: typing.Optional[str] = None) -> None:
         self.path_parts = list(filter(None, path_parts))
         self.base = base
 
@@ -89,9 +79,7 @@ class Endpoint:
         if isinstance(other, str):
             return self.add(other)
         if isinstance(other, self.__class__):
-            return self.__class__(
-                *self.path_parts, *other.path_parts, base=self.base
-            )
+            return self.__class__(*self.path_parts, *other.path_parts, base=self.base)
         raise UnsupportedOperationTypeError(
             "/", self.__class__.__name__, type(other).__name__
         )

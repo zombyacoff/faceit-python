@@ -166,11 +166,14 @@ class HighTierLevel(StrEnum):
 
 
 class Region(StrEnum):
+    # NOTE: Currently includes legacy and game-specific regions (e.g., US for CS:GO).
+    # This structure may be refactored in the future for improved consistency.
     EUROPE = "EU"
     NORTH_AMERICA = "NA"
     OCEANIA = "OCE"
     SOUTHEAST_ASIA = "SEA"
     SOUTH_AMERICA = "SA"
+    UNITED_STATES = "US"
 
 
 @typing.final
@@ -196,11 +199,7 @@ class EloRange(typing.NamedTuple):
         return self.lower <= elo <= self.upper
 
     def __str__(self) -> str:
-        return (
-            f"{self.lower}+"
-            if self.is_open_ended
-            else f"{self.lower}-{self.upper}"
-        )
+        return f"{self.lower}+" if self.is_open_ended else f"{self.lower}-{self.upper}"
 
 
 _DEFAULT_FIRST_ELO_RANGE: typing.Final = EloRange(MIN_ELO, 800)
@@ -221,6 +220,7 @@ def _create_default_elo_tiers() -> _EloThreshold:
 
 
 _BASE_ELO_RANGES: typing.Final = _create_default_elo_tiers()
+del _create_default_elo_tiers
 
 
 def _append_elite_tier(
@@ -241,29 +241,29 @@ CHALLENGER_CAPPED_ELO_RANGES: typing.Final[_EloThreshold] = _append_elite_tier(
 OPEN_ENDED_ELO_RANGES: typing.Final[_EloThreshold] = _append_elite_tier(
     HighTierLevel.ABSENT
 )
-ELO_THRESHOLDS: typing.Final[typing.Mapping[GameID, _EloThreshold]] = (
-    MappingProxyType({
-        GameID.CS2: {
-            1: EloRange(MIN_ELO, 500),
-            2: EloRange(501, 750),
-            3: EloRange(751, 900),
-            4: EloRange(901, 1050),
-            5: EloRange(1051, 1200),
-            6: EloRange(1201, 1350),
-            7: EloRange(1351, 1530),
-            8: EloRange(1531, 1750),
-            9: EloRange(1751, 2000),
-            10: EloRange(_DEFAULT_TEN_LEVEL_LOWER, HighTierLevel.CHALLENGER),
-        },
-        # These default ELO ranges (level 1: up to 800, subsequent levels: +150) are
-        # standard across most games with few exceptions. CS2 demonstrates one such
-        # exception where FACEIT adjusted boundaries following the transition from
-        # CSGO. This implementation accounts for both standard patterns and known
-        # variations in the platform's ranking system
-        GameID.CSGO: CHALLENGER_CAPPED_ELO_RANGES,
-        # TODO: Add more games (e.g. Dota 2)
-    })
-)
+del _append_elite_tier
+
+ELO_THRESHOLDS: typing.Final[typing.Mapping[GameID, _EloThreshold]] = MappingProxyType({
+    GameID.CS2: {
+        1: EloRange(MIN_ELO, 500),
+        2: EloRange(501, 750),
+        3: EloRange(751, 900),
+        4: EloRange(901, 1050),
+        5: EloRange(1051, 1200),
+        6: EloRange(1201, 1350),
+        7: EloRange(1351, 1530),
+        8: EloRange(1531, 1750),
+        9: EloRange(1751, 2000),
+        10: EloRange(_DEFAULT_TEN_LEVEL_LOWER, HighTierLevel.CHALLENGER),
+    },
+    # These default ELO ranges (level 1: up to 800, subsequent levels: +150) are
+    # standard across most games with few exceptions. CS2 demonstrates one such
+    # exception where FACEIT adjusted boundaries following the transition from
+    # CSGO. This implementation accounts for both standard patterns and known
+    # variations in the platform's ranking system
+    GameID.CSGO: CHALLENGER_CAPPED_ELO_RANGES,
+    # TODO: Add more games (e.g. Dota 2)
+})
 
 
 @typing.final
@@ -277,9 +277,7 @@ class SkillLevel:
     name: str
 
     if typing.TYPE_CHECKING:
-        _registry: typing.ClassVar[
-            typing.Mapping[GameID, typing.Mapping[int, Self]]
-        ]
+        _registry: typing.ClassVar[typing.Mapping[GameID, typing.Mapping[int, Self]]]
 
     @property
     def is_highest_level(self) -> bool:
@@ -333,8 +331,7 @@ class SkillLevel:
 
         assert isinstance(self.elo_range.upper, int)
         return (
-            (elo - self.elo_range.lower)
-            / (self.elo_range.upper - self.elo_range.lower)
+            (elo - self.elo_range.lower) / (self.elo_range.upper - self.elo_range.lower)
         ) * 100
 
     @typing.overload
@@ -361,15 +358,12 @@ class SkillLevel:
         elo: typing.Optional[int] = Field(None, ge=MIN_ELO),
     ) -> typing.Optional[Self]:
         if game_id not in cls._registry:
-            warn(
-                f"Game {game_id!r} is not supported", UserWarning, stacklevel=4
-            )
+            warn(f"Game {game_id!r} is not supported", UserWarning, stacklevel=4)
             return None
 
         if level is not None and elo is not None:
             warn(
-                "Both 'level' and 'elo' parameters provided; "
-                "'level' takes precedence",
+                "Both 'level' and 'elo' parameters provided; 'level' takes precedence",
                 UserWarning,
                 stacklevel=4,
             )
@@ -397,9 +391,7 @@ class SkillLevel:
     @classmethod
     @validate_call
     def get_all_levels(cls, game_id: GameID, /) -> typing.List[Self]:
-        return sorted(
-            cls._registry.get(game_id, {}).values(), key=attrgetter("level")
-        )
+        return sorted(cls._registry.get(game_id, {}).values(), key=attrgetter("level"))
 
     def __int__(self) -> int:
         return self.level
@@ -408,9 +400,7 @@ class SkillLevel:
     def _initialize_skill_levels_registry(cls) -> None:
         cls._registry = MappingProxyType({
             game_id: MappingProxyType({
-                level_num: cls(
-                    level_num, game_id, elo_range, f"Level {level_num}"
-                )
+                level_num: cls(level_num, game_id, elo_range, f"Level {level_num}")
                 for level_num, elo_range in thresholds.items()
             })
             for game_id, thresholds in ELO_THRESHOLDS.items()

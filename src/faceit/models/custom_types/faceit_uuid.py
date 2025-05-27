@@ -31,17 +31,11 @@ class _BaseFaceitUUIDValidator(ABC):
             return value
 
         start = (
-            len(cls._PREFIX)
-            if cls._PREFIX and value.startswith(cls._PREFIX)
-            else 0
+            len(cls._PREFIX) if cls._PREFIX and value.startswith(cls._PREFIX) else None
         )
-        end = (
-            -len(cls._SUFFIX)
-            if cls._SUFFIX and value.endswith(cls._SUFFIX)
-            else None
-        )
+        end = -len(cls._SUFFIX) if cls._SUFFIX and value.endswith(cls._SUFFIX) else None
 
-        if start == 0 and end is None:
+        if start is None and end is None:
             return value
 
         return value[start:end]
@@ -98,13 +92,11 @@ class _FaceitIDWithUniquePrefix(UserString, BaseFaceitID, ABC):
     def _validate(cls, value: str, /) -> Self:
         if not value.startswith(cls.UNIQUE_PREFIX):
             raise ValueError(
-                f"Invalid {cls.__name__}: "
-                f"{value!r} must start with {cls.UNIQUE_PREFIX!r}"
+                f"Invalid {cls.__name__}: {value!r} must start with {cls.UNIQUE_PREFIX!r}"
             )
         if not is_valid_uuid(value[len(cls.UNIQUE_PREFIX) :]):
             raise ValueError(
-                f"Invalid {cls.__name__}: "
-                f"{value!r} contains invalid UUID part."
+                f"Invalid {cls.__name__}: {value!r} contains invalid UUID part."
             )
         return cls(value)
 

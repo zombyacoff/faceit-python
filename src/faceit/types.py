@@ -15,17 +15,14 @@ _R = typing.TypeVar("_R")
 _T_co = typing.TypeVar("_T_co", covariant=True)
 _P = ParamSpec("_P")
 
-ModelT = typing.TypeVar("ModelT", bound=BaseModel)
+ModelT = typing.TypeVar("ModelT", bound="BaseModel")
 ClientT = typing.TypeVar("ClientT", bound="BaseAPIClient[typing.Any]")
 DataResourceT = typing.TypeVar(
-    "DataResourceT",
-    bound=typing.Union["SyncDataResource", "AsyncDataResource"],
+    "DataResourceT", bound=typing.Union["SyncDataResource", "AsyncDataResource"]
 )
 
 APIResponseFormatT = typing.TypeVar("APIResponseFormatT", "Raw", "Model")
-PaginationMethodT = typing.TypeVar(
-    "PaginationMethodT", bound="BaseMethodProtocol"
-)
+PaginationMethodT = typing.TypeVar("PaginationMethodT", bound="BaseMethodProtocol")
 
 EmptyString: TypeAlias = typing.Literal[""]
 UrlOrEmpty: TypeAlias = typing.Union[AnyHttpUrl, EmptyString]
@@ -62,7 +59,6 @@ class BaseMethodProtocol(typing.Protocol):
     __call__: typing.Callable[..., typing.Any]
 
 
-# fmt: off
 class BasePaginationMethod(BaseMethodProtocol, typing.Protocol[_T_co]):
     def __call__(
         self,
@@ -76,7 +72,9 @@ class BasePaginationMethod(BaseMethodProtocol, typing.Protocol[_T_co]):
 class SyncPaginationMethod(BasePaginationMethod[_T_co], typing.Protocol): ...
 
 
-class AsyncPaginationMethod(BasePaginationMethod[typing.Awaitable[_T_co]], typing.Protocol): ...
+class AsyncPaginationMethod(
+    BasePaginationMethod[typing.Awaitable[_T_co]], typing.Protocol
+): ...
 
 
 class BaseUnixPaginationMethod(BaseMethodProtocol, typing.Protocol[_T_co]):
@@ -94,5 +92,6 @@ class BaseUnixPaginationMethod(BaseMethodProtocol, typing.Protocol[_T_co]):
 class SyncUnixPaginationMethod(BaseUnixPaginationMethod[_T_co], typing.Protocol): ...
 
 
-class AsyncUnixPaginationMethod(BaseUnixPaginationMethod[typing.Awaitable[_T_co]], typing.Protocol): ...
-# fmt: on
+class AsyncUnixPaginationMethod(
+    BaseUnixPaginationMethod[typing.Awaitable[_T_co]], typing.Protocol
+): ...

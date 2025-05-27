@@ -43,6 +43,16 @@ from .helpers import (
     is_ssl_error,
 )
 
+try:
+    import decouple  # pyright: ignore[reportMissingImports]
+
+    # `decouple` is untyped;
+    # we annotate `config` as `Callable[..., str]` to avoid "no-any-return" errors.
+    # This is a minimal, project-specific typing.
+    decouple_config: typing.Callable[..., str] = decouple.config
+except ImportError:
+    decouple = None  # type: ignore[assignment]
+
 if typing.TYPE_CHECKING:
     from faceit.types import (
         EndpointParam,
@@ -52,17 +62,10 @@ if typing.TYPE_CHECKING:
         ValidUUID,
     )
 
-try:
-    from decouple import UndefinedValueError, config
-except ImportError:
-    config = None  # type: ignore[assignment]
-
 
 _logger = logging.getLogger(__name__)
 
-_HttpxClientT = typing.TypeVar(
-    "_HttpxClientT", httpx.Client, httpx.AsyncClient
-)
+_HttpxClientT = typing.TypeVar("_HttpxClientT", httpx.Client, httpx.AsyncClient)
 
 
 class MaxConcurrentRequests(StrEnum):
@@ -73,14 +76,16 @@ class MaxConcurrentRequests(StrEnum):
 # which is required for the Data resource. This should be revisited when adding
 # support for other resources, as they may require different authentication methods.
 @representation("api_key", "base_url", "retry_args")
-class BaseAPIClient(typing.Generic[_HttpxClientT], ABC):
+class BaseAPIClient(ABC, typing.Generic[_HttpxClientT]):
     __slots__ = ("_api_key", "_retry_args", "base_url")
 
     @typing.final
     class env(UserString):  # noqa: N801
+        """String subclass representing a key to fetch from environment variables."""
+
         __slots__ = ()
 
-    DEFAULT_API_KEY_ENV: typing.ClassVar = env("FACEIT_API_KEY")
+    DEFAULT_API_KEY_ENV: typing.ClassVar = env("FACEIT_SECRET")
     DEFAULT_BASE_URL: typing.ClassVar = "https://open.faceit.com/data/v4"
     DEFAULT_TIMEOUT: typing.ClassVar[float] = 10
     DEFAULT_RETRY_ARGS: typing.ClassVar = RetryArgs(
@@ -105,15 +110,13 @@ class BaseAPIClient(typing.Generic[_HttpxClientT], ABC):
         ),
         reraise=True,
         before_sleep=lambda s: _logger.warning(
-            "Retry attempt %d failed; "
-            "sleeping for %.2f seconds before next attempt",
+            "Retry attempt %d failed; sleeping for %.2f seconds before next attempt",
             s.attempt_number,
             0 if s.next_action is None else s.next_action.sleep,
         ),
     )
 
     if typing.TYPE_CHECKING:
-        # Type hint for the HTTP client that subclasses must initialize
         _client: _HttpxClientT
 
     __api_key_validator: typing.ClassVar[typing.Callable[[ValidUUID], str]] = (
@@ -182,9 +185,7 @@ class BaseAPIClient(typing.Generic[_HttpxClientT], ABC):
 
     def _retry_args_setter(self, retry_args: RetryArgs, /) -> None:
         if not isinstance(retry_args, dict):
-            raise TypeError(
-                f"Expected RetryArgs, got {type(retry_args).__name__}"
-            )
+            raise TypeError(f"Expected RetryArgs, got {type(retry_args).__name__}")
         self._retry_args: RetryArgs = {
             **self.__class__.DEFAULT_RETRY_ARGS,
             **retry_args,
@@ -207,19 +208,19 @@ class BaseAPIClient(typing.Generic[_HttpxClientT], ABC):
         return self._build_endpoint(endpoint), combined_headers
 
     @staticmethod
-    def _get_secret_from_env(env_key: str, /) -> str:
-        if config is None:
+    def _get_secret_from_env(key: str, /) -> str:
+        if decouple is None:
+            # TODO: Make this message better; `faceit[env]`
             raise ImportError(
                 "`python-decouple` is not installed. "
-                "Install it with: pip install python-decouple\n"
-                "Repository: https://github.com/HBNetwork/python-decouple"
+                "Install it with: `pip install python-decouple`"
             )
         try:
-            return config(env_key, cast=str)
-        except UndefinedValueError:
+            return decouple_config(key)
+        except decouple.UndefinedValueError:
             raise MissingAuthTokenError(
                 "Authorization token is missing. "
-                f"Please set {env_key} in your `.env` or `settings.ini` file."
+                f"Please set {key} in your `.env` or `settings.ini` file."
             ) from None
 
     @staticmethod
@@ -228,6 +229,7 @@ class BaseAPIClient(typing.Generic[_HttpxClientT], ABC):
             response.raise_for_status()
             _logger.debug("Successful response from %s", response.url)
             return typing.cast("RawAPIResponse", response.json())
+        # TODO: More specific exceptions
         except httpx.HTTPStatusError as e:
             if e.response.is_server_error:
                 _logger.warning(
@@ -245,13 +247,9 @@ class BaseAPIClient(typing.Generic[_HttpxClientT], ABC):
             raise APIError(response.status_code, response.text) from e
         except (ValueError, httpx.DecodingError):
             _logger.exception(
-                "Invalid JSON response from %s: %s",
-                response.url,
-                response.text,
+                "Invalid JSON response from %s: %s", response.url, response.text
             )
-            raise APIError(
-                response.status_code, "Invalid JSON response"
-            ) from None
+            raise APIError(response.status_code, "Invalid JSON response") from None
 
 
 class _BaseSyncClient(BaseAPIClient[httpx.Client]):
@@ -282,9 +280,7 @@ class _BaseSyncClient(BaseAPIClient[httpx.Client]):
     def request(
         self, method: str, endpoint: EndpointParam, **kwargs: typing.Any
     ) -> RawAPIResponse:
-        url, headers = self._prepare_request(
-            endpoint, kwargs.pop("headers", None)
-        )
+        url, headers = self._prepare_request(endpoint, kwargs.pop("headers", None))
         retryer = Retrying(**self._retry_args)  # type: ignore[arg-type]
         return retryer(
             lambda: self.__class__._handle_response(
@@ -369,22 +365,22 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
             max_connections=max_concurrent_requests * 2,
             keepalive_expiry=self.__class__.DEFAULT_KEEPALIVE_EXPIRY,
         )
+        transport = (  # fmt: skip
+            raw_client_kwargs.pop("transport", None)
+            or httpx.AsyncHTTPTransport(retries=1)
+        )
         self._client = httpx.AsyncClient(
             timeout=timeout,
             headers=self._base_headers,
             limits=limits,
-            transport=(
-                raw_client_kwargs.pop("transport", None)
-                or httpx.AsyncHTTPTransport(retries=1)
-            ),
+            transport=transport,
             **raw_client_kwargs,
         )
 
         # Initialize or update the semaphore if needed
         if (
             self.__class__._semaphore is None
-            or max_concurrent_requests
-            != self.__class__._max_concurrent_requests
+            or max_concurrent_requests != self.__class__._max_concurrent_requests
         ):
             self.__class__.update_rate_limit(max_concurrent_requests)
             _logger.debug(
@@ -409,8 +405,8 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
                 )
             )
 
-        original_before_sleep = self._retry_args.get(
-            "before_sleep", lambda _: None
+        original_before_sleep = self._retry_args.get("before_sleep", None) or (
+            lambda _: None
         )
 
         async def ssl_before_sleep(retry_state: RetryCallState) -> None:
@@ -421,18 +417,16 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
             if exception is not None and is_ssl_error(exception):
                 _logger.warning(
                     "SSL connection error to %s",
-                    str(
-                        retry_state.args[0] if retry_state.args else "unknown"
-                    ),
+                    str(retry_state.args[0] if retry_state.args else "unknown"),
                 )
                 await asyncio.sleep(0.5)
 
-            await invoke_callable(original_before_sleep, retry_state)  # type: ignore[arg-type]
+            await invoke_callable(original_before_sleep, retry_state)
 
-        self._retry_args.update(  # type: ignore[call-arg]
-            retry=async_retry_if_exception(combined_retry),
-            before_sleep=ssl_before_sleep,
-        )
+        self._retry_args.update({
+            "retry": async_retry_if_exception(combined_retry),
+            "before_sleep": ssl_before_sleep,
+        })
 
     async def aclose(self) -> None:
         if not self.is_closed:
@@ -442,18 +436,14 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
     async def request(
         self, method: str, endpoint: EndpointParam, **kwargs: typing.Any
     ) -> RawAPIResponse:
-        url, headers = self._prepare_request(
-            endpoint, kwargs.pop("headers", None)
-        )
+        url, headers = self._prepare_request(endpoint, kwargs.pop("headers", None))
         await self.__class__._check_connection_recovery()
 
         async def execute() -> RawAPIResponse:
             assert self.__class__._semaphore is not None
             async with self.__class__._semaphore:
                 result = self.__class__._handle_response(
-                    await self._client.request(
-                        method, url, headers=headers, **kwargs
-                    )
+                    await self._client.request(method, url, headers=headers, **kwargs)
                 )
 
                 # Decrease error count on successful request
@@ -515,9 +505,7 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
             return
 
         current = cls._max_concurrent_requests
-        new_limit = min(
-            cls._initial_max_requests, current + max(1, current // 2)
-        )
+        new_limit = min(cls._initial_max_requests, current + max(1, current // 2))
         if new_limit <= current:
             return
 
@@ -557,16 +545,13 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
         Async clients should use ``aclose()`` instead.
         """
         raise RuntimeError(
-            f"Use 'await {cls.__name__}.aclose()' "
-            f"instead of '{cls.__name__}.close()'."
+            f"Use 'await {cls.__name__}.aclose()' instead of '{cls.__name__}.close()'."
         )
 
     @classmethod
     async def close_all(cls) -> None:
         if cls._instances:
-            await asyncio.gather(
-                *(client.aclose() for client in cls._instances)
-            )
+            await asyncio.gather(*(client.aclose() for client in cls._instances))
 
     @classmethod
     @locked(_lock)
@@ -582,20 +567,13 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
             new_limit = cls.MAX_CONCURRENT_REQUESTS_ABSOLUTE
 
         # `cls._semaphore` is None when this method is called from __init__
-        if (
-            cls._max_concurrent_requests == new_limit
-            and cls._semaphore is not None
-        ):
-            _logger.debug(
-                "Rate limit already set to %d, no change needed", new_limit
-            )
+        if cls._max_concurrent_requests == new_limit and cls._semaphore is not None:
+            _logger.debug("Rate limit already set to %d, no change needed", new_limit)
             return
 
         cls._semaphore = asyncio.Semaphore(new_limit)
         cls._max_concurrent_requests = new_limit
-        _logger.info(
-            "Updated request rate limit to %d concurrent requests", new_limit
-        )
+        _logger.info("Updated request rate limit to %d concurrent requests", new_limit)
 
     @classmethod
     @locked(_lock)
@@ -607,55 +585,41 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
         recovery_interval: typing.Optional[PositiveInt] = None,
         enabled: typing.Optional[bool] = None,
     ) -> None:
+        params = {
+            "ssl_error_threshold": ("_ssl_error_threshold", ssl_error_threshold),
+            "min_connections": ("_min_connections", min_connections),
+            "recovery_interval": ("_recovery_interval", recovery_interval),
+            "adaptive_limit_enabled": ("_adaptive_limit_enabled", enabled),
+        }
+
         changes_made = False
 
-        if (
-            ssl_error_threshold is not None
-            and ssl_error_threshold != cls._ssl_error_threshold
-        ):
-            cls._ssl_error_threshold, changes_made = (
-                ssl_error_threshold,
-                True,
+        for attr, value in params.values():
+            if value is not None and value != getattr(cls, attr):
+                setattr(cls, attr, value)
+                changes_made = True
+
+        if changes_made:
+            _logger.info(
+                "Adaptive limits configured: threshold=%d, min_connections=%d, "
+                "enabled=%s, recovery_interval=%d",
+                cls._ssl_error_threshold,
+                cls._min_connections,
+                cls._adaptive_limit_enabled,
+                cls._recovery_interval,
             )
-
-        if (
-            min_connections is not None
-            and min_connections != cls._min_connections
-        ):
-            cls._min_connections, changes_made = min_connections, True
-
-        if (
-            recovery_interval is not None
-            and recovery_interval != cls._recovery_interval
-        ):
-            cls._recovery_interval, changes_made = recovery_interval, True
-
-        if enabled is not None and enabled != cls._adaptive_limit_enabled:
-            cls._adaptive_limit_enabled, changes_made = enabled, True
-
-        # fmt: off
-        if not changes_made:
-            if any(param is not None for param in (
-                ssl_error_threshold, min_connections,
-                recovery_interval, enabled,
-            )):
-                _logger.warning(
-                    "No changes made to adaptive limits. "
-                    "Current settings: threshold=%d, min_connections=%d, "
-                    "enabled=%s, recovery_interval=%d",
-                    cls._ssl_error_threshold, cls._min_connections,
-                    cls._adaptive_limit_enabled, cls._recovery_interval,
-                )
             return
 
-        _logger.info(
-            "Adaptive limits configured: "
-            "threshold=%d, min_connections=%d, "
-            "enabled=%s, recovery_interval=%d",
-            cls._ssl_error_threshold, cls._min_connections,
-            cls._adaptive_limit_enabled, cls._recovery_interval,
-        )
-        # fmt: on
+        if any(value is not None for _, value in params.values()):
+            _logger.warning(
+                "No changes made to adaptive limits. "
+                "Current settings: threshold=%d, min_connections=%d, "
+                "enabled=%s, recovery_interval=%d",
+                cls._ssl_error_threshold,
+                cls._min_connections,
+                cls._adaptive_limit_enabled,
+                cls._recovery_interval,
+            )
 
     def __enter__(self) -> typing.NoReturn:
         raise RuntimeError("Use 'async with' instead.")
@@ -707,16 +671,10 @@ class SyncClient(_BaseSyncClient):
     ) -> RawAPIPageResponse: ...
 
     @typing.overload
-    def get(
-        self, endpoint: EndpointParam, **kwargs: typing.Any
-    ) -> RawAPIResponse: ...
+    def get(self, endpoint: EndpointParam, **kwargs: typing.Any) -> RawAPIResponse: ...
 
-    def get(
-        self, endpoint: EndpointParam, **kwargs: typing.Any
-    ) -> RawAPIResponse:
-        return self.request(
-            SupportedMethod.GET, endpoint, **_clean_type_hints(kwargs)
-        )
+    def get(self, endpoint: EndpointParam, **kwargs: typing.Any) -> RawAPIResponse:
+        return self.request(SupportedMethod.GET, endpoint, **_clean_type_hints(kwargs))
 
     @typing.overload
     def post(
@@ -737,16 +695,10 @@ class SyncClient(_BaseSyncClient):
     ) -> RawAPIPageResponse: ...
 
     @typing.overload
-    def post(
-        self, endpoint: EndpointParam, **kwargs: typing.Any
-    ) -> RawAPIResponse: ...
+    def post(self, endpoint: EndpointParam, **kwargs: typing.Any) -> RawAPIResponse: ...
 
-    def post(
-        self, endpoint: EndpointParam, **kwargs: typing.Any
-    ) -> RawAPIResponse:
-        return self.request(
-            SupportedMethod.POST, endpoint, **_clean_type_hints(kwargs)
-        )
+    def post(self, endpoint: EndpointParam, **kwargs: typing.Any) -> RawAPIResponse:
+        return self.request(SupportedMethod.POST, endpoint, **_clean_type_hints(kwargs))
 
 
 @typing.final

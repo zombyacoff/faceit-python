@@ -30,9 +30,7 @@ class PaginationMetadata(typing.NamedTuple):
 
 @typing.final
 class ItemPage(BaseModel, typing.Generic[_T], frozen=True):
-    items: Annotated[
-        typing.Tuple[_T, ...], Field(alias=RAW_RESPONSE_ITEMS_KEY)
-    ]
+    items: Annotated[typing.Tuple[_T, ...], Field(alias=RAW_RESPONSE_ITEMS_KEY)]
 
     _offset: Annotated[_PaginationLimit, Field(alias="start")]
     _limit: Annotated[_PaginationLimit, Field(alias="end")]
@@ -40,8 +38,13 @@ class ItemPage(BaseModel, typing.Generic[_T], frozen=True):
     _time_from: Annotated[
         _PaginationLimit,
         Field(
-            UnsetValue.UNSET, alias="from", examples=[1746316800000]
-        ),  # Example: 1746316800000 (UTC timestamp for 2025-05-04 00:00:00, in milliseconds)
+            UnsetValue.UNSET,
+            alias="from",
+            examples=[
+                # UTC timestamp for 2025-05-04 00:00:00, in milliseconds
+                1746316800000
+            ],
+        ),
     ]
     """Unix time in milliseconds to start the range."""
     _time_to: Annotated[
@@ -88,9 +91,7 @@ class ItemPage(BaseModel, typing.Generic[_T], frozen=True):
     @typing.overload
     def first(self, default: _R, /) -> typing.Union[_T, _R]: ...
 
-    def first(
-        self, default: typing.Optional[_R] = None
-    ) -> typing.Union[_T, _R, None]:
+    def first(self, default: typing.Optional[_R] = None) -> typing.Union[_T, _R, None]:
         return self[0] if self else default
 
     @typing.overload
@@ -99,9 +100,7 @@ class ItemPage(BaseModel, typing.Generic[_T], frozen=True):
     @typing.overload
     def last(self, default: _R, /) -> typing.Union[_T, _R]: ...
 
-    def last(
-        self, default: typing.Optional[_R] = None
-    ) -> typing.Union[_T, _R, None]:
+    def last(self, default: typing.Optional[_R] = None) -> typing.Union[_T, _R, None]:
         return self[-1] if self else default
 
     @typing.overload
@@ -110,9 +109,7 @@ class ItemPage(BaseModel, typing.Generic[_T], frozen=True):
     @typing.overload
     def random(self, default: _R, /) -> typing.Union[_T, _R]: ...
 
-    def random(
-        self, default: typing.Optional[_R] = None
-    ) -> typing.Union[_T, _R, None]:
+    def random(self, default: typing.Optional[_R] = None) -> typing.Union[_T, _R, None]:
         # Intentionally using non-cryptographic RNG as this is for
         # convenience sampling rather than security-sensitive operations
         return choice(self) if self else default  # noqa: S311
@@ -121,19 +118,13 @@ class ItemPage(BaseModel, typing.Generic[_T], frozen=True):
         return self.__class__._construct_without_metadata(map(func, self))
 
     def filter(self, predicate: typing.Callable[[_T], bool], /) -> Self:
-        return self.__class__._construct_without_metadata(
-            filter(predicate, self)
-        )
+        return self.__class__._construct_without_metadata(filter(predicate, self))
 
     def with_items(self, new_items: typing.Iterable[_T], /) -> Self:
         return self.model_copy(update={"items": tuple(new_items)})
 
-    def _find_items(
-        self, attr: str, value: typing.Any, /
-    ) -> typing.Iterator[_T]:
-        return (
-            item for item in self if get_nested_property(item, attr) == value
-        )
+    def _find_items(self, attr: str, value: typing.Any, /) -> typing.Iterator[_T]:
+        return (item for item in self if get_nested_property(item, attr) == value)
 
     @classmethod
     def merge(cls, pages: typing.Iterable[ItemPage[_T]], /) -> ItemPage[_T]:
@@ -209,17 +200,13 @@ class ItemPage(BaseModel, typing.Generic[_T], frozen=True):
     ) -> typing.Tuple[typing.Dict[str, typing.Any], ...]:
         if not isinstance(items, list):
             raise TypeError(
-                f"Expected {RAW_RESPONSE_ITEMS_KEY} "
-                f"to be a list, got {type(items).__name__}"
+                f"Expected {RAW_RESPONSE_ITEMS_KEY} to be a list, got {type(items).__name__}"
             )
 
-        def normalize_item(
-            i: int, item: typing.Any
-        ) -> typing.Dict[str, typing.Any]:
+        def normalize_item(i: int, item: typing.Any) -> typing.Dict[str, typing.Any]:
             if not isinstance(item, dict):
                 raise TypeError(
-                    f"Element at index {i} must "
-                    f"be a dictionary, got {type(item).__name__}"
+                    f"Element at index {i} must be a dictionary, got {type(item).__name__}"
                 )
 
             if len(item) == 1:

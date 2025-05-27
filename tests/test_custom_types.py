@@ -32,9 +32,7 @@ urls = [
 @pytest.mark.parametrize("input_value,expected", urls)
 def test_validate_success(input_value, expected):
     if expected == "" or expected.startswith("http"):
-        assert LangFormattedAnyHttpUrl._validate(input_value) == AnyHttpUrl(
-            expected
-        )
+        assert LangFormattedAnyHttpUrl._validate(input_value) == AnyHttpUrl(expected)
         return
     with pytest.raises(ValidationError):
         LangFormattedAnyHttpUrl._validate(input_value)

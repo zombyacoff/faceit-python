@@ -22,7 +22,7 @@ if typing.TYPE_CHECKING:
 
 _LockType = type(Lock())
 
-REDACTED_MARKER: typing.Final = "[REDACTED_MARKER]"
+REDACTED_MARKER: typing.Final = "[REDACTED]"
 
 _UUID_BYTES: typing.Final = 16
 _UNINITIALIZED_MARKER: typing.Final = "uninitialized"
@@ -44,8 +44,7 @@ class StrEnum(str, Enum):
         if isinstance(value, (str, auto)):
             return super().__new__(cls, value, *args, **kwargs)
         raise TypeError(
-            "StrEnum values must be of type 'str', "
-            f"but got {type(value).__name__}: {value!r}"
+            f"StrEnum values must be of type 'str', but got {type(value).__name__}: {value!r}"
         )
 
     @staticmethod
@@ -70,8 +69,7 @@ def UnsupportedOperationTypeError(  # noqa: N802
     sign: str, self_name: str, other_name: str
 ) -> TypeError:
     return TypeError(
-        f"unsupported operand type(s) for {sign}: "
-        f"{self_name!r} and {other_name!r}"
+        f"unsupported operand type(s) for {sign}: {self_name!r} and {other_name!r}"
     )
 
 
@@ -86,7 +84,7 @@ def locked(
             @wraps(func)
             async def async_wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _T:
                 async with lock:
-                    return await func(*args, **kwargs)  # type: ignore[no-any-return]
+                    return typing.cast("_T", await func(*args, **kwargs))
 
             return typing.cast("typing.Callable[_P, _T]", async_wrapper)
 
@@ -103,9 +101,7 @@ def locked(
     return decorator
 
 
-def extends(
-    _: _T, /
-) -> typing.Callable[[typing.Callable[..., typing.Any]], _T]:
+def extends(_: _T, /) -> typing.Callable[[typing.Callable[..., typing.Any]], _T]:
     """Decorator that assigns the type signature of the given function to the
     decorated function. Type checking is enforced only at the function boundary
     (when calling the function), not within the function body.
@@ -129,16 +125,15 @@ async def invoke_callable(
     *args: typing.Any,
     **kwargs: typing.Any,
 ) -> _T:
-    if not callable(func):
-        raise TypeError(
-            f"Expected a callable object, got {type(func).__name__} "
-            f"({func!r}). Argument 'func' must be a function or object with a "
-            "__call__ method."
-        )
-    result = func(*args, **kwargs)
-    if isawaitable(result):
-        result = await result
-    return typing.cast("_T", result)
+    if callable(func):
+        result = func(*args, **kwargs)
+        if isawaitable(result):
+            result = await result
+        return typing.cast("_T", result)
+    raise TypeError(
+        f"Expected a callable object, got {type(func).__name__} ({func!r}). "
+        "Argument 'func' must be a function or object with a __call__ method."
+    )
 
 
 def deep_get(
@@ -156,7 +151,7 @@ def deep_get(
 
 def get_nested_property(
     obj: typing.Any, path: str, /, default: typing.Optional[_T] = None
-) -> typing.Union[_T, typing.Any]:
+) -> typing.Union[_T, typing.Any, None]:
     if obj is None or not path:
         return default
     try:
@@ -176,9 +171,7 @@ def get_hashable_representation(obj: typing.Any, /) -> int:
         obj_str = json.dumps(obj, default=str, sort_keys=True)
     except (TypeError, AttributeError):
         obj_str = str(obj)
-    return int.from_bytes(
-        sha256(obj_str.encode()).digest()[:8], "big", signed=True
-    )
+    return int.from_bytes(sha256(obj_str.encode()).digest()[:8], "big", signed=True)
 
 
 def deduplicate_unhashable(values: typing.Iterable[_T], /) -> typing.List[_T]:
@@ -201,12 +194,8 @@ def from_unix(
     if value is None:
         return None
     if isinstance(value, (int, float)):
-        return datetime.fromtimestamp(
-            value / (1000 if millis else 1), tz=timezone.utc
-        )
-    raise ValueError(
-        f"Expected int, float or None, got {type(value).__name__}"
-    )
+        return datetime.fromtimestamp(value / (1000 if millis else 1), tz=timezone.utc)
+    raise ValueError(f"Expected int, float or None, got {type(value).__name__}")
 
 
 def to_uuid(value: typing.Union[str, bytes], /) -> UUID:
@@ -220,8 +209,7 @@ def to_uuid(value: typing.Union[str, bytes], /) -> UUID:
         if len(value) == _UUID_BYTES:
             return UUID(bytes=value)
         raise ValueError(
-            "Byte value must be a UTF-8 encoded "
-            f"UUID string or {_UUID_BYTES} bytes"
+            f"Byte value must be a UTF-8 encoded UUID string or {_UUID_BYTES} bytes"
         ) from e
 
 
@@ -243,39 +231,27 @@ def create_uuid_validator(
 ) -> typing.Callable[[typing.Any], str]:
     def validator(value: typing.Any, /) -> str:
         if is_valid_uuid(value):
-            return str(
-                value if isinstance(value, (UUID, str)) else to_uuid(value)
-            )
+            return str(value if isinstance(value, (UUID, str)) else to_uuid(value))
         raise ValueError(error_message.format(arg_name=arg_name, value=value))
 
     return validator
 
 
-def validate_positive_int(
-    value: typing.Any, /, param_name: str = "value"
-) -> int:
+def validate_positive_int(value: typing.Any, /, param_name: str = "value") -> int:
     """Utility for validating that a value is a positive integer.
     Use this when Pydantic's ``PositiveInt`` type or validation is
     impractical or unavailable.
     """
     if not isinstance(value, int):
-        raise TypeError(
-            f"'{param_name}' must be int, got {type(value).__name__}"
-        )
+        raise TypeError(f"'{param_name}' must be int, got {type(value).__name__}")
     if value <= 0:
-        raise ValueError(
-            f"'{param_name}' must be a positive integer, got {value}"
-        )
+        raise ValueError(f"'{param_name}' must be a positive integer, got {value}")
     return value
 
 
-def _format_fields(
-    obj: object, fields: typing.Tuple[str, ...], *, joiner: str
-) -> str:
+def _format_fields(obj: object, fields: typing.Tuple[str, ...], *, joiner: str) -> str:
     return (
-        joiner.join(
-            f"{field}={reprlib.repr(getattr(obj, field))}" for field in fields
-        )
+        joiner.join(f"{field}={reprlib.repr(getattr(obj, field))}" for field in fields)
         if all(hasattr(obj, field) for field in fields)
         else repr(_UNINITIALIZED_MARKER)
     )
@@ -290,11 +266,7 @@ def _apply_representation(
         raise TypeError(f"Class {cls.__name__} must define __str__ method")
 
     def build_repr(self: _ClassT) -> str:
-        str_args = (
-            f"'{self}'"
-            if use_str
-            else _format_fields(self, fields, joiner=", ")
-        )
+        str_args = f"'{self}'" if use_str else _format_fields(self, fields, joiner=", ")
         return f"{self.__class__.__name__}({str_args})"
 
     def build_str(self: _ClassT) -> str:
@@ -308,9 +280,7 @@ def _apply_representation(
 
 
 @typing.overload
-def representation(
-    cls: _ClassT, /, *fields: str, use_str: bool = False
-) -> _ClassT: ...
+def representation(cls: _ClassT, /, *fields: str, use_str: bool = False) -> _ClassT: ...
 
 
 @typing.overload

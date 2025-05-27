@@ -9,11 +9,7 @@ from typing_extensions import Annotated, TypeAlias, deprecated
 
 from faceit.constants import GameID  # noqa: TC001
 from faceit.http import AsyncClient, SyncClient
-from faceit.resources.base import (
-    BaseResource,
-    FaceitResourcePath,
-    ModelPlaceholder,
-)
+from faceit.resources.base import BaseResource, FaceitResourcePath, ModelPlaceholder
 from faceit.resources.pagination import MaxItemsType, pages
 from faceit.types import (
     APIResponseFormatT,
@@ -46,32 +42,27 @@ class SyncTeams(BaseTeams[SyncClient], typing.Generic[APIResponseFormatT]):
     def get(self: SyncTeams[Raw], team_id: _TeamID) -> RawAPIItem: ...
 
     @typing.overload
-    def get(
-        self: SyncTeams[Model], team_id: _TeamID
-    ) -> ModelNotImplemented: ...
+    def get(self: SyncTeams[Model], team_id: _TeamID) -> ModelNotImplemented: ...
 
     @validate_call
     def get(
         self, team_id: _TeamIDValidated
     ) -> typing.Union[RawAPIItem, ModelNotImplemented]:
         return self._validate_response(
-            self._client.get(self.PATH / team_id, expect_item=True),
+            self._client.get(self.__class__.PATH / team_id, expect_item=True),
             ModelPlaceholder,
         )
 
     __call__ = get
 
     @deprecated(
-        "`details` is deprecated and will be removed in a future release. "
-        "Use `get` instead."
+        "`details` is deprecated and will be removed in a future release. Use `get` instead."
     )
     def details(self, team_id: typing.Any) -> typing.Any:
         return self.get(team_id)
 
     @typing.overload
-    def stats(
-        self: SyncTeams[Raw], team_id: _TeamID, game: GameID
-    ) -> RawAPIItem: ...
+    def stats(self: SyncTeams[Raw], team_id: _TeamID, game: GameID) -> RawAPIItem: ...
 
     @typing.overload
     def stats(
@@ -84,7 +75,7 @@ class SyncTeams(BaseTeams[SyncClient], typing.Generic[APIResponseFormatT]):
     ) -> typing.Union[RawAPIItem, ModelNotImplemented]:
         return self._validate_response(
             self._client.get(
-                self.PATH / team_id / "stats" / game,
+                self.__class__.PATH / team_id / "stats" / game,
                 expect_item=True,
             ),
             ModelPlaceholder,
@@ -118,10 +109,8 @@ class SyncTeams(BaseTeams[SyncClient], typing.Generic[APIResponseFormatT]):
     ) -> typing.Union[RawAPIPageResponse, ModelNotImplemented]:
         return self._validate_response(
             self._client.get(
-                self.PATH / team_id / "tournaments",
-                params=self.__class__._build_params(
-                    offset=offset, limit=limit
-                ),
+                self.__class__.PATH / team_id / "tournaments",
+                params=self.__class__._build_params(offset=offset, limit=limit),
                 expect_page=True,
             ),
             ModelPlaceholder,
@@ -129,16 +118,12 @@ class SyncTeams(BaseTeams[SyncClient], typing.Generic[APIResponseFormatT]):
 
     @typing.overload
     def all_tournaments(
-        self: SyncTeams[Raw],
-        team_id: _TeamID,
-        max_items: MaxItemsType = pages(30),
+        self: SyncTeams[Raw], team_id: _TeamID, max_items: MaxItemsType = pages(30)
     ) -> typing.List[RawAPIItem]: ...
 
     @typing.overload
     def all_tournaments(
-        self: SyncTeams[Model],
-        team_id: _TeamID,
-        max_items: MaxItemsType = pages(30),
+        self: SyncTeams[Model], team_id: _TeamID, max_items: MaxItemsType = pages(30)
     ) -> ModelNotImplemented: ...
 
     def all_tournaments(
@@ -156,24 +141,21 @@ class AsyncTeams(BaseTeams[AsyncClient], typing.Generic[APIResponseFormatT]):
     async def get(self: AsyncTeams[Raw], team_id: _TeamID) -> RawAPIItem: ...
 
     @typing.overload
-    async def get(
-        self: AsyncTeams[Model], team_id: _TeamID
-    ) -> ModelNotImplemented: ...
+    async def get(self: AsyncTeams[Model], team_id: _TeamID) -> ModelNotImplemented: ...
 
     @validate_call
     async def get(
         self, team_id: _TeamIDValidated
     ) -> typing.Union[RawAPIItem, ModelNotImplemented]:
         return self._validate_response(
-            await self._client.get(self.PATH / team_id, expect_item=True),
+            await self._client.get(self.__class__.PATH / team_id, expect_item=True),
             ModelPlaceholder,
         )
 
     __call__ = get
 
     @deprecated(
-        "`details` is deprecated and will be removed in a future release. "
-        "Use `get` instead."
+        "`details` is deprecated and will be removed in a future release. Use `get` instead."
     )
     async def details(self, team_id: typing.Any) -> typing.Any:
         return await self.get(team_id)
@@ -194,7 +176,7 @@ class AsyncTeams(BaseTeams[AsyncClient], typing.Generic[APIResponseFormatT]):
     ) -> typing.Union[RawAPIItem, ModelNotImplemented]:
         return self._validate_response(
             await self._client.get(
-                self.PATH / team_id / "stats" / game,
+                self.__class__.PATH / team_id / "stats" / game,
                 expect_item=True,
             ),
             ModelPlaceholder,
@@ -228,10 +210,8 @@ class AsyncTeams(BaseTeams[AsyncClient], typing.Generic[APIResponseFormatT]):
     ) -> typing.Union[RawAPIPageResponse, ModelNotImplemented]:
         return self._validate_response(
             await self._client.get(
-                self.PATH / team_id / "tournaments",
-                params=self.__class__._build_params(
-                    offset=offset, limit=limit
-                ),
+                self.__class__.PATH / team_id / "tournaments",
+                params=self.__class__._build_params(offset=offset, limit=limit),
                 expect_page=True,
             ),
             ModelPlaceholder,
@@ -239,16 +219,12 @@ class AsyncTeams(BaseTeams[AsyncClient], typing.Generic[APIResponseFormatT]):
 
     @typing.overload
     async def all_tournaments(
-        self: AsyncTeams[Raw],
-        team_id: _TeamID,
-        max_items: MaxItemsType = pages(30),
+        self: AsyncTeams[Raw], team_id: _TeamID, max_items: MaxItemsType = pages(30)
     ) -> typing.List[RawAPIItem]: ...
 
     @typing.overload
     async def all_tournaments(
-        self: AsyncTeams[Model],
-        team_id: _TeamID,
-        max_items: MaxItemsType = pages(30),
+        self: AsyncTeams[Model], team_id: _TeamID, max_items: MaxItemsType = pages(30)
     ) -> ModelNotImplemented: ...
 
     async def all_tournaments(

@@ -14,31 +14,17 @@ from faceit.utils import noop
 if typing.TYPE_CHECKING:
     from types import TracebackType
 
-_AggregatorT = typing.TypeVar(
-    "_AggregatorT", bound="BaseResources[typing.Any]"
-)
+_AggregatorT = typing.TypeVar("_AggregatorT", bound="BaseResources[typing.Any]")
 
 
 @dataclass(eq=False, frozen=True)
-class BaseResources(typing.Generic[ClientT], ABC):
+class BaseResources(ABC, typing.Generic[ClientT]):
     __slots__ = ("_client",)
 
     _client: ClientT
 
     @property
     def client(self) -> ClientT:
-        """The underlying HTTP client instance for low-level interactions with the
-        Faceit API (e.g., unsupported endpoints or advanced use cases).
-
-        This object provides direct access to the raw HTTP client used by the library,
-        allowing you to perform custom requests to the Faceit API when the high-level
-        interface does not cover your needs.
-
-        .. note::
-            For most use cases, it is recommended to use the library's standard methods.
-            Access the low-level client only when interacting with non-standard or
-            experimental API features.
-        """
         return self._client
 
 
@@ -79,21 +65,14 @@ class AsyncResources(BaseResources[AsyncClient]):
         await self._client.__aexit__(typ, exc, tb)
 
 
-def resource_aggregator(
-    cls: typing.Type[_AggregatorT], /
-) -> typing.Type[_AggregatorT]:
-    if getattr(cls, "__annotations__", None) is None:
-        raise ValueError("Class must have annotations")
-
+def resource_aggregator(cls: typing.Type[_AggregatorT], /) -> typing.Type[_AggregatorT]:
     for name, resource_type in cls.__annotations__.items():
 
         def make_property(
             is_raw: bool,
             resource_type: typing.Type[typing.Any] = resource_type,
         ) -> cached_property[_AggregatorT]:
-            return cached_property(
-                lambda self: resource_type(self._client, is_raw)
-            )
+            return cached_property(lambda self: resource_type(self._client, is_raw))
 
         prop = make_property(name.startswith("raw_"))
         setattr(cls, name, prop)

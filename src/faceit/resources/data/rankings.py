@@ -9,11 +9,7 @@ from pydantic import Field, validate_call
 from faceit.constants import GameID, Region  # noqa: TC001
 from faceit.http import AsyncClient, SyncClient
 from faceit.models.custom_types import CountryCode  # noqa: TC001
-from faceit.resources.base import (
-    BaseResource,
-    FaceitResourcePath,
-    ModelPlaceholder,
-)
+from faceit.resources.base import BaseResource, FaceitResourcePath, ModelPlaceholder
 from faceit.resources.pagination import MaxItemsType, pages
 from faceit.types import (
     APIResponseFormatT,
@@ -36,9 +32,7 @@ class BaseRankings(
     __slots__ = ()
 
 
-class SyncRankings(
-    BaseRankings[SyncClient], typing.Generic[APIResponseFormatT]
-):
+class SyncRankings(BaseRankings[SyncClient], typing.Generic[APIResponseFormatT]):
     __slots__ = ()
 
     @typing.overload
@@ -75,7 +69,7 @@ class SyncRankings(
     ) -> typing.Union[RawAPIPageResponse, ModelNotImplemented]:
         return self._validate_response(
             self._client.get(
-                self.PATH / "games" / game / "regions" / region,
+                self.__class__.PATH / "games" / game / "regions" / region,
                 params=self.__class__._build_params(
                     country=country, offset=offset, limit=limit
                 ),
@@ -148,7 +142,7 @@ class SyncRankings(
         # fmt: off
         return self._validate_response(
             self._client.get(
-                self.PATH / "games" / game / "regions" / region / "players" / str(player_id),
+                self.__class__.PATH / "games" / game / "regions" / region / "players" / str(player_id),
                 params=self.__class__._build_params(
                     country=country, limit=limit
                 ),
@@ -159,9 +153,7 @@ class SyncRankings(
         # fmt: on
 
 
-class AsyncRankings(
-    BaseRankings[AsyncClient], typing.Generic[APIResponseFormatT]
-):
+class AsyncRankings(BaseRankings[AsyncClient], typing.Generic[APIResponseFormatT]):
     __slots__ = ()
 
     @typing.overload
@@ -198,7 +190,7 @@ class AsyncRankings(
     ) -> typing.Union[RawAPIPageResponse, ModelNotImplemented]:
         return self._validate_response(
             await self._client.get(
-                self.PATH / "games" / game / "regions" / region,
+                self.__class__.PATH / "games" / game / "regions" / region,
                 params=self.__class__._build_params(
                     country=country, offset=offset, limit=limit
                 ),
@@ -271,7 +263,7 @@ class AsyncRankings(
         # fmt: off
         return self._validate_response(
             await self._client.get(
-                self.PATH / "games" / game / "regions" / region / "players" / str(player_id),
+                self.__class__.PATH / "games" / game / "regions" / region / "players" / str(player_id),
                 params=self.__class__._build_params(
                     country=country, limit=limit
                 ),
