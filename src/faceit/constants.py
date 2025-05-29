@@ -21,11 +21,13 @@ _logger = logging.getLogger(__name__)
 BASE_WIKI_URL: typing.Final = "https://docs.faceit.com"
 RAW_RESPONSE_ITEMS_KEY: typing.Final = "items"
 FACEIT_USERNAME_REGEX: typing.Final = re.compile(r"^[a-zA-Z0-9_-]{1,24}$")
-"""Regex pattern for validating FACEIT usernames.
+"""
+Regex pattern for validating FACEIT usernames.
 Matches 1 to 24 characters: letters, digits, underscores, or hyphens.
 """
 MIN_ELO: typing.Final = 100
-"""Minimum ELO value across all FACEIT games.
+"""
+Minimum ELO value across all FACEIT games.
 Players cannot drop below this threshold regardless of consecutive losses.
 """
 
@@ -144,12 +146,14 @@ class GameID(StrEnum):
 
 class HighTierLevel(StrEnum):
     ABSENT = "absent"
-    """Indicates the absence of a defined top-tier rank in this discipline.
+    """
+    Indicates the absence of a defined top-tier rank in this discipline.
     Used when there is no distinct elite or highest rank in the ranking structure.
     """
 
     CHALLENGER = "challenger"
-    """Elite tier reserved for top 1000 players per game/region.
+    """
+    Elite tier reserved for top 1000 players per game/region.
 
     .. note::
         This rank represents a dynamic threshold based on leaderboard position rather

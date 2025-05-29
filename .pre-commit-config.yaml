@@ -1,0 +1,21 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.11.11
+    hooks:
+      - id: ruff-check
+      - id: ruff-format
+
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy
+        entry: mypy --config-file=.mypy.ini src --pretty
+        language: system
+        pass_filenames: false
+
+      - id: pytest-check
+        name: pytest-check
+        entry: pytest tests
+        language: system
+        pass_filenames: false
+        always_run: true

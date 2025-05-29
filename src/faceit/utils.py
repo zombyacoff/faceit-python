@@ -102,7 +102,8 @@ def locked(
 
 
 def extends(_: _T, /) -> typing.Callable[[typing.Callable[..., typing.Any]], _T]:
-    """Decorator that assigns the type signature of the given function to the
+    """
+    Decorator that assigns the type signature of the given function to the
     decorated function. Type checking is enforced only at the function boundary
     (when calling the function), not within the function body.
     """
@@ -238,7 +239,8 @@ def create_uuid_validator(
 
 
 def validate_positive_int(value: typing.Any, /, param_name: str = "value") -> int:
-    """Utility for validating that a value is a positive integer.
+    """
+    Utility for validating that a value is a positive integer.
     Use this when Pydantic's ``PositiveInt`` type or validation is
     impractical or unavailable.
     """

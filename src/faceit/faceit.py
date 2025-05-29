@@ -96,7 +96,8 @@ class BaseFaceit(ABC, typing.Generic[ClientT, DataResourceT]):
 
 @typing.final
 class Faceit(BaseFaceit[SyncClient, SyncDataResource]):
-    """Synchronous Faceit API interface.
+    """
+    Synchronous Faceit API interface.
 
     Example (Data API)::
 
@@ -114,7 +115,8 @@ class Faceit(BaseFaceit[SyncClient, SyncDataResource]):
 
 @typing.final
 class AsyncFaceit(BaseFaceit[AsyncClient, AsyncDataResource]):
-    """Asynchronous Faceit API interface.
+    """
+    Asynchronous Faceit API interface.
 
     Example (Data API)::
 

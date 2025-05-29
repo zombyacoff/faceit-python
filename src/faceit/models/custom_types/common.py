@@ -15,8 +15,8 @@ CountryCode: TypeAlias = Annotated[
     # It is necessary to study this issue in more detail.
     CountryAlpha2, AfterValidator(lambda x: typing.cast("str", x).lower())  # noqa: TC008
 ]
-"""Type alias for country codes that are always validated and converted to lowercase.
-
+"""
+Type alias for country codes that are always validated and converted to lowercase.
 Used because Faceit API requires country codes to be in lowercase.
 """
 

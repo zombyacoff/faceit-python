@@ -44,7 +44,6 @@ extend-immutable-calls = [
 [lint.flake8-import-conventions]
 banned-from = [
     "asyncio",
-    "decouple",
     "httpx",
     "json",
     "logging",

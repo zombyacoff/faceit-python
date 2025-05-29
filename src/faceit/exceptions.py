@@ -7,8 +7,10 @@ class FaceitError(Exception):
 
 
 class MissingAuthTokenError(FaceitError):
-    """Raised when the required authorization token is missing from the
-    environment or configuration files."""
+    """
+    Raised when the required authorization token is missing from the
+    environment or configuration files.
+    """
 
 
 class APIError(FaceitError):

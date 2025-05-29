@@ -47,10 +47,7 @@ from .helpers import validate_player_id, validate_player_id_or_nickname
 _logger = logging.getLogger(__name__)
 
 PlayerID: TypeAlias = ValidUUID
-PlayerIDValidated: TypeAlias = Annotated[
-    PlayerID,
-    AfterValidator(validate_player_id),
-]
+PlayerIDValidated: TypeAlias = Annotated[PlayerID, AfterValidator(validate_player_id)]
 _PlayerIdentifier: TypeAlias = typing.Union[str, ValidUUID]
 _PlayerIdentifierValidated: TypeAlias = Annotated[
     _PlayerIdentifier, AfterValidator(validate_player_id_or_nickname)

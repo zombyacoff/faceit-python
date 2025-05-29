@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import typing
-from enum import auto
 from ssl import SSLError
 
 import httpx
@@ -51,8 +50,8 @@ class SupportsExceptionPredicate(typing.Protocol):
 
 
 class SupportedMethod(StrEnum):
-    GET = auto()
-    POST = auto()
+    GET = "GET"
+    POST = "POST"
 
 
 @typing.final

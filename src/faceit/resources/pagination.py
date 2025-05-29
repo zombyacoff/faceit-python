@@ -213,7 +213,8 @@ class BasePageIterator(ABC, typing.Generic[PaginationMethodT, _PageT]):
 
     SAFE_MAX_PAGES: typing.ClassVar = 100
     DEFAULT_MAX_ITEMS: typing.ClassVar = 2000
-    """Selected as an optimal default to balance performance and resource usage
+    """
+    Selected as an optimal default to balance performance and resource usage
     when iterating through paginated FACEIT API data.
     """
 
@@ -289,7 +290,8 @@ class BasePageIterator(ABC, typing.Generic[PaginationMethodT, _PageT]):
 
     @property
     def _effective_limit(self) -> int:
-        """Returns an effective limit for the last page to ensure the offset
+        """
+        Returns an effective limit for the last page to ensure the offset
         is a multiple of the limit, as required by the API
         ("400 Bad pagination request: 'offset' must be a multiple of 'limit'").
         """

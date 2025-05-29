@@ -1,10 +1,11 @@
 # FACEIT Python API Library
 
-![python](https://img.shields.io/badge/python-3.8%2B-3776ab?style=flat-square&labelColor=ffffff&color=2e86c1)
-![pypi](https://img.shields.io/pypi/v/faceit?style=flat-square&labelColor=ffffff&color=43a047)
+![python](https://img.shields.io/badge/python-3.8%2B-3776ab?style=flat-square)
+![pypi](https://img.shields.io/pypi/v/faceit?style=flat-square)
 
-A fully type-safe, high-level Python wrapper for the [FACEIT REST API](https://docs.faceit.com/docs).
-Provides a seamless, pythonic interface for working with FACEIT data, featuring both synchronous and asynchronous clients, strict type checking, and robust pagination.
+This library makes it easy to access and use data from the FACEIT gaming platform — such as player stats, matches, and tournaments — directly from your Python programs, without needing to understand the technical details of the FACEIT API. It helps automate and integrate FACEIT data into your own projects, whether you’re building apps, analyzing stats, or creating tools for esports and gaming.
+
+**See the [official FACEIT API documentation](https://docs.faceit.com/docs) for details about the available data and endpoints.**
 
 ## Requirements
 
@@ -22,7 +23,7 @@ Provides a seamless, pythonic interface for working with FACEIT data, featuring 
 
 ## Installation
 
-```properties
+```
 pip install faceit
 ```
 
@@ -38,13 +39,13 @@ Below is a minimal example demonstrating how to retrieve the complete CS2 match 
 import faceit
 
 with faceit.Faceit.data("YOUR_API_KEY") as data:
-player = data.players.get("s1mple")
-# Returns an `ItemPage` collection (fully-featured iterable)
-matches = data.players.all_history(player.id, faceit.GameID.CS2)
-print(f"Total CS2 matches for s1mple: {len(matches)}")
-# Example: find a match by attribute
-some_match = matches.find("id", "some_match_id")
-print(f"First match with the given ID: {some_match or 'No match found'}")
+    player = data.players.get("s1mple")
+    # Returns an `ItemPage` collection (fully-featured iterable)
+    matches = data.players.all_history(player.id, faceit.GameID.CS2)
+    print(f"Total CS2 matches for s1mple: {len(matches)}")
+    # Example: find a match by attribute
+    some_match = matches.find("id", "some_match_id")
+    print(f"First match with the given ID: {some_match or 'No match found'}")
 ```
 
 ### More Example
@@ -80,7 +81,5 @@ Please open an issue or pull request on GitHub.
 
 ## License
 
-Apache License, Version 2.0 (SPDX: Apache-2.0)
-Copyright © 2025 Alexey Svidersky (zombyacoff)
-
-See the [LICENSE](LICENSE) file or [https://www.apache.org/licenses/LICENSE-2.0](https://www.apache.org/licenses/LICENSE-2.0) for details.
+This project is licensed under the Apache License 2.0.  
+See the [LICENSE](LICENSE) file for details.

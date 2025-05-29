@@ -44,14 +44,16 @@ from .helpers import (
 )
 
 try:
-    import decouple  # pyright: ignore[reportMissingImports]
+    from decouple import UndefinedValueError, config  # pyright: ignore[reportMissingImports] # noqa: I001
 
     # `decouple` is untyped;
     # we annotate `config` as `Callable[..., str]` to avoid "no-any-return" errors.
     # This is a minimal, project-specific typing.
-    decouple_config: typing.Callable[..., str] = decouple.config
+    env_config: typing.Callable[..., str] = config
+
+    ENV_EXTRA_INSTALLED: typing.Final = True
 except ImportError:
-    decouple = None  # type: ignore[assignment]
+    ENV_EXTRA_INSTALLED: typing.Final = False  # type: ignore[misc]
 
 if typing.TYPE_CHECKING:
     from faceit.types import (
@@ -117,6 +119,7 @@ class BaseAPIClient(ABC, typing.Generic[_HttpxClientT]):
     )
 
     if typing.TYPE_CHECKING:
+        _retry_args: RetryArgs
         _client: _HttpxClientT
 
     __api_key_validator: typing.ClassVar[typing.Callable[[ValidUUID], str]] = (
@@ -186,10 +189,7 @@ class BaseAPIClient(ABC, typing.Generic[_HttpxClientT]):
     def _retry_args_setter(self, retry_args: RetryArgs, /) -> None:
         if not isinstance(retry_args, dict):
             raise TypeError(f"Expected RetryArgs, got {type(retry_args).__name__}")
-        self._retry_args: RetryArgs = {
-            **self.__class__.DEFAULT_RETRY_ARGS,
-            **retry_args,
-        }
+        self._retry_args = {**self.__class__.DEFAULT_RETRY_ARGS, **retry_args}
 
     def _build_endpoint(self, endpoint: EndpointParam, /) -> str:
         return str(
@@ -209,15 +209,14 @@ class BaseAPIClient(ABC, typing.Generic[_HttpxClientT]):
 
     @staticmethod
     def _get_secret_from_env(key: str, /) -> str:
-        if decouple is None:
-            # TODO: Make this message better; `faceit[env]`
+        if not ENV_EXTRA_INSTALLED:
             raise ImportError(
-                "`python-decouple` is not installed. "
-                "Install it with: `pip install python-decouple`"
+                "`python-decouple` is required but not installed. "
+                "Please install it with:\npip install python-decouple"
             )
         try:
-            return decouple_config(key)
-        except decouple.UndefinedValueError:
+            return env_config(key)
+        except UndefinedValueError:
             raise MissingAuthTokenError(
                 "Authorization token is missing. "
                 f"Please set {key} in your `.env` or `settings.ini` file."
@@ -272,7 +271,6 @@ class _BaseSyncClient(BaseAPIClient[httpx.Client]):
         )
 
     def close(self) -> None:
-        """Close the HTTP client and release resources."""
         if not self.is_closed:
             self._client.close()
             _logger.debug("%s closed", self.__class__.__name__)
@@ -346,10 +344,7 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
         **raw_client_kwargs: typing.Any,
     ) -> None:
         super().__init__(api_key, base_url, retry_args)
-
-        max_concurrent_requests = self.__class__._update_initial_max_requests(
-            max_concurrent_requests
-        )
+        max_concurrent_requests = self.__class__._update_initial_max_requests(max_concurrent_requests)  # fmt: skip
 
         if (
             ssl_error_threshold != self.__class__.DEFAULT_SSL_ERROR_THRESHOLD
@@ -405,9 +400,7 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
                 )
             )
 
-        original_before_sleep = self._retry_args.get("before_sleep", None) or (
-            lambda _: None
-        )
+        original_before_sleep = self._retry_args.get("before_sleep", None) or (lambda _: None)  # fmt: skip
 
         async def ssl_before_sleep(retry_state: RetryCallState) -> None:
             if retry_state.outcome is None:
@@ -532,15 +525,13 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
         )
         if max_concurrent_requests > cls._initial_max_requests:
             cls._initial_max_requests = max_concurrent_requests
-            _logger.debug(
-                "Updated initial max requests to %d",
-                max_concurrent_requests,
-            )
+            _logger.debug("Updated initial max requests to %d", max_concurrent_requests)
         return max_concurrent_requests
 
     @classmethod
     def close(cls) -> typing.NoReturn:
-        """This method intentionally raises an error to prevent incorrect usage.
+        """
+        This method intentionally raises an error to prevent incorrect usage.
 
         Async clients should use ``aclose()`` instead.
         """
@@ -640,9 +631,7 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
 # the core implementation details in the base classes
 
 
-def _clean_type_hints(
-    kwargs: typing.Dict[str, typing.Any], /
-) -> typing.Dict[str, typing.Any]:
+def _clean_type_hints(kwargs: typing.Dict[str, typing.Any], /) -> typing.Dict[str, typing.Any]:  # fmt: skip
     for key in ("expect_item", "expect_page"):
         kwargs.pop(key, None)
     return kwargs
@@ -731,9 +720,7 @@ class AsyncClient(_BaseAsyncClient):
     async def get(
         self, endpoint: EndpointParam, **kwargs: typing.Any
     ) -> RawAPIResponse:
-        return await self.request(
-            SupportedMethod.GET, endpoint, **_clean_type_hints(kwargs)
-        )
+        return await self.request(SupportedMethod.GET, endpoint, **_clean_type_hints(kwargs))  # fmt: skip
 
     @typing.overload
     async def post(
@@ -761,6 +748,4 @@ class AsyncClient(_BaseAsyncClient):
     async def post(
         self, endpoint: EndpointParam, **kwargs: typing.Any
     ) -> RawAPIResponse:
-        return await self.request(
-            SupportedMethod.POST, endpoint, **_clean_type_hints(kwargs)
-        )
+        return await self.request(SupportedMethod.POST, endpoint, **_clean_type_hints(kwargs))  # fmt: skip
