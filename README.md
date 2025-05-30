@@ -1,5 +1,8 @@
 # FACEIT Python API Library
 
+![python](https://img.shields.io/badge/python-3.8%2B-3776ab?style=flat-square)
+![pypi](https://img.shields.io/pypi/v/faceit?style=flat-square&color=43a047)
+
 This library makes it easy to access and use data from the FACEIT gaming platform—such as player stats, matches, and tournaments—directly from your Python programs, without needing to understand the technical details of the FACEIT API.
 Automate and integrate FACEIT data into your projects, whether you’re building apps, analyzing stats, or creating tools for esports and gaming.
 
