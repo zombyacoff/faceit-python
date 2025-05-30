@@ -54,7 +54,8 @@ data = Faceit.data(EnvKey("EXAMPLE"))
 ```py
 from faceit import Faceit, GameID
 
-# The API key will be automatically loaded from the environment (FACEIT_API_KEY) if not specified
+# The API key will be automatically loaded from the environment
+# (FACEIT_API_KEY) if not specified
 data = Faceit.data()  # or Faceit.data("YOUR_API_KEY")
 
 player = data.players.get("s1mple")
