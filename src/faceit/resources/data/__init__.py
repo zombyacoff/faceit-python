@@ -33,192 +33,48 @@ from .teams import SyncTeams as SyncTeams
 @final
 @resource_aggregator
 class SyncDataResource(SyncResources):
-    """Aggregates all synchronous FACEIT Data API resources.
-
-    Each attribute provides access to a resource corresponding to a specific API endpoint.
-    Both parsed (``Model``) and raw (``Raw``) data variants are available.
-
-    .. seealso::
-        FACEIT Data API documentation: https://docs.faceit.com/docs/data-api/data/
-    """
-
     championships: SyncChampionships[Model]
-    """Synchronous resource for the ``/championships`` endpoint.
-
-    For details, see:
-    https://docs.faceit.com/docs/data-api/data/#tag/Championships
-    """
-
     raw_championships: SyncChampionships[Raw]
-    """Synchronous resource for the ``/championships`` endpoint (raw data).
-
-    For details, see:
-    https://docs.faceit.com/docs/data-api/data/#tag/Championships
-    """
 
     leagues: SyncLeagues[Model]
-    """Synchronous resource for the ``/leagues`` endpoint.
-
-    For details, see:
-    https://docs.faceit.com/docs/data-api/data/#tag/Leagues
-    """
-
     raw_leagues: SyncLeagues[Raw]
-    """Synchronous resource for the ``/leagues`` endpoint (raw data).
-
-    For details, see:
-    https://docs.faceit.com/docs/data-api/data/#tag/Leagues
-    """
 
     matches: SyncMatches[Model]
-    """Synchronous resource for the ``/matches`` endpoint.
-
-    For details, see:
-    https://docs.faceit.com/docs/data-api/data/#tag/Matches
-    """
-
     raw_matches: SyncMatches[Raw]
-    """Synchronous resource for the ``/matches`` endpoint (raw data).
-
-    For details, see:
-    https://docs.faceit.com/docs/data-api/data/#tag/Matches
-    """
 
     matchmakings: SyncMatchmakings[Model]
-    """Synchronous resource for the ``/matchmakings`` endpoint.
-
-    For details, see:
-    https://docs.faceit.com/docs/data-api/data/#tag/Matchmakings
-    """
-
     raw_matchmakings: SyncMatchmakings[Raw]
-    """Synchronous resource for the ``/matchmakings`` endpoint (raw data).
-
-    For details, see:
-    https://docs.faceit.com/docs/data-api/data/#tag/Matchmakings
-    """
 
     players: SyncPlayers[Model]
-    """Synchronous resource for the ``/players`` endpoint.
-
-    For details, see:
-    https://docs.faceit.com/docs/data-api/data/#tag/Players
-    """
-
     raw_players: SyncPlayers[Raw]
-    """Synchronous resource for the ``/players`` endpoint (raw data).
-
-    For details, see:
-    https://docs.faceit.com/docs/data-api/data/#tag/Players
-    """
 
     rankings: SyncRankings[Model]
-    """Synchronous resource for the ``/rankings`` endpoint.
-
-    For details, see:
-    https://docs.faceit.com/docs/data-api/data/#tag/Rankings
-    """
-
     raw_rankings: SyncRankings[Raw]
-    """Synchronous resource for the ``/rankings`` endpoint (raw data).
-
-    For details, see:
-    https://docs.faceit.com/docs/data-api/data/#tag/Rankings
-    """
 
     teams: SyncTeams[Model]
-    """Synchronous resource for the ``/teams`` endpoint.
-
-    For details, see:
-    https://docs.faceit.com/docs/data-api/data/#tag/Teams
-    """
-
     raw_teams: SyncTeams[Raw]
-    """Synchronous resource for the ``/teams`` endpoint (raw data).
-
-    For details, see:
-    https://docs.faceit.com/docs/data-api/data/#tag/Teams
-    """
 
 
 @final
 @resource_aggregator
 class AsyncDataResource(AsyncResources):
-    """Aggregates all asynchronous FACEIT Data API resources.
-
-    Each attribute provides access to a resource corresponding to a specific API endpoint.
-    Both parsed (``Model``) and raw (``Raw``) data variants are available.
-
-    .. seealso::
-        FACEIT Data API documentation: https://docs.faceit.com/docs/data-api/data/
-    """
-
     championships: AsyncChampionships[Model]
-    """Asynchronous resource for the ``/championships`` endpoint.
-
-    For details, see:
-    https://docs.faceit.com/docs/data-api/data/#tag/Championships
-    """
-
     raw_championships: AsyncChampionships[Raw]
-    """Asynchronous resource for the ``/championships`` endpoint (raw data).
 
-    For details, see:
-    https://docs.faceit.com/docs/data-api/data/#tag/Championships
-    """
+    leagues: AsyncLeagues[Model]
+    raw_leagues: AsyncLeagues[Raw]
 
     matches: AsyncMatches[Model]
-    """Asynchronous resource for the ``/matches`` endpoint.
-
-    For details, see:
-    https://docs.faceit.com/docs/data-api/data/#tag/Matches
-    """
-
     raw_matches: AsyncMatches[Raw]
-    """Asynchronous resource for the ``/matches`` endpoint (raw data).
 
-    For details, see:
-    https://docs.faceit.com/docs/data-api/data/#tag/Matches
-    """
+    matchmakings: AsyncMatchmakings[Model]
+    raw_matchmakings: AsyncMatchmakings[Raw]
 
     players: AsyncPlayers[Model]
-    """Asynchronous resource for the ``/players`` endpoint.
-
-    For details, see:
-    https://docs.faceit.com/docs/data-api/data/#tag/Players
-    """
-
     raw_players: AsyncPlayers[Raw]
-    """Asynchronous resource for the ``/players`` endpoint (raw data).
-
-    For details, see:
-    https://docs.faceit.com/docs/data-api/data/#tag/Players
-    """
 
     teams: AsyncTeams[Model]
-    """Asynchronous resource for the ``/teams`` endpoint.
-
-    For details, see:
-    https://docs.faceit.com/docs/data-api/data/#tag/Teams
-    """
-
     raw_teams: AsyncTeams[Raw]
-    """Asynchronous resource for the ``/teams`` endpoint (raw data).
-
-    For details, see:
-    https://docs.faceit.com/docs/data-api/data/#tag/Teams
-    """
 
     rankings: AsyncRankings[Model]
-    """Asynchronous resource for the ``/rankings`` endpoint.
-
-    For details, see:
-    https://docs.faceit.com/docs/data-api/data/#tag/Rankings
-    """
-
     raw_rankings: AsyncRankings[Raw]
-    """Asynchronous resource for the ``/rankings`` endpoint (raw data).
-
-    For details, see:
-    https://docs.faceit.com/docs/data-api/data/#tag/Rankings
-    """

@@ -36,10 +36,7 @@ class StrEnum(str, Enum):
     _value_: str
 
     def __new__(
-        cls,
-        value: typing.Union[str, auto],
-        *args: typing.Any,
-        **kwargs: typing.Any,
+        cls, value: typing.Union[str, auto], *args: typing.Any, **kwargs: typing.Any
     ) -> Self:
         if isinstance(value, (str, auto)):
             return super().__new__(cls, value, *args, **kwargs)
@@ -79,7 +76,7 @@ def locked(
     def decorator(func: typing.Callable[_P, _T], /) -> typing.Callable[_P, _T]:
         if iscoroutinefunction(func):
             if not isinstance(lock, asyncio.Lock):
-                raise TypeError("lock must be an asyncio.Lock")
+                raise TypeError("lock must be an `asyncio.Lock`")
 
             @wraps(func)
             async def async_wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _T:
@@ -89,7 +86,7 @@ def locked(
             return typing.cast("typing.Callable[_P, _T]", async_wrapper)
 
         if not isinstance(lock, _LockType):
-            raise TypeError("lock must be a threading.Lock")
+            raise TypeError("lock must be a `threading.Lock`")
 
         @wraps(func)
         def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _T:

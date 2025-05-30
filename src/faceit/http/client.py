@@ -360,10 +360,7 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient]):
             max_connections=max_concurrent_requests * 2,
             keepalive_expiry=self.__class__.DEFAULT_KEEPALIVE_EXPIRY,
         )
-        transport = (  # fmt: skip
-            raw_client_kwargs.pop("transport", None)
-            or httpx.AsyncHTTPTransport(retries=1)
-        )
+        transport = raw_client_kwargs.pop("transport", None) or httpx.AsyncHTTPTransport(retries=1)  # fmt: skip
         self._client = httpx.AsyncClient(
             timeout=timeout,
             headers=self._base_headers,

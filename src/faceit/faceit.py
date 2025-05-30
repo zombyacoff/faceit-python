@@ -2,14 +2,20 @@ from __future__ import annotations
 
 import typing
 from abc import ABC
+from functools import lru_cache
 from warnings import warn
 
-from .http import AsyncClient, SyncClient
+from .http import AsyncClient, EnvKey, SyncClient
 from .resources import AsyncDataResource, SyncDataResource
 from .types import ClientT, DataResourceT, ValidUUID
 
 if typing.TYPE_CHECKING:
     from .http.client import BaseAPIClient
+
+
+@lru_cache(maxsize=None)
+def _get_env_key(key: str, /) -> BaseAPIClient.env:
+    return EnvKey(f"FACEIT_{key.upper()}")
 
 
 class BaseFaceit(ABC, typing.Generic[ClientT, DataResourceT]):
@@ -53,10 +59,7 @@ class BaseFaceit(ABC, typing.Generic[ClientT, DataResourceT]):
             "DataResourceT",
             cls._data_cls(
                 cls._initialize_client(
-                    api_key,
-                    client,
-                    secret="api_key",  # noqa: S106
-                    **client_options,
+                    api_key, client, secret_type="api_key", **client_options
                 )
             ),
         )
@@ -70,16 +73,19 @@ class BaseFaceit(ABC, typing.Generic[ClientT, DataResourceT]):
         client: typing.Optional[ClientT] = None,
         /,
         *,
-        secret: str,
+        secret_type: str,
         **client_options: typing.Any,
     ) -> ClientT:
         if auth is not None and client is not None:
-            raise ValueError(f"Provide either {secret!r} or 'client', not both")
+            raise ValueError(f"Provide either {secret_type!r} or 'client', not both")
 
         if client is None:
             return typing.cast(
                 "ClientT",
-                cls._client_cls(*() if auth is None else (auth,), **client_options),
+                cls._client_cls(
+                    _get_env_key(secret_type) if auth is None else auth,
+                    **client_options,
+                ),
             )
 
         if client_options:

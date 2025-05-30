@@ -1,9 +1,7 @@
 # FACEIT Python API Library
 
-![python](https://img.shields.io/badge/python-3.8%2B-3776ab?style=flat-square)
-![pypi](https://img.shields.io/pypi/v/faceit?style=flat-square)
-
-This library makes it easy to access and use data from the FACEIT gaming platform — such as player stats, matches, and tournaments — directly from your Python programs, without needing to understand the technical details of the FACEIT API. It helps automate and integrate FACEIT data into your own projects, whether you’re building apps, analyzing stats, or creating tools for esports and gaming.
+This library makes it easy to access and use data from the FACEIT gaming platform—such as player stats, matches, and tournaments—directly from your Python programs, without needing to understand the technical details of the FACEIT API.
+Automate and integrate FACEIT data into your projects, whether you’re building apps, analyzing stats, or creating tools for esports and gaming.
 
 **See the [official FACEIT API documentation](https://docs.faceit.com/docs) for details about the available data and endpoints.**
 
@@ -15,7 +13,7 @@ This library makes it easy to access and use data from the FACEIT gaming platfor
 
 - **High-level, idiomatic API** – Interact with FACEIT as if it were a native Python service.
 - **Full type safety** – Compatible with [mypy](https://mypy-lang.org/) and other type checkers.
-- **Synchronous & asynchronous support** – Powered by [httpx](https://www.python-httpx.org/).
+- **Sync & async support** – Powered by [httpx](https://www.python-httpx.org/).
 - **Pydantic models** – All data models inherit from [`pydantic.BaseModel`](https://docs.pydantic.dev/latest/usage/models/).
 - **Advanced pagination** – Supports both cursor-based and unix-time-based iterators.
 - **Flexible data access** – Choose between raw data and parsed models (e.g., `.raw_players` / `.players`).
@@ -23,32 +21,49 @@ This library makes it easy to access and use data from the FACEIT gaming platfor
 
 ## Installation
 
-```
+```sh
 pip install faceit
 ```
 
 ## Quickstart Example
 
+You can get started in just a few lines of code.
 Below is a minimal example demonstrating how to retrieve the complete CS2 match history for a player using the synchronous API.
 
 > [!IMPORTANT]
 > Currently, only the Faceit Data resource is available, and access requires a valid API key.
 > You can obtain your API key by following the instructions in the [official FACEIT documentation](https://docs.faceit.com/getting-started/authentication/api-keys).
 
-```py
-import faceit
+### API Key Handling
 
-with faceit.Faceit.data("YOUR_API_KEY") as data:
-    player = data.players.get("s1mple")
-    # Returns an `ItemPage` collection (fully-featured iterable)
-    matches = data.players.all_history(player.id, faceit.GameID.CS2)
-    print(f"Total CS2 matches for s1mple: {len(matches)}")
-    # Example: find a match by attribute
-    some_match = matches.find("id", "some_match_id")
-    print(f"First match with the given ID: {some_match or 'No match found'}")
+You can specify your API key directly in the constructor, or let the library automatically load it from your environment (e.g., `.env`, `settings.ini`).
+By default, the key is read from the `FACEIT_API_KEY` variable.
+To use a different variable, pass an instance of `EnvKey` to the constructor:
+
+```py
+from faceit import Faceit, EnvKey
+
+data = Faceit.data(EnvKey("EXAMPLE"))
 ```
 
-### More Example
+### Minimal Example
+
+```py
+from faceit import Faceit, GameID
+
+# The API key will be automatically loaded from the environment (FACEIT_API_KEY) if not specified
+data = Faceit.data()  # or Faceit.data("YOUR_API_KEY")
+
+player = data.players.get("s1mple")
+# Returns an `ItemPage` collection (fully-featured iterable)
+matches = data.players.all_history(player.id, GameID.CS2)
+print(f"Total CS2 matches for s1mple: {len(matches)}")
+# Example: find a match by attribute
+some_match = matches.find("id", "some_match_id")
+print(f"First match with the given ID: {some_match or 'No match found'}")
+```
+
+### More Examples
 
 See additional usage examples in the [examples/](examples/) directory.
 
@@ -64,7 +79,7 @@ The goal is to provide a solution approaching enterprise-level quality, while re
 > This library is currently in **early development**.
 > Many endpoints, models, and features are not yet implemented.
 > Webhooks, chat API, and some advanced features are not available yet.
-> Inline code documentation is minimal, and the Sphinx documentation site is not yet ready.
+> Inline code documentation is minimal, and the Sphinx-based documentation site is not yet ready.
 > Expect breaking changes and incomplete coverage.
 > **Contributions and feedback are highly welcome!**
 
@@ -79,7 +94,6 @@ The goal is to provide a solution approaching enterprise-level quality, while re
 Contributions, bug reports, and feature requests are welcome!
 Please open an issue or pull request on GitHub.
 
-## License
+---
 
-This project is licensed under the Apache License 2.0.  
-See the [LICENSE](LICENSE) file for details.
+This project is licensed under the Apache License 2.0. See the [LICENSE](LICENSE) file for details.
