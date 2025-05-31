@@ -4,7 +4,7 @@
 ![pypi](https://img.shields.io/pypi/v/faceit?style=flat-square&color=43a047)
 
 This library makes it easy to access and use data from the FACEIT gaming platform – such as player stats, matches, and tournaments – directly from your Python programs, without needing to understand the technical details of the FACEIT API.
-Automate and integrate FACEIT data into your projects, whether you’re building apps, analyzing stats, or creating tools for esports and gaming.
+Automate and integrate FACEIT data into your projects, whether building apps, analyzing stats, or creating tools for esports and gaming.
 
 **See the [official FACEIT API documentation](https://docs.faceit.com/docs) for details about the available data and endpoints.**
 
@@ -20,12 +20,18 @@ Automate and integrate FACEIT data into your projects, whether you’re building
 - **Pydantic models** – All data models inherit from [`pydantic.BaseModel`](https://docs.pydantic.dev/latest/usage/models/).
 - **Advanced pagination** – Supports both cursor-based and unix-time-based iterators.
 - **Flexible data access** – Choose between raw data and parsed models (e.g., `.raw_players` / `.players`).
-- **Page collection utilities** – Paginated responses in model mode are wrapped in an `ItemPage` collection with convenient methods: `.map()`, `.filter()`, `.find()`, and more.
+- **Page collection utilities** – Paginated responses in model mode are wrapped in an `ItemPage` collection with convenient methods, such as `.map()`, `.filter()`, `.find()`, and more.
 
 ## Installation
 
-```sh
+```
 pip install faceit
+```
+
+You can also install with the `env` extra to enable loading the API key from environment files (details below):
+
+```
+pip install faceit[env]
 ```
 
 ## Quickstart Example
@@ -46,25 +52,38 @@ To use a different variable, pass an instance of `EnvKey` to the constructor:
 ```py
 from faceit import Faceit, EnvKey
 
-data = Faceit.data(EnvKey("EXAMPLE"))
+data = Faceit.data(EnvKey("API_KEY"))
 ```
+
+> [!NOTE]
+> Loading the API key from environment files requires either installing the `[env]` extra (`pip install faceit[env]`) or installing [python-decouple](https://github.com/HBNetwork/python-decouple) yourself.
 
 ### Minimal Example
 
 ```py
 from faceit import Faceit, GameID
 
-# The API key will be automatically loaded from the environment
-# (FACEIT_API_KEY) if not specified
+# Initialize the API client.
+# If FACEIT_API_KEY is set in your environment, you can omit the argument.
 data = Faceit.data()  # or Faceit.data("YOUR_API_KEY")
 
+# Fetch player information by nickname.
 player = data.players.get("s1mple")
-# Returns an `ItemPage` collection (fully-featured iterable)
+
+# Retrieve all CS2 match history for the player.
+# Returns an ItemPage collection (fully-featured iterable).
 matches = data.players.all_history(player.id, GameID.CS2)
-print(f"Total CS2 matches for s1mple: {len(matches)}")
-# Example: find a match by attribute
-some_match = matches.find("id", "some_match_id")
-print(f"First match with the given ID: {some_match or 'No match found'}")
+
+print(f"Total CS2 matches for {player.nickname}: {len(matches)}")
+
+# Example: Find a match by its ID.
+match_id = "1-441ff69f-09e3-4c58-b5c4-a0a7424fe8e0"
+some_match = matches.find("id", match_id)
+
+if some_match:
+    print(f"Found match with ID {match_id}: {some_match}")
+else:
+    print(f"No match found with ID {match_id}")
 ```
 
 ### More Examples
@@ -96,7 +115,7 @@ The goal is to provide a solution approaching enterprise-level quality, while re
 ## Contributing
 
 Contributions, bug reports, and feature requests are welcome!
-Please open an issue or pull request on GitHub.
+Please see [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines before opening an issue or pull request.
 
 ---
 

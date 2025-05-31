@@ -8,7 +8,7 @@ from faceit.utils import _UNINITIALIZED_MARKER, representation
 DEFINE_STR_ERROR_MSG = "must define __str__ method"
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def dataclass_no_repr() -> Callable[..., Any]:
     return dataclass(repr=False)
 

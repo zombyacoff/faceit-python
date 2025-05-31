@@ -12,7 +12,9 @@ from faceit.constants import RAW_RESPONSE_ITEMS_KEY
 from faceit.types import _R, _T
 from faceit.utils import UnsetValue, get_nested_property
 
-_PaginationLimit: TypeAlias = Annotated[int, Field(ge=UnsetValue.UNSET)]
+_PaginationLimit: TypeAlias = Annotated[
+    int, Field(ge=UnsetValue.UNSET)  # [-1: unlimited)
+]
 
 
 @typing.final
@@ -37,14 +39,8 @@ class ItemPage(BaseModel, typing.Generic[_T], frozen=True):
 
     _time_from: Annotated[
         _PaginationLimit,
-        Field(
-            UnsetValue.UNSET,
-            alias="from",
-            examples=[
-                # UTC timestamp for 2025-05-04 00:00:00, in milliseconds
-                1746316800000
-            ],
-        ),
+        # 1746316800000 = UTC timestamp for 2025-05-04 00:00:00, in milliseconds
+        Field(UnsetValue.UNSET, alias="from", examples=[1746316800000]),
     ]
     """Unix time in milliseconds to start the range."""
     _time_to: Annotated[
@@ -159,8 +155,7 @@ class ItemPage(BaseModel, typing.Generic[_T], frozen=True):
     ) -> typing.Tuple[typing.Type[Self], typing.Tuple[typing.Any, ...]]:
         # fmt: off
         return (self.__class__, (
-            self.items, self._offset, self._limit,
-            self._time_from, self._time_to,
+            self.items, self._offset, self._limit, self._time_from, self._time_to,
         ))
         # fmt: on
 

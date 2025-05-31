@@ -45,15 +45,15 @@ from .helpers import (
 
 try:
     from decouple import UndefinedValueError, config  # pyright: ignore[reportMissingImports] # noqa: I001
-
+except ImportError:
+    ENV_EXTRA_INSTALLED: typing.Final = False
+else:
     # `decouple` is untyped;
     # we annotate `config` as `Callable[..., str]` to avoid "no-any-return" errors.
     # This is a minimal, project-specific typing.
     env_config: typing.Callable[..., str] = config
 
-    ENV_EXTRA_INSTALLED: typing.Final = True
-except ImportError:
-    ENV_EXTRA_INSTALLED: typing.Final = False  # type: ignore[misc]
+    ENV_EXTRA_INSTALLED: typing.Final = True  # type: ignore[misc]
 
 if typing.TYPE_CHECKING:
     from faceit.types import (

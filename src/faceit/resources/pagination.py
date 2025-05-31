@@ -513,8 +513,7 @@ class BasePageIterator(ABC, typing.Generic[PaginationMethodT, _PageT]):
     ) -> Self:
         # fmt: off
         return cls(method, *args, **{
-            **kwargs,
-            **({} if timestamp is None else {"to": timestamp + 1}),
+            **kwargs, **({} if timestamp is None else {"to": timestamp + 1}),
         })
         # fmt: on
 

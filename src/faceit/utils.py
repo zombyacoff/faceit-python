@@ -18,6 +18,7 @@ from typing_extensions import Self, TypeIs
 if typing.TYPE_CHECKING:
     from .types import _P, _T, ValidUUID
 
+    _CallableT = typing.TypeVar("_CallableT", bound=typing.Callable[..., typing.Any])
     _ClassT = typing.TypeVar("_ClassT", bound=type)
 
 _LockType = type(Lock())
@@ -98,13 +99,13 @@ def locked(
     return decorator
 
 
-def extends(_: _T, /) -> typing.Callable[[typing.Callable[..., typing.Any]], _T]:
+def extends(_: _CallableT, /) -> typing.Callable[[typing.Callable[..., typing.Any]], _CallableT]:  # fmt: skip
     """
     Decorator that assigns the type signature of the given function to the
     decorated function. Type checking is enforced only at the function boundary
     (when calling the function), not within the function body.
     """
-    return lambda x: typing.cast("_T", x)
+    return lambda x: typing.cast("_CallableT", x)
 
 
 def noop(*_: typing.Any, **__: typing.Any) -> None:

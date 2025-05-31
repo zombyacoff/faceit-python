@@ -112,8 +112,7 @@ class BasePlayers(
         if is_valid_uuid(player_lookup_key):
             _logger.debug("Fetching player by UUID: %s", player_lookup_key)
             return RequestPayload(
-                endpoint=self.__class__.PATH / str(player_lookup_key),
-                params=params,
+                endpoint=self.__class__.PATH / str(player_lookup_key), params=params
             )
 
         _logger.debug("Fetching player by nickname: %s", player_lookup_key)

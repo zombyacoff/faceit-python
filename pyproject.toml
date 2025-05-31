@@ -35,7 +35,7 @@ env = ["python-decouple>=3.8"]
 
 [project.urls]
 "Bug Tracker" = "https://github.com/zombyacoff/faceit-python/issues"
-Documentation = "https://docs.faceit.com/docs"
+"Documentation" = "https://docs.faceit.com/docs"
 
 [dependency-groups]
 dev = [
