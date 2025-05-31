@@ -129,4 +129,4 @@ cython_debug/
 
 # Personal
 /assets
-__*.py
+___*.py
