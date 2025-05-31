@@ -1,6 +1,8 @@
-from ._client import AsyncClient as AsyncClient
-from ._client import MaxConcurrentRequests as MaxConcurrentRequests
-from ._client import SupportedMethod as SupportedMethod
-from ._client import SyncClient as SyncClient
-from ._helpers import Endpoint as Endpoint
-from ._helpers import RetryArgs as RetryArgs
+from .client import AsyncClient as AsyncClient
+from .client import MaxConcurrentRequests as MaxConcurrentRequests
+from .client import SyncClient as SyncClient
+from .helpers import Endpoint as Endpoint
+from .helpers import RetryArgs as RetryArgs
+from .helpers import SupportedMethod as SupportedMethod
+
+EnvKey = SyncClient.env

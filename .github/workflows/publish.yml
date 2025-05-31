@@ -1,4 +1,4 @@
-name: Python package
+name: Publish to PyPI
 
 on:
   push:
@@ -6,11 +6,20 @@ on:
       - "v*.*.*"
 
 jobs:
-  build:
+  publish:
     runs-on: ubuntu-latest
+    environment:
+      name: release
+    permissions:
+      id-token: write
     steps:
-      - uses: actions/checkout@v3
-      - name: Build and publish to pypi
-        uses: JRubics/poetry-publish@v2.1
-        with:
-          pypi_token: ${{ secrets.PYPI_TOKEN }}
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Build package
+        run: uv build
+
+      - name: Publish to PyPI
+        run: uv publish dist/*

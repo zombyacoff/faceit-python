@@ -15,16 +15,18 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import httpx
 import pytest
+from tenacity import stop_after_attempt
+
 from faceit.constants import BASE_WIKI_URL
 from faceit.exceptions import APIError
 from faceit.http import AsyncClient, Endpoint, SupportedMethod, SyncClient
-from faceit.http._client import (
+from faceit.http.client import (
     BaseAPIClient,
     _BaseAsyncClient,
     _BaseSyncClient,
-    _is_ssl_error,
+    is_ssl_error,
 )
-from tenacity import stop_after_attempt
+from faceit.utils import REDACTED_MARKER
 
 
 @pytest.fixture
@@ -135,9 +137,7 @@ class TestBaseAPIClient:
         client = SyncClient(valid_uuid)
         masked_key = client.api_key
         assert masked_key != valid_uuid
-        assert masked_key.startswith(valid_uuid[:4])
-        assert masked_key.endswith(valid_uuid[-4:])
-        assert "..." in masked_key
+        assert masked_key == REDACTED_MARKER
         client.close()  # Ensure proper cleanup
 
     def test_base_headers(self, valid_uuid):
@@ -282,9 +282,7 @@ class TestSyncClient:
         mock_instance.request.return_value = mock_response
         mock_client.return_value = mock_instance
 
-        client = SyncClient(
-            valid_uuid, retry_args={"stop": stop_after_attempt(1)}
-        )
+        client = SyncClient(valid_uuid, retry_args={"stop": stop_after_attempt(1)})
         result = client.request(SupportedMethod.GET, "users/123")
         assert result == {"data": "test_data"}
         mock_instance.request.assert_called_once()
@@ -298,9 +296,7 @@ class TestSyncClient:
         mock_instance.request.side_effect = httpx.TimeoutException("Timeout")
         mock_client.return_value = mock_instance
 
-        client = SyncClient(
-            valid_uuid, retry_args={"stop": stop_after_attempt(1)}
-        )
+        client = SyncClient(valid_uuid, retry_args={"stop": stop_after_attempt(1)})
         with pytest.raises(httpx.TimeoutException):
             client.request(SupportedMethod.GET, "users/123")
         client.close()  # Ensure proper cleanup
@@ -361,9 +357,7 @@ class TestAsyncClient:
 
     @pytest.mark.asyncio
     @patch("httpx.AsyncClient")
-    async def test_request_with_retry(
-        self, mock_client, valid_uuid, mock_response
-    ):
+    async def test_request_with_retry(self, mock_client, valid_uuid, mock_response):
         """Test request with retry logic."""
         mock_instance = Mock()
         mock_instance.is_closed = False
@@ -384,9 +378,7 @@ class TestAsyncClient:
         """Test request with timeout."""
         mock_instance = Mock()
         mock_instance.is_closed = False
-        mock_instance.request = AsyncMock(
-            side_effect=httpx.TimeoutException("Timeout")
-        )
+        mock_instance.request = AsyncMock(side_effect=httpx.TimeoutException("Timeout"))
         mock_instance.aclose = AsyncMock()
         mock_client.return_value = mock_instance
 
@@ -428,7 +420,7 @@ class TestAsyncClient:
 
             client = AsyncClient(valid_uuid)
             try:
-                with pytest.raises(TypeError) as excinfo:
+                with pytest.raises(RuntimeError) as excinfo:
                     client.close()
                 assert "Use 'await AsyncClient.aclose()'" in str(excinfo.value)
             finally:
@@ -441,9 +433,7 @@ class TestAsyncClient:
         client = async_client_factory()
         try:
             # Save original value to restore later
-            original_max_concurrent_requests = (
-                AsyncClient._max_concurrent_requests
-            )
+            original_max_concurrent_requests = AsyncClient._max_concurrent_requests
 
             # Test updating to a valid value
             AsyncClient.update_rate_limit(20)
@@ -503,26 +493,24 @@ class TestAsyncClient:
 class TestSSLErrorHandling:
     """Tests for SSL error handling functionality."""
 
-    def test_is_ssl_error(self):
-        """Test the _is_ssl_error function."""
+    def testis_ssl_error(self):
+        """Test the is_ssl_error function."""
         # Test with SSLError
-        assert _is_ssl_error(ssl.SSLError("SSL Error"))
+        assert is_ssl_error(ssl.SSLError("SSL Error"))
 
         # Test with ConnectError containing SSL in message
-        assert _is_ssl_error(httpx.ConnectError("SSL connection failed"))
+        assert is_ssl_error(httpx.ConnectError("SSL connection failed"))
 
         # Test with ConnectError containing TLS in message
-        assert _is_ssl_error(httpx.ConnectError("TLS handshake failed"))
+        assert is_ssl_error(httpx.ConnectError("TLS handshake failed"))
 
         # Test with non-SSL error
-        assert not _is_ssl_error(ValueError("Not an SSL error"))
+        assert not is_ssl_error(ValueError("Not an SSL error"))
 
     @pytest.mark.asyncio
     @patch("httpx.AsyncClient")
-    @patch("faceit.http._client._logger")  # Mock the logger to avoid real logs
-    async def test_register_ssl_error(
-        self, mock_logger, mock_client, valid_uuid
-    ):
+    @patch("faceit.http.client._logger")  # Mock the logger to avoid real logs
+    async def test_register_ssl_error(self, mock_logger, mock_client, valid_uuid):
         """Test _register_ssl_error method."""
         mock_instance = Mock()
         mock_instance.is_closed = False
@@ -542,12 +530,8 @@ class TestSSLErrorHandling:
 
                 # Save original values
                 original_ssl_error_count = AsyncClient._ssl_error_count
-                original_adaptive_limit_enabled = (
-                    AsyncClient._adaptive_limit_enabled
-                )
-                original_max_concurrent_requests = (
-                    AsyncClient._max_concurrent_requests
-                )
+                original_adaptive_limit_enabled = AsyncClient._adaptive_limit_enabled
+                original_max_concurrent_requests = AsyncClient._max_concurrent_requests
                 original_ssl_error_threshold = AsyncClient._ssl_error_threshold
                 original_min_connections = AsyncClient._min_connections
 
@@ -565,17 +549,11 @@ class TestSSLErrorHandling:
                 mock_update_rate_limit.assert_not_called()
 
                 # Test 2: Reaching the threshold triggers rate limit reduction
-                AsyncClient._ssl_error_count = (
-                    AsyncClient._ssl_error_threshold - 1
-                )
+                AsyncClient._ssl_error_count = AsyncClient._ssl_error_threshold - 1
                 result = AsyncClient._register_ssl_error()
                 assert result is True
-                mock_update_rate_limit.assert_called_once_with(
-                    15
-                )  # 30 // 2 = 15
-                assert (
-                    AsyncClient._ssl_error_count == 0
-                )  # Counter should be reset
+                mock_update_rate_limit.assert_called_once_with(15)  # 30 // 2 = 15
+                assert AsyncClient._ssl_error_count == 0  # Counter should be reset
 
             finally:
                 # Restore the original method
@@ -583,18 +561,14 @@ class TestSSLErrorHandling:
 
                 # Restore original values
                 AsyncClient._ssl_error_count = original_ssl_error_count
-                AsyncClient._adaptive_limit_enabled = (
-                    original_adaptive_limit_enabled
-                )
-                AsyncClient._max_concurrent_requests = (
-                    original_max_concurrent_requests
-                )
+                AsyncClient._adaptive_limit_enabled = original_adaptive_limit_enabled
+                AsyncClient._max_concurrent_requests = original_max_concurrent_requests
                 AsyncClient._ssl_error_threshold = original_ssl_error_threshold
                 AsyncClient._min_connections = original_min_connections
 
     @pytest.mark.asyncio
     @patch("httpx.AsyncClient")
-    @patch("faceit.http._client._logger")  # Mock the logger to avoid real logs
+    @patch("faceit.http.client._logger")  # Mock the logger to avoid real logs
     async def test_check_connection_recovery(
         self, mock_logger, mock_client, valid_uuid
     ):
@@ -616,12 +590,8 @@ class TestSSLErrorHandling:
                 )
 
                 # Save original values
-                original_max_concurrent_requests = (
-                    AsyncClient._max_concurrent_requests
-                )
-                original_initial_max_requests = (
-                    AsyncClient._initial_max_requests
-                )
+                original_max_concurrent_requests = AsyncClient._max_concurrent_requests
+                original_initial_max_requests = AsyncClient._initial_max_requests
                 original_last_ssl_error_time = AsyncClient._last_ssl_error_time
                 original_recovery_check_time = AsyncClient._recovery_check_time
                 original_recovery_interval = AsyncClient._recovery_interval
@@ -649,12 +619,8 @@ class TestSSLErrorHandling:
                 AsyncClient.update_rate_limit = original_update_rate_limit
 
                 # Restore original values
-                AsyncClient._max_concurrent_requests = (
-                    original_max_concurrent_requests
-                )
-                AsyncClient._initial_max_requests = (
-                    original_initial_max_requests
-                )
+                AsyncClient._max_concurrent_requests = original_max_concurrent_requests
+                AsyncClient._initial_max_requests = original_initial_max_requests
                 AsyncClient._last_ssl_error_time = original_last_ssl_error_time
                 AsyncClient._recovery_check_time = original_recovery_check_time
                 AsyncClient._recovery_interval = original_recovery_interval
@@ -681,18 +647,14 @@ class TestRetryLogic:
         response = Mock()
         response.is_server_error = True
         assert retry_predicate(
-            httpx.HTTPStatusError(
-                "Server error", request=Mock(), response=response
-            )
+            httpx.HTTPStatusError("Server error", request=Mock(), response=response)
         )
 
         # Should not retry on client error
         response = Mock()
         response.is_server_error = False
         assert not retry_predicate(
-            httpx.HTTPStatusError(
-                "Client error", request=Mock(), response=response
-            )
+            httpx.HTTPStatusError("Client error", request=Mock(), response=response)
         )
 
         # Should not retry on other exceptions
@@ -702,10 +664,8 @@ class TestRetryLogic:
     async def test_ssl_before_sleep(self, valid_uuid):
         """Test the SSL before_sleep callback."""
         with patch("httpx.AsyncClient") as mock_client, patch(
-            "faceit.http._client._logger"
-        ) as mock_logger, patch(
-            "asyncio.sleep", new_callable=AsyncMock
-        ) as mock_sleep:
+            "faceit.http.client._logger"
+        ) as mock_logger, patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
             mock_instance = Mock()
             mock_instance.is_closed = False
             mock_instance.aclose = AsyncMock()
@@ -717,17 +677,13 @@ class TestRetryLogic:
                 "before_sleep": lambda _: None,  # Simple no-op function
             }
 
-            async with AsyncClient(
-                valid_uuid, retry_args=custom_retry_args
-            ) as client:
+            async with AsyncClient(valid_uuid, retry_args=custom_retry_args) as client:
                 # Create a more complete mock for RetryCallState
                 retry_state = Mock()
                 retry_state.args = ("https://test.com/api",)
                 retry_state.kwargs = {}
                 retry_state.outcome = Mock()
-                retry_state.outcome.exception.return_value = ssl.SSLError(
-                    "SSL Error"
-                )
+                retry_state.outcome.exception.return_value = ssl.SSLError("SSL Error")
 
                 # Add attributes needed for logger message formatting
                 retry_state.attempt_number = 2

@@ -58,6 +58,9 @@ cover/
 # Sphinx documentation
 docs/_build/
 docs/api/
+# TODO
+docs/
+output_dir
 
 # PyBuilder
 .pybuilder/
@@ -126,5 +129,4 @@ cython_debug/
 
 # Personal
 /assets
-_.py
-_async.py
+__*.py

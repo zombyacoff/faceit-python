@@ -7,12 +7,35 @@ regarding edge cases and integration with `Pydantic`.
 """
 
 import pytest
-from faceit.models._custom_types import (
+from pydantic import AnyHttpUrl, BaseModel, ValidationError
+
+from faceit.models.custom_types import (
     FaceitID,
     FaceitMatchID,
     FaceitTeamID,
+    LangFormattedAnyHttpUrl,
 )
-from pydantic import BaseModel, ValidationError
+
+langph = LangFormattedAnyHttpUrl._LANG_PLACEHOLDER
+urls = [
+    (f"https://example.com/{langph}/docs", "https://example.com/docs"),
+    (f"http://{langph}/foo/bar", "http://foo/bar"),
+    (f"{langph}/foo/{langph}/bar", "foo/bar"),
+    ("https://example.com/foo/bar", "https://example.com/foo/bar"),
+    ("foo/bar", "foo/bar"),
+    (f"foo/{langph}/bar", "foo/bar"),
+    (f"foo/{langph}", "foo"),
+    (f"{langph}/foo", "foo"),
+]
+
+
+@pytest.mark.parametrize("input_value,expected", urls)
+def test_validate_success(input_value, expected):
+    if expected == "" or expected.startswith("http"):
+        assert LangFormattedAnyHttpUrl._validate(input_value) == AnyHttpUrl(expected)
+        return
+    with pytest.raises(ValidationError):
+        LangFormattedAnyHttpUrl._validate(input_value)
 
 
 class TestFaceitID:
