@@ -1,6 +1,6 @@
 # Contributing to faceit-python
 
-Thank you for your interest in improving **faceit-python**!
+Thank you for your interest in improving **faceit-python**!  
 We welcome contributions of all kinds – bug fixes, documentation, new features, and more.
 
 ## Code Style & Quality
@@ -36,7 +36,7 @@ We welcome contributions of all kinds – bug fixes, documentation, new features
 - **Conventional Commits:** Follow the [Conventional Commits](https://www.conventionalcommits.org/) standard. Examples:
   - `feat: add leagues endpoint`
   - `fix: correct typo in player model`
-  - `docs: update README with usage example`
+  - `refactor: enhance auth token retrieval from environment`
 - **Atomicity:** Each commit should represent a logical, self-contained change.
 
 ## Areas Where Help Is Needed
@@ -57,5 +57,5 @@ We welcome contributions of all kinds – bug fixes, documentation, new features
 - Please be respectful and considerate in all interactions.
 - By participating, you agree to abide by our [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
 
-Thank you for helping make **faceit-python** better!
+Thank you for helping make **faceit-python** better!  
 We appreciate your contributions and look forward to collaborating with you.
