@@ -3,8 +3,7 @@
 ![python](https://img.shields.io/badge/python-3.8%2B-3776ab?style=flat-square)
 ![pypi](https://img.shields.io/pypi/v/faceit?style=flat-square&color=43a047)
 
-This library makes it easy to access and use data from the FACEIT gaming platform – such as player stats, matches, and tournaments – directly from your Python programs, without needing to understand the technical details of the FACEIT API.  
-Automate and integrate FACEIT data into your projects, whether building apps, analyzing stats, or creating tools for esports and gaming.
+This library makes it easy to access and use data from the FACEIT gaming platform – such as player stats, matches, and tournaments – directly from your Python programs, without needing to understand the technical details of the FACEIT API. Automate and integrate FACEIT data into your projects, whether building apps, analyzing stats, or creating tools for esports and gaming.
 
 **See the [official FACEIT API documentation](https://docs.faceit.com/docs) for details about the available data and endpoints.**
 
@@ -100,9 +99,9 @@ The goal is to provide a solution approaching enterprise-level quality, while re
 
 > [!WARNING]
 > This library is currently in **early development**.  
-> Many endpoints, models, and features are not yet implemented.  
-> Webhooks, chat API, and some advanced features are not available yet.  
-> Inline code documentation is minimal, and the Sphinx-based documentation site is not yet ready.  
+> Many endpoints, models, and features are not yet implemented.
+> Webhooks, chat API, and some advanced features are not available yet.
+> Inline code documentation is minimal, and the Sphinx-based documentation site is not yet ready.
 > Expect breaking changes and incomplete coverage.  
 > **Contributions and feedback are highly welcome!**
 

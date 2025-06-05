@@ -5,6 +5,8 @@ from abc import ABC
 from functools import lru_cache
 from warnings import warn
 
+from typing_extensions import Self
+
 from .http import AsyncClient, EnvKey, SyncClient
 from .resources import AsyncDataResource, SyncDataResource
 from .types import ClientT, DataResourceT, ValidUUID
@@ -25,10 +27,12 @@ class BaseFaceit(ABC, typing.Generic[ClientT, DataResourceT]):
         _client_cls: typing.Type[ClientT]
         _data_cls: typing.Type[DataResourceT]
 
-    def __new__(cls) -> typing.NoReturn:
+    def __new__(cls) -> Self:
         raise TypeError(
-            f"Direct instantiation of {cls.__name__} is not allowed. "
-            "Use classmethods or factory methods instead."
+            f"Cannot instantiate {cls.__name__} directly. "
+            "Please use the provided classmethods or factory methods (e.g., `data()`) "
+            "to obtain an instance. Direct instantiation is intentionally disabled "
+            "to enforce correct usage patterns."
         )
 
     @typing.overload
