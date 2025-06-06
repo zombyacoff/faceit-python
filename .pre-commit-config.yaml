@@ -9,7 +9,7 @@ repos:
     hooks:
       - id: mypy
         name: mypy
-        entry: mypy --config-file=.mypy.ini src --pretty
+        entry: mypy src --pretty
         language: system
         pass_filenames: false
 
