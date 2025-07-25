@@ -1,0 +1,111 @@
+version: "3"
+
+vars:
+  # Use the minimum supported Python version for compatibility checks
+  PYTHON_VERSION: '{{.PYTHON_VERSION | default "3.8"}}'
+
+tasks:
+  default:
+    desc: Show task list
+    cmds:
+      - task --list
+
+  venv:
+    desc: Create virtual environment with specified Python version
+    status:
+      - test -d .venv
+    cmds:
+      - uv venv --python {{.PYTHON_VERSION}}
+
+  sync:
+    desc: Sync dependencies
+    cmds:
+      - uv sync --all-extras
+
+  lock:
+    desc: Update dependency lock file
+    cmds:
+      - uv lock
+
+  refresh:
+    desc: Update lock file and sync dependencies
+    deps: [lock, sync]
+
+  setup:
+    desc: Create venv, install dependencies, install pre-commit hooks
+    deps: [venv, sync, pre-commit-install]
+
+  check:
+    desc: Run ruff linter
+    cmds:
+      - uv run ruff check
+
+  fix:
+    desc: Auto-fix lint issues with ruff
+    cmds:
+      - uv run ruff check --fix
+
+  format:
+    aliases: [ft]
+    desc: Format code with ruff
+    cmds:
+      - uv run ruff format
+
+  type:
+    desc: Run mypy type checks
+    cmds:
+      - uv run mypy .
+
+  test:
+    desc: Run tests with pytest
+    cmds:
+      - uv run pytest
+
+  all-checks:
+    aliases: [allc]
+    desc: Run all quality checks
+    deps: [check, type, test]
+
+  pre-commit-install:
+    aliases: [pci]
+    desc: Install pre-commit hooks
+    cmds:
+      - uv run pre-commit install
+
+  pre-commit-run:
+    aliases: [pcrun]
+    desc: Run all pre-commit hooks on all files
+    cmds:
+      - uv run pre-commit run --all-files
+
+  clean:
+    aliases: [cl]
+    desc: Remove caches and temporary files
+    cmds:
+      - uv run scripts/clean.py
+
+  dry-clean:
+    aliases: [dcl]
+    desc: Show what would be deleted (dry run)
+    cmds:
+      - uv run scripts/clean.py --dry-run
+
+  del-venv:
+    aliases: [dvenv]
+    desc: Terminate Python processes and delete .venv
+    silent: true
+    cmds:
+      - |
+        {{if eq OS "windows"}}
+          powershell -Command "
+            try {
+              Get-Process -Name python -ErrorAction SilentlyContinue | Stop-Process -Force
+            } catch {}
+            if (Test-Path .venv) {
+              Remove-Item .venv -Recurse -Force
+            }
+          "
+        {{else}}
+          -pkill -f python || true
+          [ -d .venv ] && rm -rf .venv || true
+        {{end}}

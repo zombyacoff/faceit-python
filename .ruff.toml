@@ -5,7 +5,6 @@ target-version = "py38"
 [format]
 docstring-code-format = true
 docstring-code-line-length = 100
-line-ending = "auto"
 
 [lint]
 select = ["ALL"]
@@ -16,9 +15,9 @@ ignore = [
     "CPY001",
     "D",
     "DOC",
+    "E501",
     "EM101",
     "EM102",
-    "E501",
     "ERA001",
     "FBT001",
     "FBT003",
