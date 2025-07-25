@@ -1,9 +1,8 @@
 .DEFAULT_GOAL := help
 
-VERSION ?= 3.8.0 # Use the minimum supported Python version for compatibility checks
+PYTHON_VERSION ?= 3.8 # Use the minimum supported Python version for compatibility checks
 
-.PHONY: help check fix format type pre-commit-run test venv setup sync lock refresh clean dry-clean del-venv
-
+.PHONY: help
 help:
 	@echo Available targets:
 	@echo   check            Run ruff linter
@@ -21,53 +20,67 @@ help:
 	@echo   dry-clean        Show what would be deleted (dry run)
 	@echo   del-venv         Terminate Python processes and delete .venv
 
+.PHONY: check
 check:
-	ruff check
+	uv run ruff check
 
+.PHONY: fix
 fix:
-	ruff check --fix
+	uv run ruff check --fix
 
+.PHONY: format
 format:
-	ruff format
+	uv run ruff format
 
+.PHONY: type
 type:
-	mypy .
+	uv run mypy .
 
+.PHONY: pre-commit-run
 pre-commit-run:
-	pre-commit run --all-files
+	uv run pre-commit run --all-files
 
+.PHONY: test
 test:
-	pytest
+	uv run pytest
 
+.PHONY: venv
 venv:
-	uv venv --python $(VERSION)
+	uv venv --python $(PYTHON_VERSION)
 
+.PHONY: setup
 setup:
 	$(MAKE) venv
 	$(MAKE) sync
-	pre-commit install
+	uv run pre-commit install
 
+.PHONY: sync
 sync:
 	uv sync --all-extras
 
+.PHONY: lock
 lock:
 	uv lock
 
+.PHONY: refresh
 refresh:
 	$(MAKE) lock
 	$(MAKE) sync
 
+.PHONY: clean
 clean:
 	uv run scripts/clean.py
 
+.PHONY: dry-clean
 dry-clean:
 	uv run scripts/clean.py --dry-run
 
+.PHONY: del-venv
 del-venv:
-ifeq ($(OS), Windows_NT)
-	taskkill /IM python.exe /F 2>nul || exit 0
-	rmdir /s /q .venv
+ifeq ($(OS),Windows_NT)
+	-taskkill /IM python.exe /F 2>nul
+	@if exist .venv rmdir /s /q .venv
 else
 	-pkill -f python || true
-	rm -rf .venv
+	[ -d .venv ] && rm -rf .venv || true
 endif

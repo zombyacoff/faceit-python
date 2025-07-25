@@ -122,17 +122,25 @@ class _MaxItemsInfo(typing.NamedTuple):
         return cls(max_pages, 0, False)
 
 
-_UNIX_METHOD_REQUIRED_KEYS: typing.Final = frozenset(TimestampPaginationConfig.__annotations__)  # fmt: skip
+_UNIX_METHOD_REQUIRED_KEYS: typing.Final = frozenset(
+    TimestampPaginationConfig.__annotations__
+)
 _PAGINATION_ARGS: typing.Final = PaginationMaxParams._fields
 _UNIX_PAGINATION_PARAMS: typing.Final = PaginationTimeRange._fields
 
 
-def _has_unix_pagination_params(method: BaseUnixPaginationMethod[typing.Any], /) -> bool:  # fmt: skip
-    return all(param in signature(method).parameters for param in _UNIX_PAGINATION_PARAMS)  # fmt: skip
+def _has_unix_pagination_params(
+    method: BaseUnixPaginationMethod[typing.Any], /
+) -> bool:
+    return all(
+        param in signature(method).parameters for param in _UNIX_PAGINATION_PARAMS
+    )
 
 
 def _get_le(param: Parameter, /) -> typing.Optional[Le]:
-    return next((items for items in param.default.metadata if isinstance(items, Le)), None)  # fmt: skip
+    return next(
+        (items for items in param.default.metadata if isinstance(items, Le)), None
+    )
 
 
 def _extract_pagination_limits(

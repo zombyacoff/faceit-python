@@ -630,7 +630,7 @@ class TestSSLErrorHandling:
 class TestRetryLogic:
     """Tests for retry logic."""
 
-    def test_retry_predicate(self):
+    def test_retry_predicate(self, server_error_response, error_response):
         """Test the retry predicate in DEFAULT_RETRY_ARGS."""
         retry_predicate = BaseAPIClient.DEFAULT_RETRY_ARGS["retry"].predicate
 
@@ -643,18 +643,16 @@ class TestRetryLogic:
         # Should retry on protocol error
         assert retry_predicate(httpx.RemoteProtocolError("Protocol error"))
 
-        # Should retry on server error
-        response = Mock()
-        response.is_server_error = True
         assert retry_predicate(
-            httpx.HTTPStatusError("Server error", request=Mock(), response=response)
+            httpx.HTTPStatusError(
+                "Server error", request=Mock(), response=server_error_response
+            )
         )
 
-        # Should not retry on client error
-        response = Mock()
-        response.is_server_error = False
         assert not retry_predicate(
-            httpx.HTTPStatusError("Client error", request=Mock(), response=response)
+            httpx.HTTPStatusError(
+                "Client error", request=Mock(), response=error_response
+            )
         )
 
         # Should not retry on other exceptions

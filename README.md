@@ -1,7 +1,9 @@
 # FACEIT Python API Library
 
-![python](https://img.shields.io/badge/python-3.8%2B-3776ab?style=flat-square)
-![pypi](https://img.shields.io/pypi/v/faceit?style=flat-square&color=43a047)
+[![python](https://img.shields.io/badge/python-3.8%2B-3776ab?style=flat-square)](https://www.python.org/)
+[![pypi](https://img.shields.io/pypi/v/faceit?style=flat-square)](https://pypi.org/project/faceit/)
+[![license](https://img.shields.io/badge/License-Apache_2.0-blue.svg?style=flat-square)](https://opensource.org/licenses/Apache-2.0)
+[![downloads](https://img.shields.io/pypi/dm/faceit?style=flat-square)](https://pypi.org/project/faceit/)
 
 This library makes it easy to access and use data from the FACEIT gaming platform – such as player stats, matches, and tournaments – directly from your Python programs, without needing to understand the technical details of the FACEIT API. Automate and integrate FACEIT data into your projects, whether building apps, analyzing stats, or creating tools for esports and gaming.
 
@@ -23,13 +25,13 @@ This library makes it easy to access and use data from the FACEIT gaming platfor
 
 ## Installation
 
-```
+```console
 pip install faceit
 ```
 
 You can also install with the `env` extra to enable loading the API key from environment files (details below):
 
-```
+```console
 pip install faceit[env]
 ```
 
@@ -51,7 +53,7 @@ To use a different variable, pass an instance of `EnvKey` to the constructor:
 ```py
 from faceit import Faceit, EnvKey
 
-data = Faceit.data(EnvKey("API_KEY_FIELD"))
+data = Faceit.data(EnvKey("API_KEY"))
 ```
 
 > [!NOTE]

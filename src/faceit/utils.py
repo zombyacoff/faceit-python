@@ -10,18 +10,17 @@ from enum import Enum, IntEnum, auto
 from functools import reduce, wraps
 from hashlib import sha256
 from inspect import isawaitable, iscoroutinefunction
-from threading import Lock
 from uuid import UUID
 
 from typing_extensions import Self, TypeIs
 
+from .types import _P, _T, LockType, ValidUUID
+
 if typing.TYPE_CHECKING:
-    from .types import _P, _T, ValidUUID
+    from threading import Lock
 
     _CallableT = typing.TypeVar("_CallableT", bound=typing.Callable[..., typing.Any])
     _ClassT = typing.TypeVar("_ClassT", bound=type)
-
-_LockType = type(Lock())
 
 REDACTED_MARKER: typing.Final = "[REDACTED]"
 
@@ -86,7 +85,7 @@ def locked(
 
             return typing.cast("typing.Callable[_P, _T]", async_wrapper)
 
-        if not isinstance(lock, _LockType):
+        if not isinstance(lock, LockType):
             raise TypeError("lock must be a `threading.Lock`")
 
         @wraps(func)
@@ -99,7 +98,9 @@ def locked(
     return decorator
 
 
-def extends(_: _CallableT, /) -> typing.Callable[[typing.Callable[..., typing.Any]], _CallableT]:  # fmt: skip
+def extends(
+    _: _CallableT, /
+) -> typing.Callable[[typing.Callable[..., typing.Any]], _CallableT]:
     """
     Decorator that assigns the type signature of the given function to the
     decorated function. Type checking is enforced only at the function boundary

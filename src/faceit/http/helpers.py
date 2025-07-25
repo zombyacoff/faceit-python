@@ -101,3 +101,7 @@ def is_ssl_error(exception: BaseException, /) -> bool:
         isinstance(exception, httpx.ConnectError)
         and ("SSL" in str(exception) or "TLS" in str(exception))
     )
+
+
+def is_retryable_status(code: int, /) -> bool:
+    return code == httpx.codes.TOO_MANY_REQUESTS or httpx.codes.is_server_error(code)

@@ -1,4 +1,5 @@
 import typing
+from threading import Lock
 from uuid import UUID
 
 from pydantic import AnyHttpUrl, BaseModel, Field
@@ -16,7 +17,7 @@ _T_co = typing.TypeVar("_T_co", covariant=True)
 _P = ParamSpec("_P")
 
 ModelT = typing.TypeVar("ModelT", bound="BaseModel")
-ClientT = typing.TypeVar("ClientT", bound="BaseAPIClient[typing.Any]")
+ClientT = typing.TypeVar("ClientT", bound="BaseAPIClient[typing.Any, typing.Any]")
 DataResourceT = typing.TypeVar(
     "DataResourceT", bound=typing.Union["SyncDataResource", "AsyncDataResource"]
 )
@@ -29,6 +30,8 @@ UrlOrEmpty: TypeAlias = typing.Union[AnyHttpUrl, EmptyString]
 UUIDOrEmpty: TypeAlias = typing.Union[UUID, EmptyString]
 EndpointParam: TypeAlias = typing.Union[str, "Endpoint"]
 ValidUUID: TypeAlias = typing.Union[UUID, str, bytes]
+
+LockType = type(Lock())
 
 Raw = typing.NewType("Raw", bool)
 Model = typing.NewType("Model", bool)

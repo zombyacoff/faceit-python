@@ -29,7 +29,7 @@ def find_and_remove_pycache(root: Path = Path(), *, dry_run: bool = False) -> No
 
 
 if __name__ == "__main__":
-    dry_run = "--dry-run" in sys.argv
+    is_dry_run = "--dry-run" in sys.argv
     for dir_ in DIRS:
-        remove_dir(Path(dir_), dry_run=dry_run)
-    find_and_remove_pycache(dry_run=dry_run)
+        remove_dir(Path(dir_), dry_run=is_dry_run)
+    find_and_remove_pycache(dry_run=is_dry_run)
