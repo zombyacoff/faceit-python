@@ -11,17 +11,17 @@ This library makes it easy to access and use data from the FACEIT gaming platfor
 
 ## Requirements
 
-- Python 3.8 or higher
+-   Python 3.8 or higher
 
 ## Features
 
-- **High-level, idiomatic API** – Interact with FACEIT as if it were a native Python service.
-- **Full type safety** – Compatible with [mypy](https://mypy-lang.org/) and other type checkers.
-- **Sync & async support** – Powered by [httpx](https://www.python-httpx.org/).
-- **Pydantic models** – All data models inherit from [`pydantic.BaseModel`](https://docs.pydantic.dev/latest/usage/models/).
-- **Advanced pagination** – Supports both cursor-based and unix-time-based iterators.
-- **Flexible data access** – Choose between raw data and parsed models (e.g., `.raw_players` / `.players`).
-- **Page collection utilities** – Paginated responses in model mode are wrapped in an `ItemPage` collection with convenient methods, such as `.map()`, `.filter()`, `.find()`, and more.
+-   **High-level, idiomatic API** – Interact with FACEIT as if it were a native Python service.
+-   **Full type safety** – Compatible with [mypy](https://mypy-lang.org/) and other type checkers.
+-   **Sync & async support** – Powered by [httpx](https://www.python-httpx.org/).
+-   **Pydantic models** – All data models inherit from [`pydantic.BaseModel`](https://docs.pydantic.dev/latest/usage/models/).
+-   **Advanced pagination** – Supports both cursor-based and unix-time-based iterators.
+-   **Flexible data access** – Choose between raw data and parsed models (e.g., `.raw_players` / `.players`).
+-   **Page collection utilities** – Paginated responses in model mode are wrapped in an `ItemPage` collection with convenient methods, such as `.map()`, `.filter()`, `.find()`, and more.
 
 ## Installation
 
@@ -53,7 +53,7 @@ To use a different variable, pass an instance of `EnvKey` to the constructor:
 ```py
 from faceit import Faceit, EnvKey
 
-data = Faceit.data(EnvKey("API_KEY"))
+data = Faceit.data(EnvKey("SECRET"))
 ```
 
 > [!NOTE]
@@ -109,14 +109,9 @@ The goal is to provide a solution approaching enterprise-level quality, while re
 
 ### Planned Improvements
 
-- Support for more endpoints and models
-- Webhooks and chat API integration
-- Complete documentation and usage guides
-
-## Contributing
-
-Contributions, bug reports, and feature requests are welcome!  
-Please see [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines before opening an issue or pull request.
+-   Support for more endpoints and models
+-   Webhooks and chat API integration
+-   Complete documentation and usage guides
 
 ---
 
