@@ -2,14 +2,13 @@ import typing
 
 from pydantic import BaseModel
 
-from faceit.constants import Region
 from faceit.models.custom_types import (
     FaceitID,
     LangFormattedAnyHttpUrl,
     NullableList,
     ResponseContainer,
 )
-from faceit.types import UrlOrEmpty, UUIDOrEmpty
+from faceit.types import RegionIdentifier, UrlOrEmpty, UUIDOrEmpty
 
 
 class JoinChecks(BaseModel):
@@ -52,7 +51,7 @@ class Championship(BaseModel):
     type: str
     status: str
     game_id: str
-    region: Region
+    region: RegionIdentifier
     featured: bool
     subscription_start: int
     checkin_start: int

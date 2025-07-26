@@ -6,7 +6,7 @@ from abc import ABC
 
 from pydantic import Field, validate_call
 
-from faceit.constants import GameID, Region  # noqa: TC001
+from faceit.constants import GameID  # noqa: TC001
 from faceit.http import AsyncClient, SyncClient
 from faceit.models.custom_types import CountryCode  # noqa: TC001
 from faceit.resources.base import BaseResource, FaceitResourcePath, ModelPlaceholder
@@ -19,6 +19,7 @@ from faceit.types import (
     Raw,
     RawAPIItem,
     RawAPIPageResponse,
+    RegionIdentifier,
 )
 
 from .players import PlayerID, PlayerIDValidated  # noqa: TC001
@@ -39,7 +40,7 @@ class SyncRankings(BaseRankings[SyncClient], typing.Generic[APIResponseFormatT])
     def unbounded(
         self: SyncRankings[Raw],
         game: GameID,
-        region: Region,
+        region: RegionIdentifier,
         country: typing.Optional[CountryCode] = None,
         *,
         offset: int = Field(0, ge=0),
@@ -50,7 +51,7 @@ class SyncRankings(BaseRankings[SyncClient], typing.Generic[APIResponseFormatT])
     def unbounded(
         self: SyncRankings[Model],
         game: GameID,
-        region: Region,
+        region: RegionIdentifier,
         country: typing.Optional[CountryCode] = None,
         *,
         offset: int = Field(0, ge=0),
@@ -61,7 +62,7 @@ class SyncRankings(BaseRankings[SyncClient], typing.Generic[APIResponseFormatT])
     def unbounded(
         self,
         game: GameID,
-        region: Region,
+        region: RegionIdentifier,
         country: typing.Optional[CountryCode] = None,
         *,
         offset: int = Field(0, ge=0),
@@ -82,7 +83,7 @@ class SyncRankings(BaseRankings[SyncClient], typing.Generic[APIResponseFormatT])
     def all_unbounded(
         self: SyncRankings[Raw],
         game: GameID,
-        region: Region,
+        region: RegionIdentifier,
         country: typing.Optional[CountryCode] = None,
         max_items: MaxItemsType = pages(10),
     ) -> typing.List[RawAPIItem]: ...
@@ -91,15 +92,16 @@ class SyncRankings(BaseRankings[SyncClient], typing.Generic[APIResponseFormatT])
     def all_unbounded(
         self: SyncRankings[Model],
         game: GameID,
-        region: Region,
+        region: RegionIdentifier,
         country: typing.Optional[CountryCode] = None,
         max_items: MaxItemsType = pages(10),
     ) -> ModelNotImplemented: ...
 
+    @validate_call
     def all_unbounded(
         self,
         game: GameID,
-        region: Region,
+        region: RegionIdentifier,
         country: typing.Optional[CountryCode] = None,
         max_items: MaxItemsType = pages(10),
     ) -> typing.Union[typing.List[RawAPIItem], ModelNotImplemented]:
@@ -111,7 +113,7 @@ class SyncRankings(BaseRankings[SyncClient], typing.Generic[APIResponseFormatT])
     def player(
         self: SyncRankings[Raw],
         game: GameID,
-        region: Region,
+        region: RegionIdentifier,
         player_id: PlayerID,
         country: typing.Optional[CountryCode] = None,
         *,
@@ -122,7 +124,7 @@ class SyncRankings(BaseRankings[SyncClient], typing.Generic[APIResponseFormatT])
     def player(
         self: SyncRankings[Model],
         game: GameID,
-        region: Region,
+        region: RegionIdentifier,
         player_id: PlayerID,
         country: typing.Optional[CountryCode] = None,
         *,
@@ -133,7 +135,7 @@ class SyncRankings(BaseRankings[SyncClient], typing.Generic[APIResponseFormatT])
     def player(
         self,
         game: GameID,
-        region: Region,
+        region: RegionIdentifier,
         player_id: PlayerIDValidated,
         country: typing.Optional[CountryCode] = None,
         *,
@@ -160,7 +162,7 @@ class AsyncRankings(BaseRankings[AsyncClient], typing.Generic[APIResponseFormatT
     async def unbounded(
         self: AsyncRankings[Raw],
         game: GameID,
-        region: Region,
+        region: RegionIdentifier,
         country: typing.Optional[CountryCode] = None,
         *,
         offset: int = Field(0, ge=0),
@@ -171,7 +173,7 @@ class AsyncRankings(BaseRankings[AsyncClient], typing.Generic[APIResponseFormatT
     async def unbounded(
         self: AsyncRankings[Model],
         game: GameID,
-        region: Region,
+        region: RegionIdentifier,
         country: typing.Optional[CountryCode] = None,
         *,
         offset: int = Field(0, ge=0),
@@ -182,7 +184,7 @@ class AsyncRankings(BaseRankings[AsyncClient], typing.Generic[APIResponseFormatT
     async def unbounded(
         self,
         game: GameID,
-        region: Region,
+        region: RegionIdentifier,
         country: typing.Optional[CountryCode] = None,
         *,
         offset: int = Field(0, ge=0),
@@ -203,7 +205,7 @@ class AsyncRankings(BaseRankings[AsyncClient], typing.Generic[APIResponseFormatT
     async def all_unbounded(
         self: AsyncRankings[Raw],
         game: GameID,
-        region: Region,
+        region: RegionIdentifier,
         country: typing.Optional[CountryCode] = None,
         max_items: MaxItemsType = pages(10),
     ) -> typing.List[RawAPIItem]: ...
@@ -212,15 +214,16 @@ class AsyncRankings(BaseRankings[AsyncClient], typing.Generic[APIResponseFormatT
     async def all_unbounded(
         self: AsyncRankings[Model],
         game: GameID,
-        region: Region,
+        region: RegionIdentifier,
         country: typing.Optional[CountryCode] = None,
         max_items: MaxItemsType = pages(10),
     ) -> ModelNotImplemented: ...
 
+    @validate_call
     async def all_unbounded(
         self,
         game: GameID,
-        region: Region,
+        region: RegionIdentifier,
         country: typing.Optional[CountryCode] = None,
         max_items: MaxItemsType = pages(10),
     ) -> typing.Union[typing.List[RawAPIItem], ModelNotImplemented]:
@@ -232,7 +235,7 @@ class AsyncRankings(BaseRankings[AsyncClient], typing.Generic[APIResponseFormatT
     async def player(
         self: AsyncRankings[Raw],
         game: GameID,
-        region: Region,
+        region: RegionIdentifier,
         player_id: PlayerID,
         country: typing.Optional[CountryCode] = None,
         *,
@@ -243,7 +246,7 @@ class AsyncRankings(BaseRankings[AsyncClient], typing.Generic[APIResponseFormatT
     async def player(
         self: AsyncRankings[Model],
         game: GameID,
-        region: Region,
+        region: RegionIdentifier,
         player_id: PlayerID,
         country: typing.Optional[CountryCode] = None,
         *,
@@ -254,7 +257,7 @@ class AsyncRankings(BaseRankings[AsyncClient], typing.Generic[APIResponseFormatT
     async def player(
         self,
         game: GameID,
-        region: Region,
+        region: RegionIdentifier,
         player_id: PlayerIDValidated,
         country: typing.Optional[CountryCode] = None,
         *,

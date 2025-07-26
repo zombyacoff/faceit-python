@@ -9,16 +9,18 @@ from typing_extensions import Annotated, TypeAlias
 
 from faceit.types import _R, _T
 
+# NOTE: Type alias for country codes that are always validated and converted to lowercase.
+# Used because Faceit API requires country codes to be in lowercase.
+#
 # TODO: Integrate this type alias into all data models in the future
-CountryCode: TypeAlias = Annotated[
-    # I assume that there must be a better implementation than this.
-    # It is necessary to study this issue in more detail.
-    CountryAlpha2, AfterValidator(lambda x: typing.cast("str", x).lower())  # noqa: TC008
-]
-"""
-Type alias for country codes that are always validated and converted to lowercase.
-Used because Faceit API requires country codes to be in lowercase.
-"""
+if typing.TYPE_CHECKING:
+    CountryCode: TypeAlias = typing.Union[CountryAlpha2, str]
+else:
+    CountryCode: TypeAlias = Annotated[
+        # I assume that there must be a better implementation than this.
+        # It is necessary to study this issue in more detail.
+        CountryAlpha2, AfterValidator(lambda x: typing.cast("str", x).lower())  # noqa: TC008
+    ]
 
 
 @typing.final

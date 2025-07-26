@@ -14,10 +14,10 @@ from uuid import UUID
 
 from typing_extensions import Self, TypeIs
 
-from .types import _P, _T, LockType, ValidUUID
-
 if typing.TYPE_CHECKING:
     from threading import Lock
+
+    from .types import _P, _T, ValidUUID
 
     _CallableT = typing.TypeVar("_CallableT", bound=typing.Callable[..., typing.Any])
     _ClassT = typing.TypeVar("_ClassT", bound=type)
@@ -85,12 +85,9 @@ def locked(
 
             return typing.cast("typing.Callable[_P, _T]", async_wrapper)
 
-        if not isinstance(lock, LockType):
-            raise TypeError("lock must be a `threading.Lock`")
-
         @wraps(func)
         def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _T:
-            with lock:
+            with typing.cast("Lock", lock):  # Developer's responsibility
                 return func(*args, **kwargs)
 
         return wrapper

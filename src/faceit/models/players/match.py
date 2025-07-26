@@ -5,13 +5,13 @@ from datetime import datetime
 from pydantic import BaseModel, Field, field_validator
 from typing_extensions import Annotated, TypeAlias
 
-from faceit.constants import GameID, Region
+from faceit.constants import GameID
 from faceit.models.custom_types import (
     FaceitID,
     FaceitMatchID,
     LangFormattedAnyHttpUrl,
 )
-from faceit.types import UrlOrEmpty
+from faceit.types import RegionIdentifier, UrlOrEmpty
 
 _NoOpponent: TypeAlias = typing.Literal["bye"]
 
@@ -60,7 +60,7 @@ class Results(BaseModel):
 class Match(BaseModel):
     id: Annotated[str, Field(alias="match_id")]
     game_id: GameID
-    region: Region
+    region: RegionIdentifier
     type: Annotated[str, Field(alias="match_type")]
     game_mode: str
     max_players: int
@@ -93,7 +93,7 @@ class AbstractMatchPlayerStats(BaseModel, ABC):
 # Необходимо добавить значения по умолчанию для всех полей, которые могут отсутствовать
 class CS2MatchPlayerStats(AbstractMatchPlayerStats):
     game_mode: Annotated[str, Field(alias="Game Mode")]
-    region: Annotated[Region, Field(alias="Region")]
+    region: Annotated[RegionIdentifier, Field(alias="Region")]
     kd_ratio: Annotated[float, Field(alias="K/D Ratio")]
     winner: Annotated[FaceitID, Field(alias="Winner")]
     player_id: Annotated[FaceitID, Field(alias="Player Id")]

@@ -4,17 +4,17 @@ from datetime import datetime
 from pydantic import BaseModel, Field
 from typing_extensions import Annotated
 
-from faceit.constants import GameID, Region
+from faceit.constants import GameID
 from faceit.models.custom_types import (
     FaceitID,
     LangFormattedAnyHttpUrl,
     ResponseContainer,
 )
-from faceit.types import UrlOrEmpty
+from faceit.types import RegionIdentifier, UrlOrEmpty
 
 
 class GameInfo(BaseModel):
-    region: Region
+    region: RegionIdentifier
     game_player_id: str
     level: Annotated[int, Field(alias="skill_level")]
     elo: Annotated[int, Field(alias="faceit_elo")]
@@ -23,7 +23,7 @@ class GameInfo(BaseModel):
     # by the API. Remove only if you have confirmed that "skill_level_label"
     # is not returned in any current responses.
     # level_label: str = Field(alias="skill_level_label")
-    regions: ResponseContainer[Region] = ResponseContainer({})
+    regions: ResponseContainer[RegionIdentifier] = ResponseContainer({})
     game_profile_id: str
 
 
@@ -85,7 +85,7 @@ class Tournament(BaseModel):
     name: str
     featured_image: UrlOrEmpty  # Maybe just `str`
     game_id: GameID
-    region: Region
+    region: RegionIdentifier
     status: str
     custom: bool
     invite_type: str

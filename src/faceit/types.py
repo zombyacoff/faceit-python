@@ -5,6 +5,8 @@ from uuid import UUID
 from pydantic import AnyHttpUrl, BaseModel, Field
 from typing_extensions import NotRequired, ParamSpec, TypeAlias
 
+from .constants import Region
+
 if typing.TYPE_CHECKING:
     from .http import Endpoint
     from .http.client import BaseAPIClient
@@ -31,14 +33,14 @@ UUIDOrEmpty: TypeAlias = typing.Union[UUID, EmptyString]
 EndpointParam: TypeAlias = typing.Union[str, "Endpoint"]
 ValidUUID: TypeAlias = typing.Union[UUID, str, bytes]
 
-LockType = type(Lock())
-
 Raw = typing.NewType("Raw", bool)
 Model = typing.NewType("Model", bool)
 
 # Placeholder type that signals developers to implement a proper model
 # for a resource method. Acts as a temporary stub during development.
 ModelNotImplemented: TypeAlias = BaseModel
+
+RegionIdentifier: TypeAlias = typing.Union[Region, str]
 
 RawAPIItem = typing.NewType("RawAPIItem", typing.Dict[str, typing.Any])
 RawAPIPageResponse = typing.TypedDict(
