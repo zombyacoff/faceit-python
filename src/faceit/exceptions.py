@@ -23,7 +23,7 @@ class MissingAuthTokenError(FaceitError):
     def __init__(self, key: str, /) -> None:
         super().__init__(
             "Authorization token is missing. "
-            f"Please set {key} in your `.env` or `settings.ini` file."
+            f"Please set {key} in your environment file."
         )
         self.key = key
 

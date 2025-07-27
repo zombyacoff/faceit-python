@@ -50,16 +50,10 @@ try:
     from decouple import (  # pyright: ignore[reportMissingImports]
         UndefinedValueError as EnvUndefinedValueError,
     )
-    from decouple import config  # pyright: ignore[reportMissingImports]
+    from decouple import config as env_config  # pyright: ignore[reportMissingImports]
 except ImportError:
     ENV_EXTRA_INSTALLED: typing.Final = False
 else:
-    # `decouple` is untyped;
-    # we annotate `config` as `Callable[..., str]` to avoid "no-any-return" errors.
-    # This is a minimal, project-specific typing.
-    env_config: typing.Callable[..., str] = config
-    del config
-
     ENV_EXTRA_INSTALLED: typing.Final = True  # type: ignore[misc]
 
 if typing.TYPE_CHECKING:
@@ -219,7 +213,9 @@ class BaseAPIClient(ABC, typing.Generic[_HttpxClientT, _RetryerT]):
         if not ENV_EXTRA_INSTALLED:
             raise DecoupleMissingError
         try:
-            return env_config(key)
+            return typing.cast(  # because `decouple` is untyped
+                "str", env_config(key)
+            )
         except EnvUndefinedValueError:
             raise MissingAuthTokenError(key) from None
 

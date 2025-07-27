@@ -6,9 +6,9 @@ vars:
 
 tasks:
   default:
-    desc: Show task list
+    silent: true
     cmds:
-      - task --list
+      - task -l
 
   venv:
     desc: Create virtual environment with specified Python version
@@ -92,20 +92,16 @@ tasks:
 
   del-venv:
     aliases: [dvenv]
-    desc: Terminate Python processes and delete .venv
+    desc: Delete Python virtual environment (.venv) and deactivate it
     silent: true
+    preconditions:
+      - sh: "[ -d .venv ]"
+        msg: .venv does not exist
     cmds:
-      - |
-        {{if eq OS "windows"}}
-          powershell -Command "
-            try {
-              Get-Process -Name python -ErrorAction SilentlyContinue | Stop-Process -Force
-            } catch {}
-            if (Test-Path .venv) {
-              Remove-Item .venv -Recurse -Force
-            }
-          "
-        {{else}}
-          -pkill -f python || true
-          [ -d .venv ] && rm -rf .venv || true
-        {{end}}
+      - deactivate || true
+      - cmd: cmd /c "rmdir /s /q .venv"
+        ignore_error: true
+        platforms: [windows]
+      - cmd: rm -rf .venv
+        ignore_error: true
+        platforms: [linux, darwin]

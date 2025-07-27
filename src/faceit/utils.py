@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import json
 import reprlib
 import typing
@@ -15,7 +14,8 @@ from uuid import UUID
 from typing_extensions import Self, TypeIs
 
 if typing.TYPE_CHECKING:
-    from threading import Lock
+    from asyncio import Lock as AsyncLock  # noqa: ICN003
+    from threading import Lock as SyncLock
 
     from .types import _P, _T, ValidUUID
 
@@ -62,6 +62,17 @@ class UnsetValue(IntEnum):
     UNSET = -1
 
 
+class _Noop:
+    def __call__(self, *_: typing.Any, **__: typing.Any) -> Self:
+        return self
+
+    def __await__(self) -> typing.Generator[None]:
+        yield
+
+
+noop = _Noop()
+
+
 def UnsupportedOperationTypeError(  # noqa: N802
     sign: str, self_name: str, other_name: str
 ) -> TypeError:
@@ -71,23 +82,21 @@ def UnsupportedOperationTypeError(  # noqa: N802
 
 
 def locked(
-    lock: typing.Union[Lock, asyncio.Lock], /
+    lock: typing.Union[SyncLock, AsyncLock], /
 ) -> typing.Callable[[typing.Callable[_P, _T]], typing.Callable[_P, _T]]:
     def decorator(func: typing.Callable[_P, _T], /) -> typing.Callable[_P, _T]:
         if iscoroutinefunction(func):
-            if not isinstance(lock, asyncio.Lock):
-                raise TypeError("lock must be an `asyncio.Lock`")
 
             @wraps(func)
             async def async_wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _T:
-                async with lock:
+                async with typing.cast("AsyncLock", lock):  # Developer's responsibility
                     return typing.cast("_T", await func(*args, **kwargs))
 
             return typing.cast("typing.Callable[_P, _T]", async_wrapper)
 
         @wraps(func)
         def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _T:
-            with typing.cast("Lock", lock):  # Developer's responsibility
+            with typing.cast("SyncLock", lock):
                 return func(*args, **kwargs)
 
         return wrapper
@@ -104,16 +113,6 @@ def extends(
     (when calling the function), not within the function body.
     """
     return lambda x: typing.cast("_CallableT", x)
-
-
-def noop(*_: typing.Any, **__: typing.Any) -> None:
-    """A no-operation function that ignores all arguments."""
-
-
-async def anoop(*_: typing.Any, **__: typing.Any) -> None:
-    """A no-operation function that ignores all arguments."""
-    # Not used anywhere in the project yet, but kept for future use
-    # and for consistency with the synchronous version.
 
 
 async def invoke_callable(
