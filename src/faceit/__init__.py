@@ -9,8 +9,6 @@ from .exceptions import APIError as APIError
 from .exceptions import DecoupleMissingError as DecoupleMissingError
 from .exceptions import FaceitError as FaceitError
 from .exceptions import MissingAuthTokenError as MissingAuthTokenError
-from .faceit import AsyncFaceit as AsyncFaceit
-from .faceit import Faceit as Faceit
 from .http import EnvKey as EnvKey
 from .http import MaxConcurrentRequests as MaxConcurrentRequests
 from .resources import AsyncDataResource as AsyncDataResource
