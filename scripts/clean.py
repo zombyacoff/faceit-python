@@ -1,5 +1,4 @@
 import shutil
-import sys
 from pathlib import Path
 
 PYCACHE = "__pycache__"
@@ -29,6 +28,8 @@ def find_and_remove_pycache(root: Path = Path(), *, dry_run: bool = False) -> No
 
 
 if __name__ == "__main__":
+    import sys
+
     is_dry_run = "--dry-run" in sys.argv
     for dir_ in DIRS:
         remove_dir(Path(dir_), dry_run=is_dry_run)

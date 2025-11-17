@@ -29,11 +29,11 @@ from faceit.constants import BASE_WIKI_URL
 from faceit.exceptions import APIError, DecoupleMissingError, MissingAuthTokenError
 from faceit.utils import (
     REDACTED_MARKER,
+    NullCallable,
     StrEnum,
     create_uuid_validator,
     invoke_callable,
     locked,
-    noop,
     representation,
 )
 
@@ -612,7 +612,7 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient, AsyncRetrying]):
     def __enter__(self) -> typing.NoReturn:
         raise RuntimeError("Use 'async with' instead.")
 
-    __exit__ = noop
+    __exit__ = NullCallable()
 
     async def __aenter__(self) -> Self:
         return self

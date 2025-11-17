@@ -1,11 +1,13 @@
-from typing import final  # noqa: ICN003
+import typing
+from abc import ABC, abstractmethod
 
-from faceit.resources.resource_aggregator import (
+from faceit.http.client import BaseAPIClient
+from faceit.resources.aggregator import (
     AsyncResources,
     SyncResources,
     resource_aggregator,
 )
-from faceit.types import Model, Raw
+from faceit.types import ClientT, Model, Raw, ValidUUID
 
 from .championships import AsyncChampionships as AsyncChampionships
 from .championships import BaseChampionships as BaseChampionships
@@ -30,9 +32,42 @@ from .teams import BaseTeams as BaseTeams
 from .teams import SyncTeams as SyncTeams
 
 
-@final
+class _DataResourceMixin(ABC):
+    @typing.overload
+    def __init__(self) -> None: ...
+
+    @typing.overload
+    def __init__(self, *, client: ClientT) -> None: ...
+
+    @typing.overload
+    def __init__(
+        self,
+        api_key: typing.Union[ValidUUID, BaseAPIClient.env],
+        **client_options: typing.Any,
+    ) -> None: ...
+
+    def __init__(
+        self,
+        api_key: typing.Union[ValidUUID, BaseAPIClient.env, None] = None,
+        *,
+        client: typing.Optional[ClientT] = None,
+        **client_options: typing.Any,
+    ) -> None:
+        self._initialize_client(
+            api_key,
+            client,
+            secret_type="api_key",  # noqa: S106
+            **client_options,
+        )
+
+    @abstractmethod
+    def _initialize_client(self, *args: typing.Any, **kwargs: typing.Any) -> None:
+        pass
+
+
+@typing.final
 @resource_aggregator
-class SyncDataResource(SyncResources):
+class SyncDataResource(SyncResources, _DataResourceMixin):
     championships: SyncChampionships[Model]
     raw_championships: SyncChampionships[Raw]
 
@@ -55,9 +90,9 @@ class SyncDataResource(SyncResources):
     raw_teams: SyncTeams[Raw]
 
 
-@final
+@typing.final
 @resource_aggregator
-class AsyncDataResource(AsyncResources):
+class AsyncDataResource(AsyncResources, _DataResourceMixin):
     championships: AsyncChampionships[Model]
     raw_championships: AsyncChampionships[Raw]
 

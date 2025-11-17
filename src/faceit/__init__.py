@@ -13,10 +13,12 @@ from .faceit import AsyncFaceit as AsyncFaceit
 from .faceit import Faceit as Faceit
 from .http import EnvKey as EnvKey
 from .http import MaxConcurrentRequests as MaxConcurrentRequests
+from .resources import AsyncDataResource as AsyncDataResource
 from .resources import AsyncPageIterator as AsyncPageIterator
 from .resources import CollectReturnFormat as CollectReturnFormat
 from .resources import MaxItems as MaxItems
 from .resources import MaxPages as MaxPages
+from .resources import SyncDataResource as SyncDataResource
 from .resources import SyncPageIterator as SyncPageIterator
 from .resources import TimestampPaginationConfig as TimestampPaginationConfig
 from .resources import pages as pages

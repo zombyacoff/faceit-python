@@ -62,15 +62,22 @@ class UnsetValue(IntEnum):
     UNSET = -1
 
 
-class _Noop:
+class NullCallable:
+    __slots__ = ()
+
+    _instance: typing.ClassVar[typing.Optional[Self]] = None
+
+    def __new__(cls) -> Self:
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
     def __call__(self, *_: typing.Any, **__: typing.Any) -> Self:
         return self
 
-    def __await__(self) -> typing.Generator[None]:
+    def __await__(self) -> typing.Generator[None, None, Self]:
         yield
-
-
-noop = _Noop()
+        return self
 
 
 def UnsupportedOperationTypeError(  # noqa: N802
@@ -152,9 +159,7 @@ def get_nested_property(
         return default
     try:
         return reduce(
-            lambda o, k: default if o is None else getattr(o, k),
-            path.split("."),
-            obj,
+            lambda o, k: default if o is None else getattr(o, k), path.split("."), obj
         )
     except (AttributeError, TypeError):
         return default

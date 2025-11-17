@@ -2,26 +2,64 @@ from __future__ import annotations
 
 import typing
 from abc import ABC
-from dataclasses import dataclass
-from functools import cached_property
+from functools import cached_property, lru_cache
+from warnings import warn
 
 from typing_extensions import Self
 
-from faceit.http import AsyncClient, SyncClient
-from faceit.types import ClientT
-from faceit.utils import noop
+from faceit.http import AsyncClient, EnvKey, SyncClient
+from faceit.types import ClientT, ValidUUID
+from faceit.utils import NullCallable
 
 if typing.TYPE_CHECKING:
     from types import TracebackType
 
+    from faceit.http.client import BaseAPIClient
+
 _AggregatorT = typing.TypeVar("_AggregatorT", bound="BaseResources[typing.Any]")
 
 
-@dataclass(eq=False, frozen=True)
-class BaseResources(ABC, typing.Generic[ClientT]):
-    __slots__ = ("_client",)
+@lru_cache(maxsize=None)
+def _get_env_key(key: str, /) -> BaseAPIClient.env:
+    return EnvKey(f"FACEIT_{key.upper()}")
 
-    _client: ClientT
+
+class BaseResources(ABC, typing.Generic[ClientT]):
+    __slots__ = ("_client", "_client_cls")
+
+    if typing.TYPE_CHECKING:
+        _client: ClientT
+        _client_cls: typing.Type[ClientT]
+
+    def _initialize_client(
+        self,
+        auth: typing.Union[ValidUUID, BaseAPIClient.env, None] = None,
+        client: typing.Optional[ClientT] = None,
+        /,
+        *,
+        secret_type: str,
+        **client_options: typing.Any,
+    ) -> None:
+        if auth is not None and client is not None:
+            raise ValueError(f"Provide either {secret_type!r} or 'client', not both")
+
+        if client is None:
+            self._client = self._client_cls(
+                _get_env_key(secret_type) if auth is None else auth, **client_options
+            )
+            return
+
+        if client_options:
+            warn(
+                "'client_options' are ignored when an existing client "
+                "instance is provided. Configure your client before "
+                "passing it to this constructor.",
+                UserWarning,
+                stacklevel=3,
+            )
+
+        self._client = client
+        return
 
     @property
     def client(self) -> ClientT:
@@ -30,6 +68,8 @@ class BaseResources(ABC, typing.Generic[ClientT]):
 
 class SyncResources(BaseResources[SyncClient]):
     __slots__ = ()
+
+    _client_cls = SyncClient
 
     def __enter__(self) -> Self:
         self._client.__enter__()
@@ -47,10 +87,12 @@ class SyncResources(BaseResources[SyncClient]):
 class AsyncResources(BaseResources[AsyncClient]):
     __slots__ = ()
 
+    _client_cls = AsyncClient
+
     def __enter__(self) -> typing.NoReturn:
         self._client.__enter__()
 
-    __exit__ = noop
+    __exit__ = NullCallable()
 
     async def __aenter__(self) -> Self:
         await self._client.__aenter__()

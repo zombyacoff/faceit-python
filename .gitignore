@@ -6,6 +6,8 @@ __pycache__/
 # Build tools
 #  we use `Taskfile`
 Makefile
+# IMPLEMENT A SEAMLESS MIGRATION TO TASKFILE
+Taskfile.yml
 
 # C extensions
 *.so
