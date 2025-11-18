@@ -62,7 +62,7 @@ class BasePlayers(
     __slots__ = ()
 
     _matches_stats_validator_cfg: typing.ClassVar = MappedValidatorConfig[
-        GameID, AbstractMatchPlayerStats
+        GameID, AbstractMatchPlayerStats, typing.Literal[True]
     ](
         validator_map={
             GameID.CS2: CS2MatchPlayerStats,

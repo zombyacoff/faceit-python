@@ -27,6 +27,7 @@ if typing.TYPE_CHECKING:
 
 _logger = logging.getLogger(__name__)
 
+_IsPagedT = typing.TypeVar("_IsPagedT", bound=bool)
 # Temporary placeholder type for unimplemented models.
 # Serves as a stub during development and should be replaced with
 # concrete models as implementation progresses.
@@ -41,9 +42,9 @@ class RequestPayload(typing.TypedDict):
 
 @typing.final
 @dataclass(eq=False, frozen=True)
-class MappedValidatorConfig(typing.Generic[_T, ModelT]):
+class MappedValidatorConfig(typing.Generic[_T, ModelT, _IsPagedT]):
     validator_map: typing.Mapping[_T, typing.Type[ModelT]]
-    is_paged: bool
+    is_paged: _IsPagedT
     key_name: str = "key"
 
 
@@ -106,7 +107,7 @@ class BaseResource(ABC, typing.Generic[ClientT]):
         self,
         response: RawAPIPageResponse,
         key: _T,
-        config: MappedValidatorConfig[_T, ModelT],
+        config: MappedValidatorConfig[_T, ModelT, typing.Literal[False]],
         /,
     ) -> typing.Union[ModelT, RawAPIPageResponse]: ...
 
@@ -115,7 +116,7 @@ class BaseResource(ABC, typing.Generic[ClientT]):
         self,
         response: RawAPIPageResponse,
         key: _T,
-        config: MappedValidatorConfig[_T, ModelT],
+        config: MappedValidatorConfig[_T, ModelT, typing.Literal[True]],
         /,
     ) -> typing.Union[ItemPage[ModelT], RawAPIPageResponse]: ...
 
@@ -123,7 +124,7 @@ class BaseResource(ABC, typing.Generic[ClientT]):
         self,
         response: RawAPIPageResponse,
         key: _T,
-        config: MappedValidatorConfig[_T, ModelT],
+        config: MappedValidatorConfig[_T, ModelT, _IsPagedT],
         /,
     ) -> typing.Union[ModelT, ItemPage[ModelT], RawAPIPageResponse]:
         _logger.debug("Processing response with mapped validator for key: %s", key)

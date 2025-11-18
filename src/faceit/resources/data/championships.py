@@ -91,7 +91,7 @@ class SyncChampionships(
         game: GameID,
         category: EventCategory = EventCategory.ALL,
         max_items: MaxItemsType = pages(30),
-    ) -> RawAPIPageResponse: ...
+    ) -> typing.List[RawAPIItem]: ...
 
     @typing.overload
     def all_items(
@@ -106,7 +106,7 @@ class SyncChampionships(
         game: GameID,
         category: EventCategory = EventCategory.ALL,
         max_items: MaxItemsType = pages(30),
-    ) -> typing.Union[RawAPIPageResponse, ItemPage[Championship]]:
+    ) -> typing.Union[typing.List[RawAPIItem], ItemPage[Championship]]:
         return self.__class__._sync_page_iterator.gather_pages(
             self.items, game, category, max_items=max_items
         )
@@ -311,7 +311,7 @@ class AsyncChampionships(
         game: GameID,
         category: EventCategory = EventCategory.ALL,
         max_items: MaxItemsType = pages(30),
-    ) -> RawAPIPageResponse: ...
+    ) -> typing.List[RawAPIItem]: ...
 
     @typing.overload
     async def all_items(
@@ -326,7 +326,7 @@ class AsyncChampionships(
         game: GameID,
         category: EventCategory = EventCategory.ALL,
         max_items: MaxItemsType = pages(30),
-    ) -> typing.Union[RawAPIPageResponse, ItemPage[Championship]]:
+    ) -> typing.Union[typing.List[RawAPIItem], ItemPage[Championship]]:
         return await self.__class__._async_page_iterator.gather_pages(
             self.items, game, category, max_items=max_items
         )

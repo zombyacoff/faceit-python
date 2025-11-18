@@ -9,6 +9,7 @@ from typing_extensions import Annotated, TypeAlias, deprecated
 
 from faceit.constants import GameID  # noqa: TC001
 from faceit.http import AsyncClient, SyncClient
+from faceit.models import ItemPage  # noqa: TC001
 from faceit.resources.base import BaseResource, FaceitResourcePath, ModelPlaceholder
 from faceit.resources.pagination import MaxItemsType, pages
 from faceit.types import (
@@ -97,7 +98,7 @@ class SyncTeams(BaseTeams[SyncClient], typing.Generic[APIResponseFormatT]):
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
-    ) -> ModelNotImplemented: ...
+    ) -> ItemPage[ModelNotImplemented]: ...
 
     @validate_call
     def tournaments(
@@ -106,7 +107,7 @@ class SyncTeams(BaseTeams[SyncClient], typing.Generic[APIResponseFormatT]):
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
-    ) -> typing.Union[RawAPIPageResponse, ModelNotImplemented]:
+    ) -> typing.Union[RawAPIPageResponse, ItemPage[ModelNotImplemented]]:
         return self._validate_response(
             self._client.get(
                 self.__class__.PATH / team_id / "tournaments",
@@ -124,11 +125,11 @@ class SyncTeams(BaseTeams[SyncClient], typing.Generic[APIResponseFormatT]):
     @typing.overload
     def all_tournaments(
         self: SyncTeams[Model], team_id: _TeamID, max_items: MaxItemsType = pages(30)
-    ) -> ModelNotImplemented: ...
+    ) -> ItemPage[ModelNotImplemented]: ...
 
     def all_tournaments(
         self, team_id: _TeamIDValidated, max_items: MaxItemsType = pages(30)
-    ) -> typing.Union[typing.List[RawAPIItem], ModelNotImplemented]:
+    ) -> typing.Union[typing.List[RawAPIItem], ItemPage[ModelNotImplemented]]:
         return self.__class__._sync_page_iterator.gather_pages(
             self.tournaments, team_id, max_items=max_items
         )
@@ -198,7 +199,7 @@ class AsyncTeams(BaseTeams[AsyncClient], typing.Generic[APIResponseFormatT]):
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
-    ) -> ModelNotImplemented: ...
+    ) -> ItemPage[ModelNotImplemented]: ...
 
     @validate_call
     async def tournaments(
@@ -207,7 +208,7 @@ class AsyncTeams(BaseTeams[AsyncClient], typing.Generic[APIResponseFormatT]):
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
-    ) -> typing.Union[RawAPIPageResponse, ModelNotImplemented]:
+    ) -> typing.Union[RawAPIPageResponse, ItemPage[ModelNotImplemented]]:
         return self._validate_response(
             await self._client.get(
                 self.__class__.PATH / team_id / "tournaments",
@@ -225,11 +226,11 @@ class AsyncTeams(BaseTeams[AsyncClient], typing.Generic[APIResponseFormatT]):
     @typing.overload
     async def all_tournaments(
         self: AsyncTeams[Model], team_id: _TeamID, max_items: MaxItemsType = pages(30)
-    ) -> ModelNotImplemented: ...
+    ) -> ItemPage[ModelNotImplemented]: ...
 
     async def all_tournaments(
         self, team_id: _TeamIDValidated, max_items: MaxItemsType = pages(30)
-    ) -> typing.Union[typing.List[RawAPIItem], ModelNotImplemented]:
+    ) -> typing.Union[typing.List[RawAPIItem], ItemPage[ModelNotImplemented]]:
         return await self.__class__._async_page_iterator.gather_pages(
             self.tournaments, team_id, max_items=max_items
         )

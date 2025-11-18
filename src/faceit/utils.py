@@ -145,11 +145,10 @@ def deep_get(
     /,
     default: typing.Optional[_T] = None,
 ) -> typing.Union[_T, typing.Any]:
-    return reduce(
-        lambda d, k: d.get(k, default) if isinstance(d, dict) else default,
-        keys.split("."),
-        dictionary,
-    )
+    def _reduce_func(d: typing.Any, k: str) -> typing.Any:
+        return d.get(k, default) if isinstance(d, dict) else default
+
+    return reduce(_reduce_func, keys.split("."), dictionary)
 
 
 def get_nested_property(

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import typing
 from abc import ABC
-from functools import cached_property, lru_cache
+from functools import cached_property
 from warnings import warn
 
 from typing_extensions import Self
@@ -16,16 +16,11 @@ if typing.TYPE_CHECKING:
 
     from faceit.http.client import BaseAPIClient
 
-_AggregatorT = typing.TypeVar("_AggregatorT", bound="BaseResources[typing.Any]")
-
-
-@lru_cache(maxsize=None)
-def _get_env_key(key: str, /) -> BaseAPIClient.env:
-    return EnvKey(f"FACEIT_{key.upper()}")
+    _AggregatorT = typing.TypeVar("_AggregatorT", bound="BaseResources[typing.Any]")
 
 
 class BaseResources(ABC, typing.Generic[ClientT]):
-    __slots__ = ("_client", "_client_cls")
+    __slots__ = ("_client",)
 
     if typing.TYPE_CHECKING:
         _client: ClientT
@@ -45,7 +40,8 @@ class BaseResources(ABC, typing.Generic[ClientT]):
 
         if client is None:
             self._client = self._client_cls(
-                _get_env_key(secret_type) if auth is None else auth, **client_options
+                EnvKey(f"FACEIT_{secret_type.upper()}") if auth is None else auth,
+                **client_options,
             )
             return
 

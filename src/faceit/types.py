@@ -1,5 +1,4 @@
 import typing
-from threading import Lock
 from uuid import UUID
 
 from pydantic import AnyHttpUrl, BaseModel, Field
@@ -25,7 +24,9 @@ DataResourceT = typing.TypeVar(
 )
 
 APIResponseFormatT = typing.TypeVar("APIResponseFormatT", "Raw", "Model")
-PaginationMethodT = typing.TypeVar("PaginationMethodT", bound="BaseMethodProtocol")
+PaginationMethodT = typing.TypeVar(
+    "PaginationMethodT", bound="BaseResourceMethodProtocol[typing.Any]"
+)
 
 EmptyString: TypeAlias = typing.Literal[""]
 UrlOrEmpty: TypeAlias = typing.Union[AnyHttpUrl, EmptyString]
@@ -58,45 +59,18 @@ RawAPIPageResponse = typing.TypedDict(
 RawAPIResponse: TypeAlias = typing.Union[RawAPIItem, RawAPIPageResponse]
 
 
-class BaseMethodProtocol(typing.Protocol):
+class BaseResourceMethodProtocol(typing.Protocol[_T]):
     __name__: str
-    __self__: "BaseResource[typing.Any]"
-    __call__: typing.Callable[..., typing.Any]
+    __call__: typing.Callable[..., _T]
 
 
-class BasePaginationMethod(BaseMethodProtocol, typing.Protocol[_T_co]):
-    def __call__(
-        self,
-        *args: typing.Any,
-        offset: int = Field(...),
-        limit: int = Field(...),
-        **kwargs: typing.Any,
-    ) -> _T_co: ...
-
-
-class SyncPaginationMethod(BasePaginationMethod[_T_co], typing.Protocol): ...
-
-
-class AsyncPaginationMethod(
-    BasePaginationMethod[typing.Awaitable[_T_co]], typing.Protocol
+class SyncResourceMethodProtocol(
+    BaseResourceMethodProtocol[_T],
+    typing.Protocol,
 ): ...
 
 
-class BaseUnixPaginationMethod(BaseMethodProtocol, typing.Protocol[_T_co]):
-    def __call__(
-        self,
-        *args: typing.Any,
-        offset: int = Field(...),
-        limit: int = Field(...),
-        start: typing.Optional[int] = None,
-        to: typing.Optional[int] = None,
-        **kwargs: typing.Any,
-    ) -> _T_co: ...
-
-
-class SyncUnixPaginationMethod(BaseUnixPaginationMethod[_T_co], typing.Protocol): ...
-
-
-class AsyncUnixPaginationMethod(
-    BaseUnixPaginationMethod[typing.Awaitable[_T_co]], typing.Protocol
+class AsyncResourceMethodProtocol(
+    BaseResourceMethodProtocol[typing.Awaitable[_T]],
+    typing.Protocol,
 ): ...

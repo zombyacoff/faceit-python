@@ -389,7 +389,7 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient, AsyncRetrying]):
                 self.__class__._register_ssl_error()
                 if is_ssl_error(exception)
                 else await invoke_callable(
-                    original_retry.predicate  # type: ignore[attr-defined]
+                    original_retry.predicate
                     if isinstance(original_retry, SupportsExceptionPredicate)
                     else original_retry,
                     exception,
@@ -408,7 +408,7 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient, AsyncRetrying]):
             if exception is not None and is_ssl_error(exception):
                 _logger.warning(
                     "SSL connection error to %s",
-                    str(retry_state.args[0] if retry_state.args else "unknown"),
+                    retry_state.args[0] if retry_state.args else "unknown",
                 )
                 await asyncio.sleep(0.5)
 
@@ -514,11 +514,10 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient, AsyncRetrying]):
     def _update_initial_max_requests(
         cls, value: typing.Union[MaxConcurrentRequests, PositiveInt], /
     ) -> int:
-        max_concurrent_requests = typing.cast(
-            "int",
+        max_concurrent_requests = (
             cls.MAX_CONCURRENT_REQUESTS_ABSOLUTE
             if value == MaxConcurrentRequests.ABSOLUTE
-            else value,
+            else value
         )
         if max_concurrent_requests > cls._initial_max_requests:
             cls._initial_max_requests = max_concurrent_requests

@@ -1,6 +1,6 @@
 [project]
 name = "faceit"
-version = "0.1.5"
+version = "0.2.0a1"
 description = "The Python wrapper for the Faceit API"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -36,7 +36,6 @@ env = [
 ]
 
 [project.urls]
-"Bug Tracker" = "https://github.com/zombyacoff/faceit-python/issues"
 "Documentation" = "https://docs.faceit.com/docs"
 
 [dependency-groups]
