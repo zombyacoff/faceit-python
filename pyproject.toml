@@ -2,7 +2,7 @@
 name = "faceit"
 version = "0.2.0a1"
 description = "The Python wrapper for the Faceit API"
-readme = "README"
+readme = "README.md"
 requires-python = ">=3.8"
 license = "Apache-2.0"
 authors = [

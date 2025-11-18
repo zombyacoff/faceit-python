@@ -10,11 +10,9 @@ if typing.TYPE_CHECKING:
     from .http import Endpoint
     from .http.client import BaseAPIClient
     from .resources import AsyncDataResource, SyncDataResource
-    from .resources.base import BaseResource
 
 _T = typing.TypeVar("_T")
 _R = typing.TypeVar("_R")
-_T_co = typing.TypeVar("_T_co", covariant=True)
 _P = ParamSpec("_P")
 
 ModelT = typing.TypeVar("ModelT", bound="BaseModel")
