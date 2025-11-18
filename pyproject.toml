@@ -2,7 +2,7 @@
 name = "faceit"
 version = "0.2.0a1"
 description = "The Python wrapper for the Faceit API"
-readme = "README.md"
+readme = "README"
 requires-python = ">=3.8"
 license = "Apache-2.0"
 authors = [
@@ -20,6 +20,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Typing :: Typed",
 ]
 dependencies = [
