@@ -1,9 +1,9 @@
 import typing
-from abc import ABC, abstractmethod
 
 from faceit.http.client import BaseAPIClient
 from faceit.resources.aggregator import (
     AsyncResources,
+    BaseResources,
     SyncResources,
     resource_aggregator,
 )
@@ -44,7 +44,7 @@ __all__ = [
 ]
 
 
-class _DataResourceMixin(ABC):
+class _DataResourceMixin:
     @typing.overload
     def __init__(self) -> None: ...
 
@@ -58,8 +58,8 @@ class _DataResourceMixin(ABC):
         **client_options: typing.Any,
     ) -> None: ...
 
-    def __init__(
-        self,
+    def __init__(  # type: ignore[misc]
+        self: BaseResources[ClientT],
         api_key: typing.Union[ValidUUID, BaseAPIClient.env, None] = None,
         *,
         client: typing.Optional[ClientT] = None,
@@ -71,10 +71,6 @@ class _DataResourceMixin(ABC):
             secret_type="api_key",  # noqa: S106
             **client_options,
         )
-
-    @abstractmethod
-    def _initialize_client(self, *args: typing.Any, **kwargs: typing.Any) -> None:
-        pass
 
 
 @typing.final

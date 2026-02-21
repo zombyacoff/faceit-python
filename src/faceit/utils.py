@@ -36,7 +36,7 @@ class StrEnum(str, Enum):
     _value_: str
 
     def __new__(
-        cls, value: typing.Union[str, auto], *args: typing.Any, **kwargs: typing.Any
+        cls, value: typing.Union[str, auto], *args: object, **kwargs: object
     ) -> Self:
         if isinstance(value, (str, auto)):
             return super().__new__(cls, value, *args, **kwargs)
@@ -45,7 +45,7 @@ class StrEnum(str, Enum):
         )
 
     @staticmethod
-    def _generate_next_value_(name: str, *_: typing.Any) -> str:
+    def _generate_next_value_(name: str, *_: object) -> str:
         return name
 
     def __str__(self) -> str:
@@ -72,7 +72,7 @@ class NullCallable:
             cls._instance = super().__new__(cls)
         return cls._instance
 
-    def __call__(self, *_: typing.Any, **__: typing.Any) -> Self:
+    def __call__(self, *_: object, **__: object) -> Self:
         return self
 
     def __await__(self) -> typing.Generator[None, None, Self]:
@@ -113,7 +113,7 @@ def locked(
 
 def extends(
     _: _CallableT, /
-) -> typing.Callable[[typing.Callable[..., typing.Any]], _CallableT]:
+) -> typing.Callable[[typing.Callable[..., object]], _CallableT]:
     """
     Decorator that assigns the type signature of the given function to the
     decorated function. Type checking is enforced only at the function boundary

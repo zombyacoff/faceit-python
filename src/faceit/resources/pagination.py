@@ -12,7 +12,7 @@ from warnings import warn
 from annotated_types import Le
 from pydantic import PositiveInt
 from pydantic.fields import FieldInfo
-from typing_extensions import Self, TypeAlias, deprecated
+from typing_extensions import Self, TypeAlias
 
 from faceit.constants import RAW_RESPONSE_ITEMS_KEY
 from faceit.models import ItemPage
@@ -93,14 +93,6 @@ class pages(int):  # noqa: N801
             f"Invalid value for {cls.__name__}: {integer!r}. "
             "Expected a positive integer greater than 1."
         )
-
-
-@typing.final
-@deprecated(
-    "`MaxPages` is deprecated and will be removed in a future release. Use `pages` instead."
-)
-class MaxPages(pages):  # type: ignore[misc]
-    __slots__ = ()
 
 
 @dataclass(eq=False, frozen=True)
@@ -190,7 +182,11 @@ def check_pagination_support(
     if limit_param is None or offset_param is None:
         return False
 
-    return _extract_pagination_limits(limit_param, offset_param, func.__name__)
+    return _extract_pagination_limits(
+        limit_param,
+        offset_param,
+        typing.cast("str", getattr(func, "__name__", "<unknown>")),
+    )
 
 
 _ITERATOR_SLOTS = (

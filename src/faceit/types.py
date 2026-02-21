@@ -62,13 +62,9 @@ class BaseResourceMethodProtocol(typing.Protocol[_T]):
     __call__: typing.Callable[..., _T]
 
 
-class SyncResourceMethodProtocol(
-    BaseResourceMethodProtocol[_T],
-    typing.Protocol,
-): ...
+class SyncResourceMethodProtocol(BaseResourceMethodProtocol[_T], typing.Protocol): ...
 
 
 class AsyncResourceMethodProtocol(
-    BaseResourceMethodProtocol[typing.Awaitable[_T]],
-    typing.Protocol,
+    BaseResourceMethodProtocol[typing.Awaitable[_T]], typing.Protocol
 ): ...

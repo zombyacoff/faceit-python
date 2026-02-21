@@ -7,13 +7,13 @@ from .exceptions import (
     FaceitError,
     MissingAuthTokenError,
 )
+from .faceit import AsyncFaceit, Faceit
 from .http import EnvKey, MaxConcurrentRequests
 from .resources import (
     AsyncDataResource,
     AsyncPageIterator,
     CollectReturnFormat,
     MaxItems,
-    MaxPages,
     SyncDataResource,
     SyncPageIterator,
     TimestampPaginationConfig,
@@ -23,17 +23,18 @@ from .resources import (
 __all__ = [
     "APIError",
     "AsyncDataResource",
+    "AsyncFaceit",  # deprecated
     "AsyncPageIterator",
     "CollectReturnFormat",
     "DecoupleMissingError",
     "EnvKey",
     "EventCategory",
     "ExpandedField",
+    "Faceit",  # deprecated
     "FaceitError",
     "GameID",
     "MaxConcurrentRequests",
     "MaxItems",
-    "MaxPages",
     "MissingAuthTokenError",
     "Region",
     "SkillLevel",

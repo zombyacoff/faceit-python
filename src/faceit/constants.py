@@ -173,11 +173,11 @@ class Region(StrEnum):
     # NOTE: Currently includes legacy and game-specific regions (e.g., US for CS:GO).
     # This structure may be refactored in the future for improved consistency.
     EUROPE = "EU"
+    UNITED_STATES = "US"
     NORTH_AMERICA = "NA"
+    SOUTH_AMERICA = "SA"
     OCEANIA = "OCE"
     SOUTHEAST_ASIA = "SEA"
-    SOUTH_AMERICA = "SA"
-    UNITED_STATES = "US"
 
 
 @typing.final

@@ -135,7 +135,7 @@ class ItemPage(BaseModel, typing.Generic[_T], frozen=True):
         # methods like `map()` that change the item type from `_T` to `_R`
     ) -> ItemPage[_R]:
         return cls.model_construct(  # type: ignore[return-value]
-            items=items or (),
+            items=tuple(items or ()),
             _offset=UnsetValue.UNSET, _limit=UnsetValue.UNSET,
             _time_from=UnsetValue.UNSET, _time_to=UnsetValue.UNSET,
         )
@@ -148,7 +148,7 @@ class ItemPage(BaseModel, typing.Generic[_T], frozen=True):
         return len(self.items)
 
     def __reversed__(self) -> Self:
-        return self.with_items(tuple(reversed(self)))
+        return self.with_items(reversed(self))
 
     def __reduce__(
         self,
