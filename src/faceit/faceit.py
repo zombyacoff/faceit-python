@@ -2,7 +2,7 @@ import typing
 
 from typing_extensions import Self, deprecated
 
-from .http.client import AsyncClient, SyncClient
+from .http import AsyncClient, SyncClient
 from .resources import AsyncDataResource, SyncDataResource
 from .types import ClientT, DataResourceT
 
