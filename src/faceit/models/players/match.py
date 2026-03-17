@@ -15,7 +15,10 @@ from faceit.types import RegionIdentifier, UrlOrEmpty
 
 _NoOpponent: TypeAlias = typing.Literal["bye"]
 
-_RESULT_MAP: typing.Final = {"faction1": "first", "faction2": "second"}
+_RESULT_MAP: typing.Final = {
+    "faction1": "first",
+    "faction2": "second",
+}
 
 
 class PlayerSummary(BaseModel):
@@ -106,7 +109,7 @@ class CS2MatchPlayerStats(AbstractMatchPlayerStats):
     map: Annotated[str, Field(alias="Map")]
     overtime_score: Annotated[int, Field(alias="Overtime score")]
     deaths: Annotated[int, Field(alias="Deaths")]
-    game: Annotated[str, Field(alias="Game")]
+    game: Annotated[typing.Literal[GameID.CS2], Field(alias="Game")]
     nickname: Annotated[str, Field(alias="Nickname")]
     updated_at: Annotated[datetime, Field(alias="Updated At")]
     second_half_score: Annotated[int, Field(alias="Second Half Score")]

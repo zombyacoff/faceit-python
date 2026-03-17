@@ -2,7 +2,13 @@ from __future__ import annotations
 
 import typing
 
-from pydantic import AfterValidator, AnyHttpUrl, GetCoreSchemaHandler, RootModel
+from pydantic import (
+    AfterValidator,
+    AnyHttpUrl,
+    GetCoreSchemaHandler,
+    RootModel,
+    model_validator,
+)
 from pydantic_core import core_schema
 from pydantic_extra_types.country import CountryAlpha2
 from typing_extensions import Annotated, TypeAlias
@@ -19,7 +25,7 @@ else:
     CountryCode: TypeAlias = Annotated[
         # I assume that there must be a better implementation than this.
         # It is necessary to study this issue in more detail.
-        CountryAlpha2, AfterValidator(lambda x: typing.cast("str", x).lower())  # noqa: TC008
+        CountryAlpha2, AfterValidator(lambda x: x.lower())
     ]
 
 
@@ -50,11 +56,22 @@ class ResponseContainer(RootModel[typing.Dict[str, _T]]):
     def __getattr__(self, name: str) -> typing.Optional[_T]:
         return self.root.get(name)
 
-    def __iter__(self) -> typing.Generator[typing.Tuple[str, _T], None, None]:  # noqa: PYI058
-        yield from self.items()
+    def __iter__(self) -> typing.Iterator[str]:  # type: ignore[override]
+        yield from self.root
 
     def __getitem__(self, key: str) -> _T:
         return self.root[key]
+
+    @model_validator(mode="before")
+    def _inject_keys(cls, data: typing.Any) -> typing.Any:
+        return (
+            {
+                k: {**v, "_container_key": k} if isinstance(v, dict) else v
+                for k, v in data.items()
+            }
+            if isinstance(data, dict)
+            else data
+        )
 
 
 @typing.final

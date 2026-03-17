@@ -206,12 +206,11 @@ class EloRange(typing.NamedTuple):
         return f"{self.lower}+" if self.is_open_ended else f"{self.lower}-{self.upper}"
 
 
-_DEFAULT_FIRST_ELO_RANGE: typing.Final = EloRange(MIN_ELO, 800)
 _DEFAULT_TEN_LEVEL_LOWER: typing.Final = 2001
 
 
 def _create_default_elo_tiers() -> _EloThreshold:
-    tier_ranges = {1: _DEFAULT_FIRST_ELO_RANGE}
+    tier_ranges = {1: EloRange(MIN_ELO, 800)}
 
     for level in range(2, 10):
         # `cast(int, ...)` tells the type checker that we know `upper` is
@@ -228,8 +227,7 @@ del _create_default_elo_tiers
 
 
 def _append_elite_tier(
-    elite_upper_bound: HighTierLevel,
-    base_tiers: _EloThreshold = _BASE_ELO_RANGES,
+    elite_upper_bound: HighTierLevel, base_tiers: _EloThreshold = _BASE_ELO_RANGES
 ) -> _EloThreshold:
     return {
         **base_tiers,
@@ -237,17 +235,20 @@ def _append_elite_tier(
     }
 
 
-CHALLENGER_CAPPED_ELO_RANGES: typing.Final[_EloThreshold] = _append_elite_tier(
+CHALLENGER_CAPPED_ELO_RANGES: typing.Final = _append_elite_tier(
     HighTierLevel.CHALLENGER
 )
 # Pre-generating this range configuration for future implementation needs
 # Exposed as a constant for both internal use and potential library consumers
-OPEN_ENDED_ELO_RANGES: typing.Final[_EloThreshold] = _append_elite_tier(
-    HighTierLevel.ABSENT
-)
+OPEN_ENDED_ELO_RANGES: typing.Final = _append_elite_tier(HighTierLevel.ABSENT)
 del _append_elite_tier
 
-ELO_THRESHOLDS: typing.Final[typing.Mapping[GameID, _EloThreshold]] = MappingProxyType({
+ELO_THRESHOLDS: typing.Final[
+    typing.Mapping[
+        GameID,
+        _EloThreshold,
+    ]
+] = MappingProxyType({
     GameID.CS2: {
         1: EloRange(MIN_ELO, 500),
         2: EloRange(501, 750),
@@ -281,7 +282,12 @@ class SkillLevel:
     name: str
 
     if typing.TYPE_CHECKING:
-        _registry: typing.ClassVar[typing.Mapping[GameID, typing.Mapping[int, Self]]]
+        _registry: typing.ClassVar[
+            typing.Mapping[
+                GameID,
+                typing.Mapping[int, Self],
+            ]
+        ]
 
     @property
     def is_highest_level(self) -> bool:
@@ -399,6 +405,8 @@ class SkillLevel:
 
     def __int__(self) -> int:
         return self.level
+
+    # TODO: Implement comparison methods
 
     @classmethod
     def _initialize_skill_levels_registry(cls) -> None:

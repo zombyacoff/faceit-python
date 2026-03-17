@@ -13,22 +13,14 @@ from warnings import warn
 from weakref import WeakSet
 
 import httpx
+import tenacity
+import tenacity.asyncio
 from pydantic import PositiveInt, validate_call
-from tenacity import (
-    AsyncRetrying,
-    RetryCallState,
-    Retrying,
-    retry_if_exception,
-    stop_after_attempt,
-    wait_random_exponential,
-)
-from tenacity.asyncio import retry_if_exception as async_retry_if_exception
 from typing_extensions import Self
 
 from faceit.constants import BASE_WIKI_URL
 from faceit.exceptions import APIError, DecoupleMissingError, MissingAuthTokenError
 from faceit.utils import (
-    REDACTED_MARKER,
     NullCallable,
     StrEnum,
     create_uuid_validator,
@@ -47,10 +39,7 @@ from .helpers import (
 )
 
 try:
-    from decouple import (  # pyright: ignore[reportMissingImports]
-        UndefinedValueError as EnvUndefinedValueError,
-    )
-    from decouple import config as env_config  # pyright: ignore[reportMissingImports]
+    import decouple  # pyright: ignore[reportMissingImports]
 except ImportError:
     ENV_EXTRA_INSTALLED: typing.Final = False
 else:
@@ -68,7 +57,7 @@ if typing.TYPE_CHECKING:
 _logger = logging.getLogger(__name__)
 
 _HttpxClientT = typing.TypeVar("_HttpxClientT", httpx.Client, httpx.AsyncClient)
-_RetryerT = typing.TypeVar("_RetryerT", Retrying, AsyncRetrying)
+_RetryerT = typing.TypeVar("_RetryerT", tenacity.Retrying, tenacity.AsyncRetrying)
 
 
 class MaxConcurrentRequests(StrEnum):
@@ -90,18 +79,14 @@ class BaseAPIClient(ABC, typing.Generic[_HttpxClientT, _RetryerT]):
 
     DEFAULT_API_KEY_ENV: typing.ClassVar = env("FACEIT_SECRET")
     DEFAULT_BASE_URL: typing.ClassVar = "https://open.faceit.com/data/v4"
-    DEFAULT_TIMEOUT: typing.ClassVar[float] = 10
+    DEFAULT_TIMEOUT: typing.ClassVar = 10.0
     DEFAULT_RETRY_ARGS: typing.ClassVar = RetryArgs(
-        stop=stop_after_attempt(3),
-        wait=wait_random_exponential(1, 10),
-        retry=retry_if_exception(
+        stop=tenacity.stop_after_attempt(3),
+        wait=tenacity.wait_random_exponential(1, 10),
+        retry=tenacity.retry_if_exception(
             lambda e: isinstance(
                 e,
-                (
-                    httpx.TimeoutException,
-                    httpx.ConnectError,
-                    httpx.RemoteProtocolError,
-                ),
+                (httpx.TimeoutException, httpx.ConnectError, httpx.RemoteProtocolError),
             )
             or (
                 isinstance(e, httpx.HTTPStatusError)
@@ -142,7 +127,7 @@ class BaseAPIClient(ABC, typing.Generic[_HttpxClientT, _RetryerT]):
 
     @property
     def api_key(self) -> str:
-        return REDACTED_MARKER
+        return self._api_key[:4] + "..." + self._api_key[-4:]
 
     @api_key.setter
     def api_key(self, value: typing.Union[ValidUUID, env]) -> None:
@@ -165,8 +150,6 @@ class BaseAPIClient(ABC, typing.Generic[_HttpxClientT, _RetryerT]):
 
     @property
     def is_closed(self) -> bool:
-        # Defensive check to handle cases where client initialization failed
-        # Prevents AttributeError in __del__ during garbage collection
         return self._client.is_closed if hasattr(self, "_client") else True
 
     @property
@@ -212,10 +195,9 @@ class BaseAPIClient(ABC, typing.Generic[_HttpxClientT, _RetryerT]):
         if not ENV_EXTRA_INSTALLED:
             raise DecoupleMissingError
         try:
-            return typing.cast(  # because `decouple` is untyped
-                "str", env_config(key)
-            )
-        except EnvUndefinedValueError:
+            # because `decouple` is untyped
+            return typing.cast("str", decouple.config(key))
+        except decouple.UndefinedValueError:
             raise MissingAuthTokenError(key) from None
 
     @staticmethod
@@ -248,7 +230,7 @@ class BaseAPIClient(ABC, typing.Generic[_HttpxClientT, _RetryerT]):
             raise APIError(response.status_code, "Invalid JSON response") from None
 
 
-class _BaseSyncClient(BaseAPIClient[httpx.Client, Retrying]):
+class _BaseSyncClient(BaseAPIClient[httpx.Client, tenacity.Retrying]):
     __slots__ = ("_client", "_retryer")
 
     def __init__(
@@ -266,7 +248,7 @@ class _BaseSyncClient(BaseAPIClient[httpx.Client, Retrying]):
         self._client = httpx.Client(
             timeout=timeout, headers=self._base_headers, **raw_client_kwargs
         )
-        self._retryer = Retrying(**self._retry_args)  # type: ignore[arg-type]
+        self._retryer = tenacity.Retrying(**self._retry_args)  # type: ignore[arg-type]
 
     def close(self) -> None:
         if not self.is_closed:
@@ -293,7 +275,7 @@ class _BaseSyncClient(BaseAPIClient[httpx.Client, Retrying]):
 # NOTE: Logic on eliminating SSL errors was added because during tests
 # it was found that such errors often pop up even with a small
 # number of concurrent requests, probably problems on the FACEIT API side
-class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient, AsyncRetrying]):
+class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient, tenacity.AsyncRetrying]):
     __slots__ = ("__weakref__", "_client", "_retryer")
 
     _instances: typing.ClassVar[WeakSet[_BaseAsyncClient]] = WeakSet()
@@ -304,7 +286,7 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient, AsyncRetrying]):
     _ssl_error_count: typing.ClassVar = 0
     _adaptive_limit_enabled: typing.ClassVar = True
     _last_ssl_error_time: typing.ClassVar = time()
-    _recovery_check_time: typing.ClassVar[float] = 0
+    _recovery_check_time: typing.ClassVar = 0.0
 
     # Current limit value is based on empirical testing,
     # but requires further investigation for optimal setting
@@ -321,7 +303,7 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient, AsyncRetrying]):
     _min_connections: typing.ClassVar = DEFAULT_MIN_CONNECTIONS
     _recovery_interval: typing.ClassVar = DEFAULT_RECOVERY_INTERVAL
 
-    DEFAULT_KEEPALIVE_EXPIRY: typing.ClassVar[float] = 30
+    DEFAULT_KEEPALIVE_EXPIRY: typing.ClassVar = 30.0
 
     def __init__(
         self,
@@ -365,7 +347,7 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient, AsyncRetrying]):
             limits=limits,
             **raw_client_kwargs,
         )
-        self._retryer = AsyncRetrying(**self._retry_args)  # type: ignore[arg-type]
+        self._retryer = tenacity.AsyncRetrying(**self._retry_args)  # type: ignore[arg-type]
 
         # Initialize or update the semaphore if needed
         if (
@@ -399,7 +381,7 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient, AsyncRetrying]):
             lambda _: None
         )
 
-        async def ssl_before_sleep(retry_state: RetryCallState) -> None:
+        async def ssl_before_sleep(retry_state: tenacity.RetryCallState) -> None:
             if retry_state.outcome is None:
                 return
 
@@ -414,7 +396,7 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient, AsyncRetrying]):
             await invoke_callable(original_before_sleep, retry_state)
 
         self._retry_args.update({
-            "retry": async_retry_if_exception(combined_retry),
+            "retry": tenacity.asyncio.retry_if_exception(combined_retry),
             "before_sleep": ssl_before_sleep,
         })
 

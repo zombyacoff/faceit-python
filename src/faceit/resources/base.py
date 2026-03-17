@@ -20,7 +20,7 @@ from faceit.types import (
 )
 from faceit.utils import StrEnum
 
-from .pagination import AsyncPageIterator, SyncPageIterator, TimestampPaginationConfig
+from .pagination import AsyncPageIterator, SyncPageIterator
 
 if typing.TYPE_CHECKING:
     _ResponseT = typing.TypeVar("_ResponseT", bound=RawAPIResponse)
@@ -70,7 +70,6 @@ class BaseResource(ABC, typing.Generic[ClientT]):
 
     _sync_page_iterator: typing.ClassVar = SyncPageIterator
     _async_page_iterator: typing.ClassVar = AsyncPageIterator
-    _timestamp_cfg: typing.ClassVar = TimestampPaginationConfig
 
     _PARAM_NAME_MAP: typing.ClassVar[typing.Mapping[str, str]] = MappingProxyType({
         "start": "from",

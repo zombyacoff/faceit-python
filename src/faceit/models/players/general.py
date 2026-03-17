@@ -1,10 +1,10 @@
 import typing
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from typing_extensions import Annotated
 
-from faceit.constants import GameID
+from faceit.constants import ELO_THRESHOLDS, GameID, SkillLevel
 from faceit.models.custom_types import (
     FaceitID,
     LangFormattedAnyHttpUrl,
@@ -16,7 +16,7 @@ from faceit.types import RegionIdentifier, UrlOrEmpty
 class GameInfo(BaseModel):
     region: RegionIdentifier
     game_player_id: str
-    level: Annotated[int, Field(alias="skill_level")]
+    level: Annotated[typing.Union[int, SkillLevel], Field(alias="skill_level")]
     elo: Annotated[int, Field(alias="faceit_elo")]
     game_player_name: str
     # This attribute appears to be deprecated and is no longer provided
@@ -25,6 +25,24 @@ class GameInfo(BaseModel):
     # level_label: str = Field(alias="skill_level_label")
     regions: ResponseContainer[RegionIdentifier] = ResponseContainer({})
     game_profile_id: str
+
+    @model_validator(mode="before")
+    def _prepare_skill_level(cls, data: typing.Any) -> typing.Any:
+        if not isinstance(data, dict):
+            return data
+
+        game_id = data.get("_container_key")
+        skill_lvl = data.get("skill_level")
+        if (
+            game_id is not None
+            and game_id in ELO_THRESHOLDS
+            and skill_lvl is not None
+            # Just in case; It may not be necessary at all
+            and not isinstance(skill_lvl, SkillLevel)
+        ):
+            data["skill_level"] = SkillLevel.get_level(game_id, skill_lvl)
+
+        return data
 
 
 class Player(BaseModel):

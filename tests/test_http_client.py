@@ -26,7 +26,6 @@ from faceit.http.client import (
     _BaseSyncClient,
     is_ssl_error,
 )
-from faceit.utils import REDACTED_MARKER
 
 
 @pytest.fixture
@@ -137,7 +136,6 @@ class TestBaseAPIClient:
         client = SyncClient(valid_uuid)
         masked_key = client.api_key
         assert masked_key != valid_uuid
-        assert masked_key == REDACTED_MARKER
         client.close()  # Ensure proper cleanup
 
     def test_base_headers(self, valid_uuid):

@@ -1,11 +1,11 @@
 # mypy: disable-error-code="no-any-return"
 from __future__ import annotations
 
+import inspect
 import math
 import typing
 from abc import ABC
 from dataclasses import dataclass
-from inspect import Parameter, signature
 from itertools import chain
 from warnings import warn
 
@@ -123,18 +123,19 @@ def _has_unix_pagination_params(
     method: BaseResourceMethodProtocol[typing.Any], /
 ) -> bool:
     return all(
-        param in signature(method).parameters for param in _UNIX_PAGINATION_PARAMS
+        param in inspect.signature(method).parameters
+        for param in _UNIX_PAGINATION_PARAMS
     )
 
 
-def _get_le(param: Parameter, /) -> typing.Optional[Le]:
+def _get_le(param: inspect.Parameter, /) -> typing.Optional[Le]:
     return next(
         (items for items in param.default.metadata if isinstance(items, Le)), None
     )
 
 
 def _extract_pagination_limits(
-    limit_param: Parameter, offset_param: Parameter, method_name: str, /
+    limit_param: inspect.Parameter, offset_param: inspect.Parameter, method_name: str, /
 ) -> PaginationMaxParams:
     # Validates pagination parameters for:
     # 1. Development - ensures correct function signatures with clear error messages
@@ -176,7 +177,7 @@ def check_pagination_support(
         return False
 
     limit_param, offset_param = (
-        signature(func).parameters.get(arg) for arg in _PAGINATION_ARGS
+        inspect.signature(func).parameters.get(arg) for arg in _PAGINATION_ARGS
     )
 
     if limit_param is None or offset_param is None:

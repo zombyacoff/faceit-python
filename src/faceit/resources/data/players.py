@@ -29,7 +29,12 @@ from faceit.resources.base import (
     ModelPlaceholder,
     RequestPayload,
 )
-from faceit.resources.pagination import MaxItems, MaxItemsType, pages
+from faceit.resources.pagination import (
+    MaxItems,
+    MaxItemsType,
+    TimestampPaginationConfig,
+    pages,
+)
 from faceit.types import (
     APIResponseFormatT,
     ClientT,
@@ -72,10 +77,10 @@ class BasePlayers(
         key_name="game",
     )
 
-    _matches_stats_timestamp_cfg: typing.ClassVar = BaseResource._timestamp_cfg(
+    _matches_stats_timestamp_cfg: typing.ClassVar = TimestampPaginationConfig(
         key="stats.Match Finished At", attr="match_finished_at"
     )
-    _history_timestamp_cfg: typing.ClassVar = BaseResource._timestamp_cfg(
+    _history_timestamp_cfg: typing.ClassVar = TimestampPaginationConfig(
         key="finished_at", attr="finished_at"
     )
 

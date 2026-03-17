@@ -1,7 +1,7 @@
 import typing
 from uuid import UUID
 
-from pydantic import AnyHttpUrl, BaseModel, Field
+from pydantic import AnyHttpUrl, BaseModel
 from typing_extensions import NotRequired, ParamSpec, TypeAlias
 
 from .constants import Region
@@ -57,14 +57,10 @@ RawAPIPageResponse = typing.TypedDict(
 RawAPIResponse: TypeAlias = typing.Union[RawAPIItem, RawAPIPageResponse]
 
 
+# fmt: off
 class BaseResourceMethodProtocol(typing.Protocol[_T]):
     __name__: str
     __call__: typing.Callable[..., _T]
-
-
 class SyncResourceMethodProtocol(BaseResourceMethodProtocol[_T], typing.Protocol): ...
-
-
-class AsyncResourceMethodProtocol(
-    BaseResourceMethodProtocol[typing.Awaitable[_T]], typing.Protocol
-): ...
+class AsyncResourceMethodProtocol(BaseResourceMethodProtocol[typing.Awaitable[_T]], typing.Protocol): ...
+# fmt: on

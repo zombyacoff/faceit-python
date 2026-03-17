@@ -9,15 +9,12 @@ from typing_extensions import Self, TypeAlias
 from faceit.utils import StrEnum, UnsupportedOperationTypeError, representation
 
 if typing.TYPE_CHECKING:
-    from tenacity import RetryCallState, RetryError
-    from tenacity.retry import retry_base
-    from tenacity.stop import stop_base
-    from tenacity.wait import wait_base
+    import tenacity
 
     from faceit.types import EndpointParam
 
     _RetryHook: TypeAlias = typing.Callable[
-        [RetryCallState], typing.Union[typing.Awaitable[None], None]
+        [tenacity.RetryCallState], typing.Union[typing.Awaitable[None], None]
     ]
 
 
@@ -26,20 +23,27 @@ class RetryArgs(typing.TypedDict, total=False):
     sleep: typing.Callable[
         [typing.Union[int, float]], typing.Union[typing.Awaitable[None], None]
     ]
-    stop: typing.Union[stop_base, typing.Callable[[RetryCallState], bool]]
+    stop: typing.Union[
+        tenacity.stop.stop_base, typing.Callable[[tenacity.RetryCallState], bool]
+    ]
     wait: typing.Union[
-        wait_base, typing.Callable[[RetryCallState], typing.Union[float, int]]
+        tenacity.wait.wait_base,
+        typing.Callable[[tenacity.RetryCallState], typing.Union[float, int]],
     ]
     retry: typing.Union[
-        retry_base,
-        typing.Callable[[RetryCallState], typing.Union[typing.Awaitable[bool], bool]],
+        tenacity.retry_base,
+        typing.Callable[
+            [tenacity.RetryCallState], typing.Union[typing.Awaitable[bool], bool]
+        ],
     ]
     before: _RetryHook
     after: _RetryHook
     before_sleep: typing.Optional[_RetryHook]
     reraise: bool
-    retry_error_cls: typing.Type[RetryError]
-    retry_error_callback: typing.Optional[typing.Callable[[RetryCallState], typing.Any]]
+    retry_error_cls: typing.Type[tenacity.RetryError]
+    retry_error_callback: typing.Optional[
+        typing.Callable[[tenacity.RetryCallState], typing.Any]
+    ]
 
 
 @typing.runtime_checkable

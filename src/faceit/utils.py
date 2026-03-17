@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import json
 import reprlib
 import typing
@@ -8,7 +9,6 @@ from datetime import datetime, timezone
 from enum import Enum, IntEnum, auto
 from functools import reduce, wraps
 from hashlib import sha256
-from inspect import isawaitable, iscoroutinefunction
 from uuid import UUID
 
 from typing_extensions import Self, TypeIs
@@ -22,10 +22,12 @@ if typing.TYPE_CHECKING:
     _CallableT = typing.TypeVar("_CallableT", bound=typing.Callable[..., typing.Any])
     _ClassT = typing.TypeVar("_ClassT", bound=type)
 
-REDACTED_MARKER: typing.Final = "[REDACTED]"
-
 _UUID_BYTES: typing.Final = 16
 _UNINITIALIZED_MARKER: typing.Final = "uninitialized"
+
+
+class UnsetValue(IntEnum):
+    UNSET = -1
 
 
 # NOTE: Inspired by irgeek/StrEnum:
@@ -54,12 +56,10 @@ class StrEnum(str, Enum):
 
 class StrEnumWithAll(StrEnum):
     @classmethod
-    def all(cls) -> typing.Tuple[Self, ...]:
+    def get_all_values(cls) -> typing.Tuple[Self, ...]:
         return tuple(cls)
 
-
-class UnsetValue(IntEnum):
-    UNSET = -1
+    all = get_all_values  # alias for backwards compatibility
 
 
 class NullCallable:
@@ -92,7 +92,7 @@ def locked(
     lock: typing.Union[SyncLock, AsyncLock], /
 ) -> typing.Callable[[typing.Callable[_P, _T]], typing.Callable[_P, _T]]:
     def decorator(func: typing.Callable[_P, _T], /) -> typing.Callable[_P, _T]:
-        if iscoroutinefunction(func):
+        if inspect.iscoroutinefunction(func):
 
             @wraps(func)
             async def async_wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _T:
@@ -128,27 +128,30 @@ async def invoke_callable(
     *args: typing.Any,
     **kwargs: typing.Any,
 ) -> _T:
-    if callable(func):
-        result = func(*args, **kwargs)
-        if isawaitable(result):
-            result = await result
-        return typing.cast("_T", result)
-    raise TypeError(
-        f"Expected a callable object, got {type(func).__name__} ({func!r}). "
-        "Argument 'func' must be a function or object with a __call__ method."
-    )
+    if not callable(func):
+        raise TypeError(
+            f"Expected a callable object, got {type(func).__name__} ({func!r}). "
+            "Argument 'func' must be a function or object with a __call__ method."
+        )
+    result = func(*args, **kwargs)
+    if inspect.isawaitable(result):
+        result = await result
+    return typing.cast("_T", result)
 
 
 def deep_get(
-    dictionary: typing.Dict[str, typing.Any],
+    dictionary: typing.Mapping[str, typing.Any],
     keys: str,
     /,
     default: typing.Optional[_T] = None,
-) -> typing.Union[_T, typing.Any]:
-    def _reduce_func(d: typing.Any, k: str) -> typing.Any:
-        return d.get(k, default) if isinstance(d, dict) else default
-
-    return reduce(_reduce_func, keys.split("."), dictionary)
+) -> typing.Union[_T, typing.Any, None]:
+    current = dictionary
+    try:
+        for key in keys.split("."):
+            current = current[key]
+    except (KeyError, TypeError, AttributeError):
+        return default
+    return current
 
 
 def get_nested_property(
@@ -264,7 +267,9 @@ def _apply_representation(
     has_str = getattr(cls, "__str__", object.__str__) is not object.__str__
 
     if use_str and not has_str:
-        raise TypeError(f"Class {cls.__name__} must define __str__ method")
+        raise TypeError(
+            f"Class {cls.__name__} must define '__str__' method when 'use_str=True'"
+        )
 
     def build_repr(self: _ClassT) -> str:
         str_args = f"'{self}'" if use_str else _format_fields(self, fields, joiner=", ")
@@ -295,6 +300,6 @@ def representation(
 ) -> typing.Union[_ClassT, typing.Callable[[_ClassT], _ClassT]]:
     return (
         _apply_representation(fields[0], fields[1:], use_str)
-        if fields and isinstance(fields[0], type)
+        if fields and inspect.isclass(fields[0])
         else lambda cls: _apply_representation(cls, fields, use_str)
     )
