@@ -606,7 +606,7 @@ class SyncPageIterator(_BaseSyncPageIterator[_PageT]):
         key: str,
         attr: str,
         **kwargs: typing.Any,
-    ) -> typing.Generator[_PageT, None, None]:
+    ) -> typing.Iterator[_PageT]:
         cls._validate_unix_pagination_parameter(method, kwargs, key, attr)
         kwargs["max_items"] = max_items
 
@@ -762,7 +762,7 @@ class AsyncPageIterator(_BasyAsyncPageIterator[_PageT]):
         key: str,
         attr: str,
         **kwargs: typing.Any,
-    ) -> typing.AsyncGenerator[_PageT, None]:
+    ) -> typing.AsyncIterator[_PageT]:
         cls._validate_unix_pagination_parameter(method, kwargs, key, attr)
         kwargs["max_items"] = max_items
 

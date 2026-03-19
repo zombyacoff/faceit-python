@@ -4,7 +4,7 @@ import logging
 import re
 import typing
 from dataclasses import dataclass
-from operator import attrgetter
+from functools import total_ordering
 from types import MappingProxyType
 from warnings import warn
 
@@ -272,7 +272,8 @@ ELO_THRESHOLDS: typing.Final[
 
 
 @typing.final
-@dataclass(frozen=True)
+@total_ordering
+@dataclass(eq=False, frozen=True)
 class SkillLevel:
     __slots__ = ("elo_range", "game_id", "level", "name")
 
@@ -401,12 +402,33 @@ class SkillLevel:
     @classmethod
     @validate_call
     def get_all_levels(cls, game_id: GameID, /) -> typing.List[Self]:
-        return sorted(cls._registry.get(game_id, {}).values(), key=attrgetter("level"))
+        return sorted(cls._registry.get(game_id, {}).values())
 
     def __int__(self) -> int:
         return self.level
 
-    # TODO: Implement comparison methods
+    def __eq__(self, other: object) -> bool:
+        # Explicitly defined for performance and clarity.
+        # By comparing only the core identity fields (`game_id` and `level`)
+        # instead of all dataclass fields, we reduce the number of operations.
+        return (
+            self.level == other.level and self.game_id == other.game_id
+            if isinstance(other, self.__class__)
+            else NotImplemented
+        )
+
+    def __lt__(self, other: Self) -> bool:
+        if not isinstance(other, self.__class__):
+            return NotImplemented
+        if self.game_id != other.game_id:
+            raise TypeError(
+                "Cannot compare levels from different games: "
+                f"'{self.game_id}' vs '{other.game_id}'"
+            )
+        return self.level < other.level
+
+    def __hash__(self) -> int:
+        return hash((self.game_id, self.level))
 
     @classmethod
     def _initialize_skill_levels_registry(cls) -> None:

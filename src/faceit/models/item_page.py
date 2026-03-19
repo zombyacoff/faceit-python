@@ -130,7 +130,7 @@ class ItemPage(BaseModel, typing.Generic[_T], frozen=True):
     def with_items(self, new_items: typing.Iterable[_T], /) -> Self:
         return self.model_copy(update={"items": tuple(new_items)})
 
-    def _find_items(self, attr: str, value: typing.Any, /) -> typing.Generator[_T]:
+    def _find_items(self, attr: str, value: typing.Any, /) -> typing.Iterator[_T]:
         return (item for item in self if get_nested_property(item, attr) == value)
 
     @classmethod

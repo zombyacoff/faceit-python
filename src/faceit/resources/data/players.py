@@ -442,7 +442,7 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
     @typing.overload
     def stats(
         self: SyncPlayers[Raw], player_id: PlayerID, game: GameID
-    ) -> RawAPIPageResponse: ...
+    ) -> RawAPIItem: ...
 
     @typing.overload
     def stats(
@@ -452,11 +452,11 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
     @validate_call
     def stats(
         self, player_id: PlayerIDValidated, game: GameID
-    ) -> typing.Union[RawAPIPageResponse, ModelNotImplemented]:
+    ) -> typing.Union[RawAPIItem, ModelNotImplemented]:
         return self._validate_response(
             self._client.get(
                 self.__class__.PATH / str(player_id) / "stats" / game,
-                expect_page=True,
+                expect_item=True,
             ),
             ModelPlaceholder,
         )
@@ -884,7 +884,7 @@ class AsyncPlayers(BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT])
     @typing.overload
     async def stats(
         self: AsyncPlayers[Raw], player_id: PlayerID, game: GameID
-    ) -> RawAPIPageResponse: ...
+    ) -> RawAPIItem: ...
 
     @typing.overload
     async def stats(
@@ -894,11 +894,11 @@ class AsyncPlayers(BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT])
     @validate_call
     async def stats(
         self, player_id: PlayerIDValidated, game: GameID
-    ) -> typing.Union[RawAPIPageResponse, ModelNotImplemented]:
+    ) -> typing.Union[RawAPIItem, ModelNotImplemented]:
         return self._validate_response(
             await self._client.get(
                 self.__class__.PATH / str(player_id) / "stats" / game,
-                expect_page=True,
+                expect_item=True,
             ),
             ModelPlaceholder,
         )

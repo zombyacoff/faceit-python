@@ -1,21 +1,17 @@
 import typing
 
-from typing_extensions import Self, deprecated
+from typing_extensions import deprecated
 
 from .http import AsyncClient, SyncClient
 from .resources import AsyncDataResource, SyncDataResource
 from .types import ClientT, DataResourceT
 
 
-@deprecated("`BaseFaceit` is deprecated and will be removed in a future release.")
 class BaseFaceit(typing.Generic[ClientT, DataResourceT]):
     __slots__ = ()
 
     if typing.TYPE_CHECKING:
         data: typing.Type[DataResourceT]
-
-    def __new__(cls) -> Self:
-        raise TypeError(f"Cannot instantiate {cls.__name__} directly.")
 
 
 @deprecated(

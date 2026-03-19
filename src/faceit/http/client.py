@@ -16,12 +16,11 @@ import httpx
 import tenacity
 import tenacity.asyncio
 from pydantic import PositiveInt, validate_call
-from typing_extensions import Self
+from typing_extensions import Never, Self
 
 from faceit.constants import BASE_WIKI_URL
 from faceit.exceptions import APIError, DecoupleMissingError, MissingAuthTokenError
 from faceit.utils import (
-    NullCallable,
     StrEnum,
     create_uuid_validator,
     invoke_callable,
@@ -506,7 +505,7 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient, tenacity.AsyncRetrying])
         return max_concurrent_requests
 
     @classmethod
-    def close(cls) -> typing.NoReturn:
+    def close(cls) -> Never:
         """
         This method intentionally raises an error to prevent incorrect usage.
 
@@ -589,10 +588,11 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient, tenacity.AsyncRetrying])
                 cls._recovery_interval,
             )
 
-    def __enter__(self) -> typing.NoReturn:
+    def __enter__(self) -> Never:
         raise RuntimeError("Use 'async with' instead.")
 
-    __exit__ = NullCallable()
+    def __exit__(self, *_: object, **__: object) -> None:
+        pass
 
     async def __aenter__(self) -> Self:
         return self

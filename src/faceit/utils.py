@@ -62,24 +62,6 @@ class StrEnumWithAll(StrEnum):
     all = get_all_values  # alias for backwards compatibility
 
 
-class NullCallable:
-    __slots__ = ()
-
-    _instance: typing.ClassVar[typing.Optional[Self]] = None
-
-    def __new__(cls) -> Self:
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-        return cls._instance
-
-    def __call__(self, *_: object, **__: object) -> Self:
-        return self
-
-    def __await__(self) -> typing.Generator[None, None, Self]:
-        yield
-        return self
-
-
 def UnsupportedOperationTypeError(  # noqa: N802
     sign: str, self_name: str, other_name: str
 ) -> TypeError:

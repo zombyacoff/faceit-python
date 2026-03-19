@@ -5,11 +5,10 @@ from abc import ABC
 from functools import cached_property
 from warnings import warn
 
-from typing_extensions import Self
+from typing_extensions import Never, Self
 
 from faceit.http import AsyncClient, EnvKey, SyncClient
 from faceit.types import ClientT, ValidUUID
-from faceit.utils import NullCallable
 
 if typing.TYPE_CHECKING:
     from types import TracebackType
@@ -85,10 +84,10 @@ class AsyncResources(BaseResources[AsyncClient]):
 
     _client_cls = AsyncClient
 
-    def __enter__(self) -> typing.NoReturn:
+    def __enter__(self) -> Never:
         self._client.__enter__()
 
-    __exit__ = NullCallable()
+    __exit__ = AsyncClient.__exit__
 
     async def __aenter__(self) -> Self:
         await self._client.__aenter__()
