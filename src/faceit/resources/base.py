@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import logging
 import typing
+import warnings
 from abc import ABC
 from dataclasses import dataclass
 from types import MappingProxyType
-from warnings import warn
 
 from pydantic import ValidationError
 
@@ -129,7 +129,7 @@ class BaseResource(ABC, typing.Generic[ClientT]):
         _logger.debug("Processing response with mapped validator for key: %s", key)
         validator = config.validator_map.get(key)
         if validator is None:
-            warn(
+            warnings.warn(
                 f"No model defined for {config.key_name} {key!r}. Consider using the raw response.",
                 UserWarning,
                 stacklevel=5,
@@ -154,7 +154,7 @@ class BaseResource(ABC, typing.Generic[ClientT]):
         if self._raw:
             return response
         if validator is None:
-            warn(
+            warnings.warn(
                 "No model defined for this response. Validation and model "
                 "parsing are unavailable. Use the raw version for explicit, "
                 "unprocessed data.",

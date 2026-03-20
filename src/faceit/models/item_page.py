@@ -159,16 +159,15 @@ class ItemPage(BaseModel, typing.Generic[_T], frozen=True):
         return len(self.items)
 
     def __reversed__(self) -> Self:
-        return self.with_items(reversed(self))
+        return self.with_items(reversed(self.items))
 
     def __reduce__(
         self,
     ) -> typing.Tuple[typing.Type[Self], typing.Tuple[typing.Any, ...]]:
-        # fmt: off
-        return (self.__class__, (
-            self.items, self._offset, self._limit, self._time_from, self._time_to,
-        ))
-        # fmt: on
+        return (
+            self.__class__,
+            (self.items, self._offset, self._limit, self._time_from, self._time_to),
+        )
 
     @typing.overload
     def __getitem__(self, index: typing.SupportsIndex) -> _T: ...

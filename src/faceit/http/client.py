@@ -3,13 +3,13 @@ from __future__ import annotations
 import asyncio
 import logging
 import typing
+import warnings
 from abc import ABC
 from collections import UserString
 from functools import lru_cache
 from threading import Lock
 from time import time
 from types import MappingProxyType
-from warnings import warn
 from weakref import WeakSet
 
 import httpx
@@ -71,7 +71,7 @@ class BaseAPIClient(ABC, typing.Generic[_HttpxClientT, _RetryerT]):
     __slots__ = ("_api_key", "_build_endpoint", "_retry_args", "base_url")
 
     @typing.final
-    class env(UserString):  # noqa: N801
+    class env(UserString):
         """String subclass representing a key to fetch from environment variables."""
 
         __slots__ = ()
@@ -87,10 +87,7 @@ class BaseAPIClient(ABC, typing.Generic[_HttpxClientT, _RetryerT]):
                 e,
                 (httpx.TimeoutException, httpx.ConnectError, httpx.RemoteProtocolError),
             )
-            or (
-                isinstance(e, httpx.HTTPStatusError)
-                and is_retryable_status(e.response.status_code)
-            )
+            or (isinstance(e, APIError) and is_retryable_status(e.status_code))
         ),
         reraise=True,
         before_sleep=lambda s: _logger.warning(
@@ -208,20 +205,18 @@ class BaseAPIClient(ABC, typing.Generic[_HttpxClientT, _RetryerT]):
         # TODO: More specific exceptions
         except httpx.HTTPStatusError as e:
             # fmt: off
-            # NOTE: If the error is retryable, tenacity will retry unless attempts are exhausted.
-            # In that case, tenacity raises `RetryError` (not wrapped as `APIError`) for the caller.
             if is_retryable_status(e.response.status_code):
                 _logger.warning(
                     "Retryable HTTP error %s at %s: %s",
                     e.response.status_code, e.response.url, e.response.text
                 )
-                raise
-            _logger.exception(
-                "HTTP error %s at %s: %s",
-                response.status_code, response.url, response.text,
-            )
-            # fmt: on
+            else:
+                _logger.exception(
+                    "HTTP error %s at %s: %s",
+                    response.status_code, response.url, response.text,
+                )
             raise APIError(response.status_code, response.text) from e
+            # fmt: on
         except (ValueError, httpx.DecodingError):
             _logger.exception(
                 "Invalid JSON response from %s: %s", response.url, response.text
@@ -525,7 +520,7 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient, tenacity.AsyncRetrying])
     @validate_call
     def update_rate_limit(cls, new_limit: PositiveInt, /) -> None:
         if new_limit > cls.MAX_CONCURRENT_REQUESTS_ABSOLUTE:
-            warn(
+            warnings.warn(
                 f"Request limit of {new_limit} exceeds "
                 f"maximum allowed ({cls.MAX_CONCURRENT_REQUESTS_ABSOLUTE})",
                 UserWarning,

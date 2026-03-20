@@ -53,10 +53,12 @@ banned-from = [
     "reprlib",
     "tenacity",
     "typing",
+    "warnings",
 ]
 
 [lint.pep8-naming]
 classmethod-decorators = ["field_validator", "model_validator"]
+ignore-names = ["env", "pages"]
 
 [lint.per-file-ignores]
 "__init__.py" = ["F401", "PLC041"]

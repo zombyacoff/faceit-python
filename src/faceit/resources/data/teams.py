@@ -5,7 +5,7 @@ import typing
 from abc import ABC
 
 from pydantic import AfterValidator, Field, validate_call
-from typing_extensions import Annotated, TypeAlias, deprecated
+from typing_extensions import Annotated, TypeAlias
 
 from faceit.constants import GameID  # noqa: TC001
 from faceit.http import AsyncClient, SyncClient
@@ -55,12 +55,6 @@ class SyncTeams(BaseTeams[SyncClient], typing.Generic[APIResponseFormatT]):
         )
 
     __call__ = get
-
-    @deprecated(
-        "`details` is deprecated and will be removed in a future release. Use `get` instead."
-    )
-    def details(self, team_id: typing.Any) -> typing.Any:
-        return self.get(team_id)
 
     @typing.overload
     def stats(self: SyncTeams[Raw], team_id: _TeamID, game: GameID) -> RawAPIItem: ...
@@ -154,12 +148,6 @@ class AsyncTeams(BaseTeams[AsyncClient], typing.Generic[APIResponseFormatT]):
         )
 
     __call__ = get
-
-    @deprecated(
-        "`details` is deprecated and will be removed in a future release. Use `get` instead."
-    )
-    async def details(self, team_id: typing.Any) -> typing.Any:
-        return await self.get(team_id)
 
     @typing.overload
     async def stats(

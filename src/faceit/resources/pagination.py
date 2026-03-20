@@ -4,10 +4,10 @@ from __future__ import annotations
 import inspect
 import math
 import typing
+import warnings
 from abc import ABC
 from dataclasses import dataclass
 from itertools import chain
-from warnings import warn
 
 from annotated_types import Le
 from pydantic import PositiveInt
@@ -81,7 +81,7 @@ class PaginationMaxParams(typing.NamedTuple):
 
 
 @typing.final
-class pages(int):  # noqa: N801
+class pages(int):
     __slots__ = ()
 
     @extends(int.__new__)
@@ -328,7 +328,7 @@ class BasePageIterator(ABC, typing.Generic[PaginationMethodT, _PageT]):
 
         def warn_if_exceeds_safe(max_pages: int, /) -> int:
             if max_pages > self.__class__.SAFE_MAX_PAGES:
-                warn(
+                warnings.warn(
                     f"The computed number of pages ({max_pages}) exceeds the "
                     f"recommended safe maximum ({self.__class__.SAFE_MAX_PAGES}). "
                     "Proceed at your own risk.",
@@ -389,7 +389,7 @@ class BasePageIterator(ABC, typing.Generic[PaginationMethodT, _PageT]):
     @staticmethod
     def _remove_pagination_args(**kwargs: _T) -> typing.Dict[str, _T]:
         if any(kwargs.pop(arg, None) for arg in _PAGINATION_ARGS):
-            warn(
+            warnings.warn(
                 f"Pagination parameters {_PAGINATION_ARGS} should not be "
                 "provided by users. These parameters are managed internally "
                 "by the pagination system.",
@@ -417,7 +417,7 @@ class BasePageIterator(ABC, typing.Generic[PaginationMethodT, _PageT]):
                 f"Key and attribute parameters must be non-empty strings: {key}, {attr}."
             )
         if any(kwargs.pop(arg, None) for arg in _UNIX_PAGINATION_PARAMS):
-            warn(
+            warnings.warn(
                 "The parameters start and to will be managed automatically with Unix "
                 "timestamp pagination. Your provided values will be ignored.",
                 UserWarning,

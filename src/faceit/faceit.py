@@ -1,4 +1,5 @@
 import typing
+import warnings
 
 from typing_extensions import deprecated
 
@@ -11,26 +12,36 @@ class BaseFaceit(typing.Generic[ClientT, DataResourceT]):
     __slots__ = ()
 
     if typing.TYPE_CHECKING:
-        data: typing.Type[DataResourceT]
+        _data_cls: typing.Type[DataResourceT]
+
+    @classmethod
+    def data(cls, *args: typing.Any, **kwargs: typing.Any) -> DataResourceT:
+        warnings.warn(
+            f"`{cls.__name__}.data()` is deprecated and will be removed in a future release. "
+            f"Please instantiate `{cls._data_cls.__name__}` directly.",
+            category=DeprecationWarning,
+            stacklevel=2,
+        )
+        return typing.cast("DataResourceT", cls._data_cls(*args, **kwargs))
 
 
+@typing.final
 @deprecated(
     "`Faceit` is deprecated and will be removed in a future release. "
     "Use `SyncDataResource` instead."
 )
-@typing.final
 class Faceit(BaseFaceit[SyncClient, SyncDataResource]):
     __slots__ = ()
 
-    data = SyncDataResource
+    _data_cls = SyncDataResource
 
 
+@typing.final
 @deprecated(
     "`AsyncFaceit` is deprecated and will be removed in a future release. "
     "Use `AsyncDataResource` instead."
 )
-@typing.final
 class AsyncFaceit(BaseFaceit[AsyncClient, AsyncDataResource]):
     __slots__ = ()
 
-    data = AsyncDataResource
+    _data_cls = AsyncDataResource

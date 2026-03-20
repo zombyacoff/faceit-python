@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 import typing
+import warnings
 from abc import ABC
 from functools import cached_property
-from warnings import warn
 
 from typing_extensions import Never, Self
 
 from faceit.http import AsyncClient, EnvKey, SyncClient
-from faceit.types import ClientT, ValidUUID
+from faceit.types import ClientT, Raw, ValidUUID
 
 if typing.TYPE_CHECKING:
     from types import TracebackType
@@ -45,7 +45,7 @@ class BaseResources(ABC, typing.Generic[ClientT]):
             return
 
         if client_options:
-            warn(
+            warnings.warn(
                 "'client_options' are ignored when an existing client "
                 "instance is provided. Configure your client before "
                 "passing it to this constructor.",
@@ -106,12 +106,11 @@ def resource_aggregator(cls: typing.Type[_AggregatorT], /) -> typing.Type[_Aggre
     for name, resource_type in cls.__annotations__.items():
 
         def make_property(
-            is_raw: bool,
-            resource_type: typing.Type[typing.Any] = resource_type,
+            is_raw: bool, resource_type: typing.Type[typing.Any]
         ) -> cached_property[_AggregatorT]:
             return cached_property(lambda self: resource_type(self._client, is_raw))
 
-        prop = make_property(name.startswith("raw_"))
+        prop = make_property(Raw in typing.get_args(resource_type), resource_type)
         setattr(cls, name, prop)
         prop.__set_name__(cls, name)
 

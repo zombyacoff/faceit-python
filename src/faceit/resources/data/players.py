@@ -3,8 +3,8 @@ from __future__ import annotations
 
 import logging
 import typing
+import warnings
 from abc import ABC
-from warnings import warn
 
 from pydantic import AfterValidator, Field, validate_call
 from typing_extensions import Annotated, TypeAlias
@@ -106,7 +106,7 @@ class BasePlayers(
             return RequestPayload(endpoint=self.__class__.PATH, params=params)
 
         if game is not None or game_player_id is not None:
-            warn(
+            warnings.warn(
                 "When 'player_lookup_key' is provided, "
                 "'game' and 'game_player_id' should not be specified. "
                 "The value of 'player_lookup_key' will take precedence.",

@@ -195,7 +195,7 @@ class TestBaseAPIClient:
 
     def test_handle_response_server_error(self, server_error_response):
         """Test server error response handling."""
-        with pytest.raises(httpx.HTTPStatusError):
+        with pytest.raises(APIError):
             BaseAPIClient._handle_response(server_error_response)
 
     def test_handle_response_invalid_json(self, invalid_json_response):
@@ -641,11 +641,7 @@ class TestRetryLogic:
         # Should retry on protocol error
         assert retry_predicate(httpx.RemoteProtocolError("Protocol error"))
 
-        assert retry_predicate(
-            httpx.HTTPStatusError(
-                "Server error", request=Mock(), response=server_error_response
-            )
-        )
+        assert retry_predicate(APIError(500, server_error_response.text))
 
         assert not retry_predicate(
             httpx.HTTPStatusError(

@@ -3,10 +3,10 @@ from __future__ import annotations
 import logging
 import re
 import typing
+import warnings
 from dataclasses import dataclass
 from functools import total_ordering
 from types import MappingProxyType
-from warnings import warn
 
 from pydantic import Field, validate_call
 from typing_extensions import Self, TypeAlias
@@ -329,7 +329,7 @@ class SkillLevel:
         self, elo: int = Field(ge=MIN_ELO), /
     ) -> typing.Optional[float]:
         if self.is_highest_level:
-            warn(
+            warnings.warn(
                 "Cannot calculate progress percentage for highest level",
                 UserWarning,
                 stacklevel=4,
@@ -337,7 +337,7 @@ class SkillLevel:
             return None
 
         if not self.contains_elo(elo):
-            warn(f"Elo {elo} is out of range", UserWarning, stacklevel=4)
+            warnings.warn(f"Elo {elo} is out of range", UserWarning, stacklevel=4)
             return None
 
         assert isinstance(self.elo_range.upper, int)
@@ -369,11 +369,13 @@ class SkillLevel:
         elo: typing.Optional[int] = Field(None, ge=MIN_ELO),
     ) -> typing.Optional[Self]:
         if game_id not in cls._registry:
-            warn(f"Game {game_id!r} is not supported", UserWarning, stacklevel=4)
+            warnings.warn(
+                f"Game {game_id!r} is not supported", UserWarning, stacklevel=4
+            )
             return None
 
         if level is not None and elo is not None:
-            warn(
+            warnings.warn(
                 "Both 'level' and 'elo' parameters provided; 'level' takes precedence",
                 UserWarning,
                 stacklevel=4,
@@ -411,11 +413,9 @@ class SkillLevel:
         # Explicitly defined for performance and clarity.
         # By comparing only the core identity fields (`game_id` and `level`)
         # instead of all dataclass fields, we reduce the number of operations.
-        return (
-            self.level == other.level and self.game_id == other.game_id
-            if isinstance(other, self.__class__)
-            else NotImplemented
-        )
+        if not isinstance(other, self.__class__):
+            return NotImplemented
+        return self.level == other.level and self.game_id == other.game_id
 
     def __lt__(self, other: Self) -> bool:
         if not isinstance(other, self.__class__):
