@@ -81,26 +81,23 @@ class Endpoint:
     def __truediv__(self, other: EndpointParam) -> Self:
         if isinstance(other, self.__class__):
             return self.__class__(*self.path_parts, *other.path_parts, base=self.base)
-        try:
-            return self.add(str(other))
-        except (TypeError, ValueError):
-            raise UnsupportedOperationTypeError(
-                "/", self.__class__.__name__, type(other).__name__
-            ) from None
+        if isinstance(other, str):
+            return self.add(other)
+        raise UnsupportedOperationTypeError(
+            "/", self.__class__.__name__, type(other).__name__
+        )
 
     def __itruediv__(self, other: EndpointParam) -> Self:
         if isinstance(other, self.__class__):
             self.path_parts.extend(other.path_parts)
             return self
-        try:
-            other_str = str(other)
-        except (TypeError, ValueError):
-            raise UnsupportedOperationTypeError(
-                "/=", self.__class__.__name__, type(other).__name__
-            ) from None
-        if other_str:
-            self.path_parts.append(other_str)
-        return self
+        if isinstance(other, str):
+            if other:
+                self.path_parts.append(other)
+            return self
+        raise UnsupportedOperationTypeError(
+            "/=", self.__class__.__name__, type(other).__name__
+        )
 
 
 def is_ssl_error(exception: BaseException, /) -> bool:
