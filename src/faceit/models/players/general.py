@@ -29,7 +29,6 @@ class GameInfo(BaseModel):
     # by the API. Remove only if you have confirmed that "skill_level_label"
     # is not returned in any current responses.
     # level_label: Annotated[str, Field(alias="skill_level_label")]
-
     # regions: ResponseContainer[RegionIdentifier] = ResponseContainer({})
     game_profile_id: str
 
@@ -40,10 +39,12 @@ class GameInfo(BaseModel):
 
         game_id = data.get("_container_key")
         skill_lvl = data.get("skill_level")
+
         if (
             game_id is not None
             and game_id in ELO_THRESHOLDS
             and skill_lvl is not None
+            and skill_lvl in ELO_THRESHOLDS.values()
             # Just in case; It may not be necessary at all
             and not isinstance(skill_lvl, SkillLevel)
         ):
@@ -182,6 +183,7 @@ class CSLifetimeStats(BaseModel):  # `GameID.CS2` & `GameID.CSGO`
     total_rounds_with_extended_stats: Annotated[
         int, Field(0, alias="Total Rounds with extended stats")
     ]
+    total_sniper_kills: Annotated[int, Field(0, alias="Total Sniper Kills")]
     total_utility_count: Annotated[int, Field(0, alias="Total Utility Count")]
     total_utility_damage: Annotated[int, Field(0, alias="Total Utility Damage")]
     total_utility_successes: Annotated[int, Field(0, alias="Total Utility Successes")]

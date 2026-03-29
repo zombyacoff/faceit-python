@@ -15,10 +15,9 @@ from faceit.types import RegionIdentifier, UrlOrEmpty
 
 _NoOpponent: TypeAlias = typing.Literal["bye"]
 
-_RESULT_MAP: typing.Final = {
-    "faction1": "first",
-    "faction2": "second",
-}
+_F1: typing.Final = "faction1"
+_F2: typing.Final = "faction2"
+_RESULT_MAP: typing.Final = {_F1: "first", _F2: "second"}
 
 
 class PlayerSummary(BaseModel):
@@ -40,13 +39,13 @@ class Team(BaseModel):
 
 
 class Teams(BaseModel):
-    first: Annotated[Team, Field(alias="faction1")]
-    second: Annotated[Team, Field(alias="faction2")]
+    first: Annotated[Team, Field(alias=_F1)]
+    second: Annotated[Team, Field(alias=_F2)]
 
 
 class Score(BaseModel):
-    first: Annotated[int, Field(alias="faction1")]
-    second: Annotated[int, Field(alias="faction2")]
+    first: Annotated[int, Field(alias=_F1)]
+    second: Annotated[int, Field(alias=_F2)]
 
 
 class Results(BaseModel):
