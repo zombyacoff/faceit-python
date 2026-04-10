@@ -90,6 +90,8 @@ class AbstractMatchPlayerStats(BaseModel, ABC):
     returned based on the game context.
     """
 
+    game: Annotated[GameID, Field(alias="Game")]
+
 
 # Не работает для игроков, игравших последний раз в ~авг. 2024 года
 # Необходимо добавить значения по умолчанию для всех полей, которые могут отсутствовать

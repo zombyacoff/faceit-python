@@ -1,27 +1,27 @@
+<div align="center">=
 # FACEIT Python API Library
 
 [![python](https://img.shields.io/badge/python-3.8%2B-3776ab?style=flat-square)](https://www.python.org/)
 [![pypi](https://img.shields.io/pypi/v/faceit?style=flat-square)](https://pypi.org/project/faceit/)
 [![license](https://img.shields.io/badge/License-Apache_2.0-blue.svg?style=flat-square)](https://opensource.org/licenses/Apache-2.0)
 [![downloads](https://img.shields.io/pypi/dm/faceit?style=flat-square)](https://pypi.org/project/faceit/)
+[![FACEIT API](https://img.shields.io/badge/FACEIT_API-Reference-FF5500?style=flat-square&logo=faceit)](https://docs.faceit.com/docs)
 
-This library makes it easy to access and use data from the FACEIT gaming platform – such as player stats, matches, and tournaments – directly from your Python programs, without needing to understand the technical details of the FACEIT API. Automate and integrate FACEIT data into your projects, whether building apps, analyzing stats, or creating tools for esports and gaming.
+The most intuitive, type-safe way to interact with the FACEIT API.
 
-**See the [official FACEIT API documentation](https://docs.faceit.com/docs) for details about the available data and endpoints.**
+Access FACEIT data: player stats, matches, and tournaments directly from Python.
 
-## Requirements
-
-- Python 3.8 or higher
+</div>
 
 ## Features
 
-- **High-level, idiomatic API** – Interact with FACEIT as if it were a native Python service.
-- **Full type safety** – Compatible with [mypy](https://mypy-lang.org/) and other type checkers.
-- **Sync & async support** – Powered by [httpx](https://www.python-httpx.org/).
-- **Pydantic models** – All data models inherit from [`pydantic.BaseModel`](https://docs.pydantic.dev/latest/usage/models/).
-- **Advanced pagination** – Supports both cursor-based and unix-time-based iterators.
-- **Flexible data access** – Choose between raw data and parsed models (e.g., `.raw_players` / `.players`).
-- **Page collection utilities** – Paginated responses in model mode are wrapped in an `ItemPage` collection with convenient methods, such as `.map()`, `.filter()`, `.find()`, and more.
+- **High-level, idiomatic API**: Interact with FACEIT as if it were a native Python service.
+- **Full type safety**: Compatible with [mypy](https://mypy-lang.org/) and other type checkers.
+- **Sync & async support**: Powered by [httpx](https://www.python-httpx.org/).
+- **Pydantic models**: All data models inherit from [`pydantic.BaseModel`](https://docs.pydantic.dev/latest/usage/models/).
+- **Advanced pagination**: Supports both cursor-based and Unix timestamp pagination.
+- **Flexible data access**: Choose between raw data and parsed models (e.g., `.raw_players` / `.players`).
+- **Page collection utilities**: Paginated responses in model mode are wrapped in an `ItemPage` collection with convenient methods, such as `.map()`, `.filter()`, `.find()`, and more.
 
 ## Installation
 
@@ -29,25 +29,21 @@ This library makes it easy to access and use data from the FACEIT gaming platfor
 pip install faceit
 ```
 
-You can also install with the `env` extra to enable loading the API key from environment files (details below):
-
-```
-pip install faceit[env]
-```
+Use `pip install faceit[env]` if you plan to load the API key from environment (see [API Key Handling](#api-key-handling)).
 
 ## Quickstart Example
 
-You can get started in just a few lines of code.  
+You can get started in just a few lines of code.
 Below is a minimal example demonstrating how to retrieve the complete CS2 match history for a player using the synchronous API.
 
 > [!IMPORTANT]
-> Currently, only the Faceit Data resource is available, and access requires a valid API key.  
+> Currently, only the data resource is available, and access requires a valid API key.
 > You can obtain your API key by following the instructions in the [official FACEIT documentation](https://docs.faceit.com/getting-started/authentication/api-keys).
 
 ### API Key Handling
 
-You can specify your API key directly in the constructor, or let the library automatically load it from your environment (e.g., `.env`, `settings.ini`).  
-By default, the key is read from the `FACEIT_API_KEY` variable.  
+You can specify your API key directly in the constructor, or let the library automatically load it from your environment (e.g., `.env`, `settings.ini`).
+By default, the key is read from the `FACEIT_API_KEY` variable.
 To use a different variable, pass an instance of `EnvKey` to the constructor:
 
 ```py
@@ -55,7 +51,7 @@ data = faceit.SyncDataResource(faceit.EnvKey("SECRET"))
 ```
 
 > [!NOTE]
-> Loading the API key from environment files requires either installing the `[env]` extra or installing [python-decouple](https://github.com/HBNetwork/python-decouple) yourself.
+> Loading the API key from environment files requires either installing the `env` extra or installing [python-decouple](https://github.com/HBNetwork/python-decouple) yourself.
 
 ### Minimal Example
 
@@ -79,13 +75,13 @@ print(f"Total CS2 matches for {player.nickname}: {len(matches)}")
 match_id = "1-964ea204-03cf-4292-99f8-44da63968463"
 some_match = matches.find("id", match_id)
 
-if some_match:
-    print(f"Found match with ID {match_id}: {some_match}")
-else:
+if some_match is None:
     print(f"No match found with ID {match_id}")
+else:
+    print(f"Found match with ID {match_id}: {some_match}")
 ```
 
-See additional usage examples in the [examples/](examples/) directory.
+<!-- See additional usage examples in the [examples/](examples/) directory. -->
 
 ## Motivation
 
@@ -96,11 +92,11 @@ The goal is to provide a solution approaching enterprise-level quality, while re
 ## Project Status & Roadmap
 
 > [!WARNING]
-> This library is currently in **early development**.  
+> This library is currently in **early development**.
 > Many endpoints, models, and features are not yet implemented.
 > Webhooks, chat API, and some advanced features are not available yet.
 > Inline code documentation is minimal, and the Sphinx-based documentation site is not yet ready.
-> Expect breaking changes and incomplete coverage.  
+> Expect breaking changes and incomplete coverage.
 > **Contributions and feedback are highly welcome!**
 
 ### Planned Improvements

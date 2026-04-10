@@ -25,11 +25,8 @@ class GameInfo(BaseModel):
     level: Annotated[typing.Union[int, SkillLevel], Field(alias="skill_level")]
     elo: Annotated[int, Field(alias="faceit_elo")]
     game_player_name: str
-    # This attribute appears to be deprecated and is no longer provided
-    # by the API. Remove only if you have confirmed that "skill_level_label"
-    # is not returned in any current responses.
-    # level_label: Annotated[str, Field(alias="skill_level_label")]
-    # regions: ResponseContainer[RegionIdentifier] = ResponseContainer({})
+    level_label: Annotated[str, Field("", alias="skill_level_label")]  # Maybe outdated
+    regions: ResponseContainer[typing.Any]  # Maybe outdated
     game_profile_id: str
 
     @model_validator(mode="before")
@@ -40,21 +37,24 @@ class GameInfo(BaseModel):
         game_id = data.get("_container_key")
         skill_lvl = data.get("skill_level")
 
-        if (
-            game_id is not None
-            and game_id in ELO_THRESHOLDS
-            and skill_lvl is not None
-            and skill_lvl in ELO_THRESHOLDS.values()
-            # Just in case; It may not be necessary at all
-            and not isinstance(skill_lvl, SkillLevel)
-        ):
-            resolved = SkillLevel.get_level(game_id, skill_lvl)
-            assert resolved is not None, (
-                "`resolved` cannot be None because `game_id` was already validated "
-                "to be present in `ELO_THRESHOLDS`"
-            )
-            data["skill_level"] = resolved
+        if isinstance(skill_lvl, SkillLevel) or game_id is None or skill_lvl is None:
+            return data
+        if game_id not in ELO_THRESHOLDS:
+            return data
+        # NOTE: FACEIT returns level 0 for `GameID.CSGO`
+        # (at least for 'm0NESY', discovered empirically; might apply to other games too),
+        # which doesn't match any level in `ELO_THRESHOLDS`.
+        # I assume this is an API bug caused by CSGO becoming obsolete after the release of CS2.
+        # TODO: Understand why the API behaves this way.
+        if skill_lvl not in ELO_THRESHOLDS[game_id]:
+            return data
 
+        resolved = SkillLevel.get_level(game_id, skill_lvl)
+        assert resolved is not None, (
+            "`resolved` cannot be None because `game_id` was already validated "
+            "to be present in `ELO_THRESHOLDS`"
+        )
+        data["skill_level"] = resolved
         return data
 
 
@@ -79,7 +79,7 @@ class Player(BaseModel):
     faceit_url: LangFormattedAnyHttpUrl
     membership_type: str
     cover_featured_image: UrlOrEmpty
-    # infractions: ResponseContainer[typing.Any]
+    infractions: ResponseContainer[typing.Any]  # Maybe outdated
     verified: bool
     activated_at: datetime
 
@@ -294,5 +294,5 @@ class PlayerStats(BaseModel):
     segments: typing.List[Segment]
 
     # TODO: Преобразование списка карт в словарь по "label"
-    # Возможно лучше `GenericContainer` где атрибуты будут автоматически
+    # Возможно лучше `ResponseContainer` где атрибуты будут автоматически
     # генерироваться (есть карты, чьи названия не могут быть атрибутами)
