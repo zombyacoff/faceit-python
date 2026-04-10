@@ -2,27 +2,28 @@
 
 # FACEIT Python API Library
 
-[![python](https://img.shields.io/badge/python-3.8%2B-3776ab?style=flat-square)](https://www.python.org/)
-[![pypi](https://img.shields.io/pypi/v/faceit?style=flat-square)](https://pypi.org/project/faceit/)
-[![license](https://img.shields.io/badge/License-Apache_2.0-blue.svg?style=flat-square)](https://opensource.org/licenses/Apache-2.0)
-[![downloads](https://img.shields.io/pypi/dm/faceit?style=flat-square)](https://pypi.org/project/faceit/)
+[![python](https://img.shields.io/badge/python-3.8%2B-FAD6C5?style=flat-square)](https://www.python.org/)
+[![pypi](https://img.shields.io/pypi/v/faceit?style=flat-square&color=FAD6C5)](https://pypi.org/project/faceit/)
+[![license](https://img.shields.io/badge/License-Apache_2.0-FAD6C5?style=flat-square)](https://opensource.org/licenses/Apache-2.0)
+[![downloads](https://img.shields.io/pypi/dm/faceit?style=flat-square&color=FAD6C5)](https://pypi.org/project/faceit/)
+
 [![FACEIT API](https://img.shields.io/badge/FACEIT_API-Reference-FF5500?style=flat-square&logo=faceit)](https://docs.faceit.com/docs)
 
 The most intuitive, type-safe way to interact with the FACEIT API.
 
-Access FACEIT data: player stats, matches, and tournaments directly from Python.
+Access FACEIT data — player stats, matches, and tournaments directly from Python.
 
 </div>
 
 ## Features
 
-- **High-level, idiomatic API**: Interact with FACEIT as if it were a native Python service.
-- **Full type safety**: Compatible with [mypy](https://mypy-lang.org/) and other type checkers.
-- **Sync & async support**: Powered by [httpx](https://www.python-httpx.org/).
-- **Pydantic models**: All data models inherit from [`pydantic.BaseModel`](https://docs.pydantic.dev/latest/usage/models/).
-- **Advanced pagination**: Supports both cursor-based and Unix timestamp pagination.
-- **Flexible data access**: Choose between raw data and parsed models (e.g., `.raw_players` / `.players`).
-- **Page collection utilities**: Paginated responses in model mode are wrapped in an `ItemPage` collection with convenient methods, such as `.map()`, `.filter()`, `.find()`, and more.
+- **High-level, idiomatic API** — Interact with FACEIT as if it were a native Python service.
+- **Full type safety** — Compatible with [mypy](https://mypy-lang.org/) and other type checkers.
+- **Sync & async support** — Powered by [httpx](https://www.python-httpx.org/).
+- **Pydantic models** — All data models inherit from [`pydantic.BaseModel`](https://docs.pydantic.dev/latest/usage/models/).
+- **Advanced pagination** — Supports both cursor-based and Unix timestamp pagination.
+- **Flexible data access** — Choose between raw data and parsed models (e.g., `.raw_players` / `.players`).
+- **Page collection utilities** — Paginated responses in model mode are wrapped in an `ItemPage` collection with convenient methods, such as `.map()`, `.filter()`, `.find()`, and more.
 
 ## Installation
 
@@ -98,6 +99,7 @@ The goal is to provide a solution approaching enterprise-level quality, while re
 > Webhooks, chat API, and some advanced features are not available yet.
 > Inline code documentation is minimal, and the Sphinx-based documentation site is not yet ready.
 > Expect breaking changes and incomplete coverage.
+>
 > **Contributions and feedback are highly welcome!**
 
 ### Planned Improvements
