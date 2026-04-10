@@ -1,4 +1,4 @@
-<div align="center">=
+<div align="center">
 # FACEIT Python API Library
 
 [![python](https://img.shields.io/badge/python-3.8%2B-3776ab?style=flat-square)](https://www.python.org/)
