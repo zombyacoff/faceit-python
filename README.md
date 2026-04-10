@@ -9,8 +9,7 @@
 
 [![FACEIT API](https://img.shields.io/badge/FACEIT_API-Reference-FF5500?style=flat-square&logo=faceit)](https://docs.faceit.com/docs)
 
-**The most easy-to-use, type-safe way to interact with the FACEIT API.**
-
+**The most easy-to-use, type-safe way to interact with the FACEIT API.**  
 Access FACEIT data — player stats, matches, and tournaments directly from Python.
 
 </div>
@@ -35,16 +34,16 @@ Use `pip install faceit[env]` if you plan to load the API key from environment (
 
 ## Quickstart Example
 
-You can get started in just a few lines of code.
+You can get started in just a few lines of code.  
 Below is a short example showing how to get the complete CS2 match history for a player using the synchronous API.
 
 > [!IMPORTANT]
-> Currently, only the data resource is available, and access requires a valid API key.
+> Currently, only the data resource is available, and access requires a valid API key.  
 > You can get your API key by following the steps in the [official FACEIT documentation](https://docs.faceit.com/getting-started/authentication/api-keys).
 
 ### API Key Handling
 
-You can insert your API key directly in the constructor, or let the library automatically load it from your environment (e.g., `.env`, `settings.ini`).
+You can insert your API key directly in the constructor, or let the library automatically load it from your environment (e.g., `.env`, `settings.ini`).  
 By default, the key is read from the `FACEIT_API_KEY` variable (in the environment). To use a different variable, pass an instance of `EnvKey` to the constructor:
 
 ```py
@@ -86,17 +85,17 @@ else:
 
 ## Motivation
 
-This project was created because of a need while building a product that works closely with the FACEIT platform.
-Existing solutions did not offer the level of type safety, convenience, or abstraction needed for strong, maintainable code.
+This project was created because of a need while building a product that works closely with the FACEIT platform.  
+Existing solutions did not offer the level of type safety, convenience, or abstraction needed for strong, maintainable code.  
 The goal is to provide a solution approaching enterprise-level quality, while remaining accessible and useful for a wide range of users.
 
 ## Project Status & Roadmap
 
 > [!WARNING]
-> This library is currently in **early development**.
-> Many endpoints, models, and features are not yet implemented.
-> Webhooks, chat API, and some advanced features are not available yet.
-> In-code documentation is minimal, and the Sphinx-based documentation site is not yet ready.
+> This library is currently in **early development**.  
+> Many endpoints, models, and features are not yet implemented.  
+> Webhooks, chat API, and some advanced features are not available yet.  
+> In-code documentation is minimal, and the Sphinx-based documentation site is not yet ready.  
 > Expect breaking changes and incomplete coverage.
 >
 > **Contributions and feedback are highly welcome!**
