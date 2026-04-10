@@ -2,15 +2,14 @@
 
 # FACEIT Python API Library
 
-[![python](https://img.shields.io/badge/python-3.8%2B-FAD6C5?style=flat-square)](https://www.python.org/)
-[![pypi](https://img.shields.io/pypi/v/faceit?style=flat-square&color=FAD6C5)](https://pypi.org/project/faceit/)
-[![license](https://img.shields.io/badge/License-Apache_2.0-FAD6C5?style=flat-square)](https://opensource.org/licenses/Apache-2.0)
-[![downloads](https://img.shields.io/pypi/dm/faceit?style=flat-square&color=FAD6C5)](https://pypi.org/project/faceit/)
+[![Python](https://img.shields.io/badge/Python-3.8%2B-FAD6C5?style=flat-square)](https://www.python.org/)
+[![PyPI](https://img.shields.io/pypi/v/faceit?label=PyPI&style=flat-square&color=FAD6C5)](https://pypi.org/project/faceit/)
+[![License](https://img.shields.io/badge/License-Apache_2.0-FAD6C5?style=flat-square)](https://opensource.org/licenses/Apache-2.0)
+[![Downloads](https://img.shields.io/pypi/dm/faceit?label=Downloads&style=flat-square&color=FAD6C5)](https://pypi.org/project/faceit/)
 
 [![FACEIT API](https://img.shields.io/badge/FACEIT_API-Reference-FF5500?style=flat-square&logo=faceit)](https://docs.faceit.com/docs)
 
-The most intuitive, type-safe way to interact with the FACEIT API.
-
+**The most easy-to-use, type-safe way to interact with the FACEIT API.**
 Access FACEIT data — player stats, matches, and tournaments directly from Python.
 
 </div>
@@ -36,17 +35,16 @@ Use `pip install faceit[env]` if you plan to load the API key from environment (
 ## Quickstart Example
 
 You can get started in just a few lines of code.
-Below is a minimal example demonstrating how to retrieve the complete CS2 match history for a player using the synchronous API.
+Below is a short example showing how to get the complete CS2 match history for a player using the synchronous API.
 
 > [!IMPORTANT]
 > Currently, only the data resource is available, and access requires a valid API key.
-> You can obtain your API key by following the instructions in the [official FACEIT documentation](https://docs.faceit.com/getting-started/authentication/api-keys).
+> You can get your API key by following the steps in the [official FACEIT documentation](https://docs.faceit.com/getting-started/authentication/api-keys).
 
 ### API Key Handling
 
-You can specify your API key directly in the constructor, or let the library automatically load it from your environment (e.g., `.env`, `settings.ini`).
-By default, the key is read from the `FACEIT_API_KEY` variable.
-To use a different variable, pass an instance of `EnvKey` to the constructor:
+You can insert your API key directly in the constructor, or let the library automatically load it from your environment (e.g., `.env`, `settings.ini`).
+By default, the key is read from the `FACEIT_API_KEY` variable (in the environment). To use a different variable, pass an instance of `EnvKey` to the constructor:
 
 ```py
 data = faceit.SyncDataResource(faceit.EnvKey("SECRET"))
@@ -61,14 +59,14 @@ data = faceit.SyncDataResource(faceit.EnvKey("SECRET"))
 import faceit
 
 # Initialize the API client.
-# If FACEIT_API_KEY is set in your environment, you can omit the argument.
+# If `FACEIT_API_KEY` is set in your environment, you can omit the argument.
 data = faceit.SyncDataResource()  # or faceit.SyncDataResource("YOUR_API_KEY")
 
 # Fetch player information by nickname.
 player = data.players.get("m0NESY")
 
-# Retrieve all CS2 match history for the player.
-# Returns an ItemPage collection (fully-featured iterable).
+# Get all CS2 match history for the player.
+# Returns an `ItemPage` collection (multifunctional tuple).
 matches = data.players.all_history(player.id, faceit.GameID.CS2)
 
 print(f"Total CS2 matches for {player.nickname}: {len(matches)}")
@@ -87,8 +85,8 @@ else:
 
 ## Motivation
 
-This project was created out of necessity during the development of a product requiring deep integration with the FACEIT platform.
-Existing solutions did not offer the level of type safety, convenience, or abstraction needed for robust, maintainable code.
+This project was created because of a need while building a product that works closely with the FACEIT platform.
+Existing solutions did not offer the level of type safety, convenience, or abstraction needed for strong, maintainable code.
 The goal is to provide a solution approaching enterprise-level quality, while remaining accessible and useful for a wide range of users.
 
 ## Project Status & Roadmap
@@ -97,7 +95,7 @@ The goal is to provide a solution approaching enterprise-level quality, while re
 > This library is currently in **early development**.
 > Many endpoints, models, and features are not yet implemented.
 > Webhooks, chat API, and some advanced features are not available yet.
-> Inline code documentation is minimal, and the Sphinx-based documentation site is not yet ready.
+> In-code documentation is minimal, and the Sphinx-based documentation site is not yet ready.
 > Expect breaking changes and incomplete coverage.
 >
 > **Contributions and feedback are highly welcome!**
@@ -106,7 +104,7 @@ The goal is to provide a solution approaching enterprise-level quality, while re
 
 - Support for more endpoints and models
 - Webhooks and chat API integration
-- Complete documentation and usage guides
+- Full documentation and usage guides
 
 ---
 
