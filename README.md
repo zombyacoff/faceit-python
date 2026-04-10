@@ -10,6 +10,7 @@
 [![FACEIT API](https://img.shields.io/badge/FACEIT_API-Reference-FF5500?style=flat-square&logo=faceit)](https://docs.faceit.com/docs)
 
 **The most easy-to-use, type-safe way to interact with the FACEIT API.**
+
 Access FACEIT data — player stats, matches, and tournaments directly from Python.
 
 </div>
