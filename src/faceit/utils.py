@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import inspect
 import json
+import os
 import reprlib
+import sys
 import typing
 from contextlib import suppress
 from datetime import datetime, timezone
 from enum import Enum, IntEnum, auto
-from functools import reduce, wraps
+from functools import lru_cache, reduce, wraps
 from hashlib import sha256
 from uuid import UUID
 
@@ -16,12 +18,16 @@ from typing_extensions import Self, TypeIs
 if typing.TYPE_CHECKING:
     from asyncio import Lock as AsyncLock  # noqa: ICN003
     from threading import Lock as SyncLock
+    from types import FrameType
 
     from .types import _P, _T, ValidUUID
 
     _CallableT = typing.TypeVar("_CallableT", bound=typing.Callable[..., typing.Any])
     _ClassT = typing.TypeVar("_ClassT", bound=type)
 
+_IGNORED_MODULES: typing.Set[str] = {
+    "pydantic",
+}
 _UUID_BYTES: typing.Final = 16
 _UNINITIALIZED_MARKER: typing.Final = "uninitialized"
 
@@ -241,6 +247,55 @@ def _format_fields(obj: object, fields: typing.Tuple[str, ...], *, joiner: str) 
         if all(hasattr(obj, field) for field in fields)
         else repr(_UNINITIALIZED_MARKER)
     )
+
+
+@lru_cache(maxsize=1)
+def _get_ignored_paths() -> typing.Tuple[
+    typing.Tuple[str, ...],
+    typing.FrozenSet[str],
+]:
+    prefixes: typing.List[str] = []
+    files: typing.Set[str] = set()
+
+    for mod_name in (__name__.split(".")[0], *list(_IGNORED_MODULES)):
+        mod = sys.modules.get(mod_name)
+        if not mod or not hasattr(mod, "__file__") or mod.__file__ is None:
+            continue
+
+        path = os.path.normcase(os.path.realpath(mod.__file__))
+
+        if path.endswith("__init__.py"):
+            dir_path = os.path.dirname(path) + os.sep  # noqa: PTH120
+            prefixes.append(dir_path)
+        else:
+            files.add(path)
+
+    return tuple(prefixes), frozenset(files)
+
+
+def warn_stacklevel() -> int:
+    """
+    Determines the appropriate stack level for warnings emitted by the library,
+    so that they point to the user's code instead of internal library frames.
+    """
+    with suppress(ValueError, AttributeError):
+        ignored_prefixes, ignored_files = _get_ignored_paths()
+        frame: typing.Optional[FrameType] = sys._getframe(1)
+        level = 1
+
+        while frame:
+            filename = frame.f_code.co_filename
+            if filename and not filename.startswith("<"):
+                norm_path = os.path.normcase(os.path.realpath(filename))
+                if norm_path not in ignored_files and not norm_path.startswith(
+                    ignored_prefixes
+                ):
+                    return level
+
+            frame = frame.f_back
+            level += 1
+
+    return 1
 
 
 def _apply_representation(

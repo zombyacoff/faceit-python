@@ -3,7 +3,7 @@ from datetime import datetime
 from enum import IntEnum
 
 from pydantic import BaseModel, Field, model_validator
-from typing_extensions import Annotated
+from typing_extensions import Annotated, TypeAlias
 
 from faceit.constants import ELO_THRESHOLDS, GameID, SkillLevel
 from faceit.models.custom_types import (
@@ -11,7 +11,13 @@ from faceit.models.custom_types import (
     LangFormattedAnyHttpUrl,
     ResponseContainer,
 )
-from faceit.types import RegionIdentifier, UrlOrEmpty
+from faceit.types import AnyCSID, RawAPIItem, RegionIdentifier, UrlOrEmpty
+
+_PlayerStatsT = typing.TypeVar("_PlayerStatsT", bound=GameID)
+_SegmentStatsT = typing.TypeVar("_SegmentStatsT")
+_LifetimeStatsT = typing.TypeVar("_LifetimeStatsT")
+
+_SEGMENT_NAME: typing.Final = "label"
 
 
 class MatchResult(IntEnum):
@@ -20,9 +26,11 @@ class MatchResult(IntEnum):
 
 
 class GameInfo(BaseModel):
+    _SKILL_LVL: typing.ClassVar = "skill_level"
+
     region: RegionIdentifier
     game_player_id: str
-    level: Annotated[typing.Union[int, SkillLevel], Field(alias="skill_level")]
+    level: Annotated[typing.Union[int, SkillLevel], Field(alias=_SKILL_LVL)]
     elo: Annotated[int, Field(alias="faceit_elo")]
     game_player_name: str
     level_label: Annotated[str, Field("", alias="skill_level_label")]  # Maybe outdated
@@ -34,8 +42,8 @@ class GameInfo(BaseModel):
         if not isinstance(data, dict):
             return data
 
-        game_id = data.get("_container_key")
-        skill_lvl = data.get("skill_level")
+        game_id = data.get(ResponseContainer._INJECTED_KEY)
+        skill_lvl = data.get(cls._SKILL_LVL)
 
         if isinstance(skill_lvl, SkillLevel) or game_id is None or skill_lvl is None:
             return data
@@ -44,8 +52,9 @@ class GameInfo(BaseModel):
         # NOTE: FACEIT returns level 0 for `GameID.CSGO`
         # (at least for 'm0NESY', discovered empirically; might apply to other games too),
         # which doesn't match any level in `ELO_THRESHOLDS`.
-        # I assume this is an API bug caused by CSGO becoming obsolete after the release of CS2.
-        # TODO: Understand why the API behaves this way.
+        # I assume this is an API bug caused by CSGO becoming obsolete after the release of CS2
+        #
+        # TODO: Understand why the API behaves this way
         if skill_lvl not in ELO_THRESHOLDS[game_id]:
             return data
 
@@ -54,7 +63,7 @@ class GameInfo(BaseModel):
             "`resolved` cannot be None because `game_id` was already validated "
             "to be present in `ELO_THRESHOLDS`"
         )
-        data["skill_level"] = resolved
+        data[cls._SKILL_LVL] = resolved
         return data
 
 
@@ -278,21 +287,62 @@ class CSMapStats(BaseModel):  # `GameID.CS2` & `GameID.CSGO`
     wins: Annotated[int, Field(alias="Wins")]
 
 
-class Segment(BaseModel):  # Возможно является более универсальным
-    stats: CSMapStats
+class Segment(BaseModel, typing.Generic[_SegmentStatsT]):
+    stats: _SegmentStatsT
     type: str
     mode: str
-    name: Annotated[str, Field(alias="label")]
+    name: Annotated[str, Field(alias=_SEGMENT_NAME)]
     img_small: UrlOrEmpty
     img_regular: UrlOrEmpty
 
 
-class PlayerStats(BaseModel):
+class PlayerStats(
+    # TODO: Подумать над более элегантной типизацией в зависимости от `GameID`
+    BaseModel,
+    typing.Generic[
+        _PlayerStatsT,
+        _LifetimeStatsT,
+        _SegmentStatsT,
+    ],
+):
     id: Annotated[FaceitID, Field(alias="player_id")]
-    game_id: GameID
-    lifetime: CSLifetimeStats  # Относительно `game_id`; для иных игр модели делать не собираюсь
-    segments: typing.List[Segment]
+    game_id: _PlayerStatsT
+    lifetime: _LifetimeStatsT  # Относительно `game_id`; для иных игр модели делать не собираюсь
+    segments: ResponseContainer[
+        Segment[_SegmentStatsT]
+    ]  # TODO: Add description; usage guide
 
-    # TODO: Преобразование списка карт в словарь по "label"
-    # Возможно лучше `ResponseContainer` где атрибуты будут автоматически
-    # генерироваться (есть карты, чьи названия не могут быть атрибутами)
+    @model_validator(mode="before")
+    def _prepare_segments(cls, data: typing.Any) -> typing.Any:
+        if not isinstance(data, dict):
+            return data
+
+        raw_segments = data.get("segments")
+        if isinstance(raw_segments, list):
+            data["segments"] = {
+                # NOTE: Anubis --> anubis, Ancient --> ancient, ...
+                # (lowercase and replace spaces with underscores)
+                seg.get(_SEGMENT_NAME).lower().replace(" ", "_"): seg
+                for seg in raw_segments
+                if _SEGMENT_NAME in seg
+            }
+
+        return data
+
+
+CSPlayerStats: TypeAlias = PlayerStats[
+    AnyCSID,
+    CSLifetimeStats,
+    CSMapStats,
+]
+
+FallbackPlayerStats: TypeAlias = PlayerStats[
+    GameID,
+    RawAPIItem,
+    RawAPIItem,
+]
+
+AnyPlayerStats: TypeAlias = typing.Union[
+    CSPlayerStats,
+    FallbackPlayerStats,
+]

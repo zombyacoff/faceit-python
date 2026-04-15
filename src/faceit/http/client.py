@@ -191,7 +191,7 @@ class BaseAPIClient(ABC, typing.Generic[_HttpxClientT, _RetryerT]):
         if not ENV_EXTRA_INSTALLED:
             raise DecoupleMissingError
         try:
-            # because `decouple` is untyped
+            # cast is required because `decouple` is untyped
             return typing.cast("str", decouple.config(key))
         except decouple.UndefinedValueError:
             raise MissingAuthTokenError(key) from None
@@ -425,9 +425,11 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient, tenacity.AsyncRetrying])
 
     @classmethod
     @locked(_lock)
-    # Always returns `True` to ensure retry
-    # happens for SSL errors in the retry mechanism
-    def _register_ssl_error(cls) -> typing.Literal[True]:
+    def _register_ssl_error(
+        cls,
+        # Always returns `True` to ensure retry
+        # happens for SSL errors in the retry mechanism
+    ) -> typing.Literal[True]:
         cls._ssl_error_count += 1
         cls._last_ssl_error_time = time()
         current_limit = cls._max_concurrent_requests
@@ -528,7 +530,7 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient, tenacity.AsyncRetrying])
             )
             new_limit = cls.MAX_CONCURRENT_REQUESTS_ABSOLUTE
 
-        # `cls._semaphore` is None when this method is called from __init__
+        # `cls._semaphore` is None when this method is called from `__init__`
         if cls._max_concurrent_requests == new_limit and cls._semaphore is not None:
             _logger.debug("Rate limit already set to %d, no change needed", new_limit)
             return
@@ -603,12 +605,15 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient, tenacity.AsyncRetrying])
 # the core implementation details in the base classes
 
 
-def _clean_type_hints(
+# fmt: off
+_TYPE_HINT_KEYS: typing.Final = {"expect_item", "expect_page"}
+def _clean_type_hints(  # noqa: E302
     kwargs: typing.Dict[str, typing.Any], /
 ) -> typing.Dict[str, typing.Any]:
-    for key in ("expect_item", "expect_page"):
+    for key in _TYPE_HINT_KEYS:
         kwargs.pop(key, None)
     return kwargs
+# fmt: on
 
 
 @typing.final

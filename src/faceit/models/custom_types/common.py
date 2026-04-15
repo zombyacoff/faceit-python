@@ -33,6 +33,8 @@ else:
 class ResponseContainer(RootModel[typing.Dict[str, _T]]):
     __slots__ = ()
 
+    _INJECTED_KEY: typing.ClassVar = "_container_key"
+
     def items(self) -> typing.ItemsView[str, _T]:
         return self.root.items()
 
@@ -70,7 +72,7 @@ class ResponseContainer(RootModel[typing.Dict[str, _T]]):
     def _inject_keys(cls, data: typing.Any) -> typing.Any:
         return (
             {
-                k: {**v, "_container_key": k} if isinstance(v, dict) else v
+                k: {**v, cls._INJECTED_KEY: k} if isinstance(v, dict) else v
                 for k, v in data.items()
             }
             if isinstance(data, dict)

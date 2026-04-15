@@ -34,6 +34,7 @@ from faceit.utils import (
     extends,
     representation,
     validate_positive_int,
+    warn_stacklevel,
 )
 
 _PageType: TypeAlias = typing.Union[ItemPage[typing.Any], RawAPIPageResponse]
@@ -333,7 +334,7 @@ class BasePageIterator(ABC, typing.Generic[PaginationMethodT, _PageT]):
                     f"recommended safe maximum ({self.__class__.SAFE_MAX_PAGES}). "
                     "Proceed at your own risk.",
                     UserWarning,
-                    stacklevel=2,
+                    stacklevel=warn_stacklevel(),
                 )
             return max_pages
 
@@ -388,13 +389,13 @@ class BasePageIterator(ABC, typing.Generic[PaginationMethodT, _PageT]):
 
     @staticmethod
     def _remove_pagination_args(**kwargs: _T) -> typing.Dict[str, _T]:
-        if any(kwargs.pop(arg, None) for arg in _PAGINATION_ARGS):
+        if any([kwargs.pop(arg, None) for arg in _PAGINATION_ARGS]):  # noqa: C419
             warnings.warn(
                 f"Pagination parameters {_PAGINATION_ARGS} should not be "
                 "provided by users. These parameters are managed internally "
                 "by the pagination system.",
                 UserWarning,
-                stacklevel=2,
+                stacklevel=warn_stacklevel(),
             )
         return kwargs
 
@@ -410,7 +411,7 @@ class BasePageIterator(ABC, typing.Generic[PaginationMethodT, _PageT]):
         if not _has_unix_pagination_params(method):
             raise ValueError(
                 f"Method {method.__name__!r} does not appear to support Unix timestamp "
-                "pagination. Expected start and to parameters."
+                "pagination. Expected 'start' and 'to' parameters."
             )
         if any(not isinstance(value, str) or not value for value in (key, attr)):
             raise ValueError(
@@ -418,10 +419,10 @@ class BasePageIterator(ABC, typing.Generic[PaginationMethodT, _PageT]):
             )
         if any(kwargs.pop(arg, None) for arg in _UNIX_PAGINATION_PARAMS):
             warnings.warn(
-                "The parameters start and to will be managed automatically with Unix "
+                "The parameters 'start' and 'to' will be managed automatically with Unix "
                 "timestamp pagination. Your provided values will be ignored.",
                 UserWarning,
-                stacklevel=3,
+                stacklevel=warn_stacklevel(),
             )
 
     @staticmethod
@@ -450,11 +451,10 @@ class BasePageIterator(ABC, typing.Generic[PaginationMethodT, _PageT]):
     ) -> typing.Optional[int]:
         if not page:
             return None
-        return (
-            deep_get(page[RAW_RESPONSE_ITEMS_KEY][-1], key)
-            if isinstance(page, dict)
-            else getattr(page.last(), attr, None)
-        )
+        if isinstance(page, dict):
+            items = page.get(RAW_RESPONSE_ITEMS_KEY) or []
+            return deep_get(items[-1], key) if items else None
+        return getattr(page.get_last(), attr, None)  # type: ignore[union-attr]
 
     @staticmethod
     def _filter_collection(
@@ -549,7 +549,7 @@ class _BaseSyncPageIterator(
         )
 
 
-class _BasyAsyncPageIterator(
+class _BaseAsyncPageIterator(
     BasePageIterator[AsyncResourceMethodProtocol[_PageT], _PageT],
     typing.AsyncIterator[_PageT],
 ):
@@ -731,7 +731,7 @@ class SyncPageIterator(_BaseSyncPageIterator[_PageT]):
 
 
 @typing.final
-class AsyncPageIterator(_BasyAsyncPageIterator[_PageT]):
+class AsyncPageIterator(_BaseAsyncPageIterator[_PageT]):
     __slots__ = ()
 
     @typing.overload

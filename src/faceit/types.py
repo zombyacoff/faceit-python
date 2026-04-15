@@ -4,7 +4,7 @@ from uuid import UUID
 from pydantic import AnyHttpUrl, BaseModel
 from typing_extensions import NotRequired, ParamSpec, TypeAlias
 
-from .constants import Region
+from .constants import GameID, Region
 
 if typing.TYPE_CHECKING:
     from .http import Endpoint
@@ -31,6 +31,8 @@ UrlOrEmpty: TypeAlias = typing.Union[AnyHttpUrl, EmptyString]
 UUIDOrEmpty: TypeAlias = typing.Union[UUID, EmptyString]
 EndpointParam: TypeAlias = typing.Union[str, "Endpoint"]
 ValidUUID: TypeAlias = typing.Union[UUID, str, bytes]
+
+AnyCSID: TypeAlias = typing.Literal[GameID.CS2, GameID.CSGO]
 
 Raw = typing.NewType("Raw", bool)
 Model = typing.NewType("Model", bool)

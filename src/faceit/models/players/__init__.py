@@ -1,4 +1,13 @@
-from .general import BanEntry, GameInfo, GeneralTeam, Hub, Player, Tournament
+from .general import (
+    BanEntry,
+    CSPlayerStats,
+    FallbackPlayerStats,
+    GameInfo,
+    GeneralTeam,
+    Hub,
+    Player,
+    Tournament,
+)
 from .match import (
     CS2MatchPlayerStats,
     Match,
@@ -12,6 +21,8 @@ from .match import (
 __all__ = [
     "BanEntry",
     "CS2MatchPlayerStats",
+    "CSPlayerStats",
+    "FallbackPlayerStats",
     "GameInfo",
     "GeneralTeam",
     "Hub",

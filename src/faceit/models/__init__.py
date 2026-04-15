@@ -3,6 +3,8 @@ from .item_page import ItemPage
 from .players import (
     BanEntry,
     CS2MatchPlayerStats,
+    CSPlayerStats,
+    FallbackPlayerStats,
     GeneralTeam,
     Hub,
     Match,
@@ -13,7 +15,9 @@ from .players import (
 __all__ = [
     "BanEntry",
     "CS2MatchPlayerStats",
+    "CSPlayerStats",
     "Championship",
+    "FallbackPlayerStats",
     "GeneralTeam",
     "Hub",
     "ItemPage",

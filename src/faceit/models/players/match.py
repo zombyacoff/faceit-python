@@ -94,7 +94,7 @@ class AbstractMatchPlayerStats(BaseModel, ABC):
 
 
 # Не работает для игроков, игравших последний раз в ~авг. 2024 года
-# Необходимо добавить значения по умолчанию для всех полей, которые могут отсутствовать
+# TODO: Необходимо добавить значения по умолчанию для всех полей, которые могут отсутствовать
 class CS2MatchPlayerStats(AbstractMatchPlayerStats):
     game_mode: Annotated[str, Field(alias="Game Mode")]
     region: Annotated[RegionIdentifier, Field(alias="Region")]

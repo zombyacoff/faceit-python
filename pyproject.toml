@@ -1,7 +1,7 @@
 [project]
 name = "faceit"
-version = "0.2.0b1"
-description = "The Python wrapper for the Faceit API"
+version = "0.2.0"
+description = "The Python wrapper for the FACEIT API"
 readme = "README.md"
 requires-python = ">=3.8"
 license = "Apache-2.0"
@@ -43,6 +43,12 @@ dev = [
     "pytest>=7.4",
     "pytest-asyncio>=0.21.1",
     "ruff>=0.4.8",
+]
+examples = [
+    "disnake>=2.0.0,<3.0.0",
+    # Maybe needed later
+    # "pydantic-settings>=2.0.0",
+    # "wireup>=2.0.0,<3.0.0",
 ]
 lint = [
     "ruff>=0.4.8",

@@ -9,94 +9,101 @@
 
 [![FACEIT API](https://img.shields.io/badge/FACEIT_API-Reference-FF5500?style=flat-square&logo=faceit)](https://docs.faceit.com/docs)
 
-**The most easy-to-use, type-safe way to interact with the FACEIT API.**  
-Access FACEIT data — player stats, matches, and tournaments directly from Python.
+**The easiest and most type-safe way to interact with the FACEIT API.**
+
+Access FACEIT data — player stats, matches, and tournaments — directly from Python.
 
 </div>
+
+---
 
 ## Features
 
 - **High-level, idiomatic API** — Interact with FACEIT as if it were a native Python service.
 - **Full type safety** — Compatible with [mypy](https://mypy-lang.org/) and other type checkers.
 - **Sync & async support** — Powered by [httpx](https://www.python-httpx.org/).
-- **Pydantic models** — All data models inherit from [`pydantic.BaseModel`](https://docs.pydantic.dev/latest/usage/models/).
+- **Pydantic models** — All data models inherit from [`pydantic.BaseModel`](https://docs.pydantic.dev/latest/concepts/models/).
 - **Advanced pagination** — Supports both cursor-based and Unix timestamp pagination.
-- **Flexible data access** — Choose between raw data and parsed models (e.g., `.raw_players` / `.players`).
+- **Flexible data access** — Choose between raw data and parsed models (e.g., `.raw_players` vs `.players`).
 - **Page collection utilities** — Paginated responses in model mode are wrapped in an `ItemPage` collection with convenient methods, such as `.map()`, `.filter()`, `.find()`, and more.
 
 ## Installation
 
-```
+> Requires Python 3.8+
+
+```bash
 pip install faceit
 ```
 
-Use `pip install faceit[env]` if you plan to load the API key from environment (see [API Key Handling](#api-key-handling)).
+For automatic environment variable loading (see [API Key Handling](#api-key-handling)):
 
-## Quickstart Example
-
-You can get started in just a few lines of code.  
-Below is a short example showing how to get the complete CS2 match history for a player using the synchronous API.
-
-> [!IMPORTANT]
-> Currently, only the data resource is available, and access requires a valid API key.  
-> You can get your API key by following the steps in the [official FACEIT documentation](https://docs.faceit.com/getting-started/authentication/api-keys).
-
-### API Key Handling
-
-You can insert your API key directly in the constructor, or let the library automatically load it from your environment (e.g., `.env`, `settings.ini`).  
-By default, the key is read from the `FACEIT_API_KEY` variable (in the environment). To use a different variable, pass an instance of `EnvKey` to the constructor:
-
-```py
-data = faceit.SyncDataResource(faceit.EnvKey("SECRET"))
+```bash
+pip install faceit[env]
 ```
 
-> [!NOTE]
-> Loading the API key from environment files requires either installing the `env` extra or installing [python-decouple](https://github.com/HBNetwork/python-decouple) yourself.
+## Quickstart
 
-### Minimal Example
+Get started in seconds. The following example demonstrates how to fetch a player's CS2 matches and perform a basic performance analysis using the synchronous API.
+
+> [!IMPORTANT]
+> Currently, only the Data Resource is available.  
+> Access to this resource requires a valid API key, which you can obtain via the official [FACEIT Developer Portal](https://docs.faceit.com/getting-started/authentication/api-keys/).
 
 ```py
 import faceit
 
-# Initialize the API client.
-# If `FACEIT_API_KEY` is set in your environment, you can omit the argument.
+# 1. Initialize the Data Resource.
+# If `FACEIT_API_KEY` is set in your environment, no arguments are needed.
 data = faceit.SyncDataResource()  # or faceit.SyncDataResource("YOUR_API_KEY")
 
-# Fetch player information by nickname.
-player = data.players.get("m0NESY")
+# 2. Fetch player data by nickname.
+nickname = input("Enter the player's nickname: ")
+player = data.players.get(nickname)
 
-# Get all CS2 match history for the player.
-# Returns an `ItemPage` collection (multifunctional tuple).
-matches = data.players.all_history(player.id, faceit.GameID.CS2)
+# 3. Get all CS2 matches for the player.
+# Returns an `ItemPage` — a type-safe collection with built-in utility methods.
+matches = data.players.all_matches_stats(player.id, faceit.GameID.CS2)
 
 print(f"Total CS2 matches for {player.nickname}: {len(matches)}")
 
-# Example: Find a match by its ID.
-match_id = "1-964ea204-03cf-4292-99f8-44da63968463"
-some_match = matches.find("id", match_id)
+# 4. Perform data analysis
+# Filter for matches with a positive K/D ratio (1 or higher)
+positive_kd_matches = matches.filter(lambda m: m.kd_ratio >= 1)
 
-if some_match is None:
-    print(f"No match found with ID {match_id}")
-else:
-    print(f"Found match with ID {match_id}: {some_match}")
+total_count = len(matches)
+positive_count = len(positive_kd_matches)
+
+kd_rate = (positive_count / total_count * 100) if total_count > 0 else 0
+
+print(f"Matches with K/D >= 1: {positive_count}")
+print(f"{player.nickname}'s positive K/D rate: {kd_rate:.2f}%")
 ```
 
-<!-- See additional usage examples in the [examples/](examples/) directory. -->
+See additional usage examples in the [examples/](examples/) directory.
+
+### API Key Handling
+
+You can provide your API key directly in the constructor or let the library automatically load it from your environment.
+
+- **Automatic:** Set the `FACEIT_API_KEY` environment variable. _(Requires `faceit[env]` or manual [python-decouple](https://github.com/HBNetwork/python-decouple) installation)_.
+- **Manual:** Pass the key string directly: `SyncDataResource("YOUR_API_KEY")`.
+- **Custom Variable:** To use a different environment variable name, pass an instance of `EnvKey`: `SyncDataResource(EnvKey("SECRET"))`
 
 ## Motivation
 
-This project was created because of a need while building a product that works closely with the FACEIT platform.  
+This project was born out of necessity while building a product that works closely with the FACEIT platform.  
 Existing solutions did not offer the level of type safety, convenience, or abstraction needed for strong, maintainable code.  
 The goal is to provide a solution approaching enterprise-level quality, while remaining accessible and useful for a wide range of users.
 
 ## Project Status & Roadmap
 
 > [!WARNING]
-> This library is currently in **early development**.  
-> Many endpoints, models, and features are not yet implemented.  
-> Webhooks, chat API, and some advanced features are not available yet.  
-> In-code documentation is minimal, and the Sphinx-based documentation site is not yet ready.  
-> Expect breaking changes and incomplete coverage.
+> This library is currently in **early development**.
+>
+> - Many endpoints, models, and features are not yet implemented.
+> - Webhooks, chat API, and some advanced features are not available yet.
+> - In-code documentation is minimal, and the Sphinx-based documentation site is not yet ready.
+> - Expect breaking changes and incomplete coverage.
 >
 > **Contributions and feedback are highly welcome!**
 
