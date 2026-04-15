@@ -1,5 +1,3 @@
-import asyncio
-
 import decouple
 import disnake
 import pydantic
@@ -7,8 +5,14 @@ from disnake.ext import commands
 
 import faceit
 
-bot = commands.InteractionBot()
-data = faceit.AsyncDataResource()  # set `FACEIT_API_KEY` in your environment
+
+# For IDE auto-completion
+class FaceitDiscordBot(commands.InteractionBot):
+    def setup_faceit(self, data: faceit.AsyncDataResource, /) -> None:
+        self.faceit_data = data
+
+
+bot = FaceitDiscordBot()
 
 
 @bot.slash_command(
@@ -24,7 +28,7 @@ async def stats(
     await inter.response.defer()
 
     try:
-        player = await data.players.get(player_name)
+        player = await bot.faceit_data.players.get(player_name)
 
         cs2_game = player.games.get(faceit.GameID.CS2)
         if cs2_game is None:
@@ -32,7 +36,7 @@ async def stats(
                 f"🔎 Player **{player.nickname}** found, but they don't have CS2 linked."
             )
 
-        player_stats = await data.players.stats(player.id, faceit.GameID.CS2)
+        player_stats = await bot.faceit_data.players.stats(player.id, faceit.GameID.CS2)
 
         embed = disnake.Embed(
             title=f"{player.nickname}'s Statistics",
@@ -70,14 +74,11 @@ async def stats(
         embed.set_footer(text="FACEIT Stats Bot • CS2 Edition")
         await inter.edit_original_response(embed=embed)
 
+    except faceit.exceptions.NotFoundError:
+        await inter.edit_original_response(f"❌ Player **{player_name}** not found.")
+
     except faceit.APIError as e:
-        await inter.edit_original_response(
-            (
-                f"❌ Player **{player_name}** not found."
-                if e.status_code == 404
-                else f"⚠️ API Error: {e.message}"
-            )
-        )
+        await inter.edit_original_response(f"⚠️ API Error: {e}")
 
     except pydantic.ValidationError as e:
         await inter.edit_original_response(
@@ -91,8 +92,16 @@ async def stats(
         )
 
 
+async def main():
+    async with (
+        # set `FACEIT_API_KEY` in your environment
+        faceit.AsyncDataResource()
+    ) as data:
+        bot.setup_faceit(data)
+        await bot.start(decouple.config("DISCORD_BOT_TOKEN"))
+
+
 if __name__ == "__main__":
-    try:
-        bot.run(decouple.config("DISCORD_BOT_TOKEN"))
-    finally:
-        asyncio.run(data.client.aclose())
+    import asyncio
+
+    asyncio.run(main())

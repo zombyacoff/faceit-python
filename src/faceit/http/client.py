@@ -215,13 +215,13 @@ class BaseAPIClient(ABC, typing.Generic[_HttpxClientT, _RetryerT]):
                     "HTTP error %s at %s: %s",
                     response.status_code, response.url, response.text,
                 )
-            raise APIError(response.status_code, response.text) from e
+            raise APIError.from_response(response) from e
             # fmt: on
         except (ValueError, httpx.DecodingError):
             _logger.exception(
                 "Invalid JSON response from %s: %s", response.url, response.text
             )
-            raise APIError(response.status_code, "Invalid JSON response") from None
+            raise APIError(response, message="Invalid JSON response") from None
 
 
 class _BaseSyncClient(BaseAPIClient[httpx.Client, tenacity.Retrying]):

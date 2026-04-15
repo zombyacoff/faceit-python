@@ -8,6 +8,7 @@ import warnings
 from abc import ABC
 from dataclasses import dataclass
 from itertools import chain
+from types import MappingProxyType
 
 from annotated_types import Le
 from pydantic import PositiveInt
@@ -69,7 +70,7 @@ if typing.TYPE_CHECKING:
         typing.Type[ItemPage[typing.Any]], typing.Type[RawAPIPageResponse]
     ]
     _PageFactory: TypeAlias = typing.Callable[[_PageList], _PageClass]
-    _PageFactoryMap: TypeAlias = typing.Dict[CollectReturnFormat, _PageFactory]
+    _PageFactoryMap: TypeAlias = typing.Mapping[CollectReturnFormat, _PageFactory]
     _OptionalTimestampPaginationConfig: TypeAlias = typing.Union[
         TimestampPaginationConfig, typing.Literal[False]
     ]
@@ -209,11 +210,11 @@ class BasePageIterator(ABC, typing.Generic[PaginationMethodT, _PageT]):
     if typing.TYPE_CHECKING:
         _STOP_ITERATION_EXC: typing.ClassVar[typing.Type[Exception]]
 
-    _COLLECT_RETURN_FORMATS: typing.ClassVar[_PageFactoryMap] = {
+    _COLLECT_RETURN_FORMATS: typing.ClassVar[_PageFactoryMap] = MappingProxyType({
         CollectReturnFormat.FIRST: lambda c: type(c[0]) if c else RawAPIPageResponse,
         CollectReturnFormat.RAW: lambda _: RawAPIPageResponse,
         CollectReturnFormat.MODEL: lambda _: ItemPage,
-    }
+    })
 
     SAFE_MAX_PAGES: typing.ClassVar = 100
     DEFAULT_MAX_ITEMS: typing.ClassVar = 2000

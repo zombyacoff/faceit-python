@@ -18,7 +18,7 @@ import pytest
 from tenacity import stop_after_attempt
 
 from faceit.constants import BASE_WIKI_URL
-from faceit.exceptions import APIError
+from faceit.exceptions import APIError, BadRequestError
 from faceit.http import AsyncClient, Endpoint, SupportedMethod, SyncClient
 from faceit.http.client import (
     BaseAPIClient,
@@ -188,10 +188,13 @@ class TestBaseAPIClient:
 
     def test_handle_response_http_error(self, error_response):
         """Test HTTP error response handling."""
-        with pytest.raises(APIError) as excinfo:
+        with pytest.raises(BadRequestError) as excinfo:
             BaseAPIClient._handle_response(error_response)
         assert excinfo.value.status_code == 400
-        assert excinfo.value.message == "Bad Request"
+        assert (
+            excinfo.value.message
+            == f"Status {excinfo.value.status_code}: {httpx.codes.get_reason_phrase(400)}"
+        )
 
     def test_handle_response_server_error(self, server_error_response):
         """Test server error response handling."""
@@ -584,7 +587,7 @@ class TestSSLErrorHandling:
                 # Create a mock for update_rate_limit
                 mock_update_rate_limit = Mock()
                 AsyncClient.update_rate_limit = classmethod(
-                    lambda cls, new_limit: mock_update_rate_limit(new_limit)
+                    lambda _, new_limit: mock_update_rate_limit(new_limit)
                 )
 
                 # Save original values
@@ -641,7 +644,7 @@ class TestRetryLogic:
         # Should retry on protocol error
         assert retry_predicate(httpx.RemoteProtocolError("Protocol error"))
 
-        assert retry_predicate(APIError(500, server_error_response.text))
+        assert retry_predicate(APIError(server_error_response))
 
         assert not retry_predicate(
             httpx.HTTPStatusError(

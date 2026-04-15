@@ -19,8 +19,10 @@ if typing.TYPE_CHECKING:
 _logger = logging.getLogger(__name__)
 
 BASE_WIKI_URL: typing.Final = "https://docs.faceit.com"
+"""Base URL for FACEIT's documentation."""
 RAW_RESPONSE_ITEMS_KEY: typing.Final = "items"
 FACEIT_COLOR: typing.Final = 0xFF5500
+"""Hex color code for FACEIT branding."""
 FACEIT_USERNAME_REGEX: typing.Final = re.compile(r"^[a-zA-Z0-9_-]{1,24}$")
 """
 Regex pattern for validating FACEIT usernames.
