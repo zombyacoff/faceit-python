@@ -88,7 +88,8 @@ class BaseResource(ABC, typing.Generic[ClientT]):
             return
         if resource_path is None:
             raise TypeError(
-                f"Class {cls.__name__} requires 'path' parameter or a parent with 'PATH' defined."
+                f"Class {cls.__name__} requires 'path' "
+                "parameter or a parent with 'PATH' defined."
             )
         cls.PATH = Endpoint(resource_path)
         super().__init_subclass__(**kwargs)
@@ -155,7 +156,7 @@ class BaseResource(ABC, typing.Generic[ClientT]):
                 "parsing are unavailable. Use the raw version for explicit, "
                 "unprocessed data."
             )
-            warn_msg = warn_msg if warn_msg is not None else default_warn_msg
+            warn_msg = default_warn_msg if warn_msg is None else warn_msg
             warnings.warn(warn_msg, UserWarning, stacklevel=warn_stacklevel())
             return response
         try:

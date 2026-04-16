@@ -202,7 +202,6 @@ class BaseAPIClient(ABC, typing.Generic[_HttpxClientT, _RetryerT]):
             response.raise_for_status()
             _logger.debug("Successful response from %s", response.url)
             return typing.cast("RawAPIResponse", response.json())
-        # TODO: More specific exceptions
         except httpx.HTTPStatusError as e:
             # fmt: off
             if is_retryable_status(e.response.status_code):

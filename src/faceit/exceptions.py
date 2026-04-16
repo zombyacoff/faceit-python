@@ -71,6 +71,7 @@ class APIError(FaceitError):
             if self.response is None
             else self.__class__._MESSAGE_FORMAT.format(
                 status_code=self.status_code,
+                # TODO: Format error message
                 message=self.response.text,
             )
         )
