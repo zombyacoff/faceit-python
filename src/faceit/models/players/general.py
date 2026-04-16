@@ -319,6 +319,7 @@ class PlayerStats(
 
         raw_segments = data.get("segments")
         if isinstance(raw_segments, list):
+            # TODO: Maybe create enum for segments - CS2Maps8SeasonMappool
             data["segments"] = {
                 # NOTE: Anubis --> anubis, Ancient --> ancient, ...
                 # (lowercase and replace spaces with underscores)

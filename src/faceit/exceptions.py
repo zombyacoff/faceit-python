@@ -22,11 +22,9 @@ class DecoupleMissingError(FaceitError):
 
 class MissingAuthTokenError(FaceitError):
     def __init__(self, key: str, /) -> None:
-        super().__init__(
-            "Authorization token is missing. "
-            f"Please set {key} in your environment file."
-        )
         self.key = key
+        msg = f"Authorization token is missing. Please set {key} in your environment file."
+        super().__init__(msg)
 
 
 class APIError(FaceitError):

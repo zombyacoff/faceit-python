@@ -1,3 +1,5 @@
+from contextlib import suppress
+
 import decouple
 import disnake
 import pydantic
@@ -92,16 +94,22 @@ async def stats(
         )
 
 
-async def main():
+async def main() -> None:
     async with (
-        # set `FACEIT_API_KEY` in your environment
-        faceit.AsyncDataResource()
+        # NOTE: Ensure the `FACEIT_API_KEY` is set in your environment variables.
+        # (Requires `faceit[env]` to be installed)
+        faceit.AsyncDataResource()  # Or use faceit.AsyncDataResource("YOUR_FACEIT_API_KEY")
     ) as data:
         bot.setup_faceit(data)
-        await bot.start(decouple.config("DISCORD_BOT_TOKEN"))
+        await bot.start(
+            decouple.config(  # Included with `faceit[env]` installation
+                "DISCORD_BOT_TOKEN"
+            )
+        )
 
 
 if __name__ == "__main__":
     import asyncio
 
-    asyncio.run(main())
+    with suppress(KeyboardInterrupt, asyncio.CancelledError):  # CTRL+C
+        asyncio.run(main())

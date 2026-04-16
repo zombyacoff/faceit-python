@@ -257,7 +257,7 @@ def _get_ignored_paths() -> typing.Tuple[
     prefixes: typing.List[str] = []
     files: typing.Set[str] = set()
 
-    for mod_name in (__name__.split(".")[0], *list(_IGNORED_MODULES)):
+    for mod_name in (__name__.split(".")[0], *_IGNORED_MODULES):
         mod = sys.modules.get(mod_name)
         if not mod or not hasattr(mod, "__file__") or mod.__file__ is None:
             continue
