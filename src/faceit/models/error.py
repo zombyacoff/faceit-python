@@ -11,4 +11,4 @@ class ErrorDetail(BaseModel):
 
 
 class ErrorResponse(BaseModel):
-    errors: typing.List[ErrorDetail]
+    errors: typing.List[ErrorDetail] = []

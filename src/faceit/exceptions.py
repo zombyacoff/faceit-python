@@ -4,6 +4,7 @@ import httpx
 from pydantic import ValidationError
 
 from .models.error import ErrorResponse
+from .utils import UnsetValue
 
 
 class FaceitError(Exception):
@@ -31,19 +32,15 @@ class MissingAuthTokenError(FaceitError):
 
 
 class APIError(FaceitError):
+    _DEFAULT_MESSAGE: typing.ClassVar = "API request failed"
+    _EXPECTED_STATUS_CODE: typing.ClassVar[int] = UnsetValue.UNSET
+    _MESSAGE_FORMAT: typing.ClassVar = "Status {status_code}: {message}"
     _STATUS_ERRORS: typing.ClassVar[
         typing.Dict[
             int,
             typing.Type["APIError"],
         ]
     ] = {}
-    _MESSAGE_FORMAT: typing.ClassVar = "Status {status_code}: {message}"
-
-    _expected_status_code: typing.ClassVar = 0
-    _default_message: typing.ClassVar = "API request failed"
-
-    if typing.TYPE_CHECKING:
-        _error_detail: str
 
     def __init_subclass__(
         cls,
@@ -51,8 +48,8 @@ class APIError(FaceitError):
         default_message: typing.Optional[str] = None,
         **kwargs: typing.Any,
     ) -> None:
-        cls._expected_status_code = code.value
-        cls._default_message = default_message or code.get_reason_phrase(code.value)
+        cls._EXPECTED_STATUS_CODE = code.value
+        cls._DEFAULT_MESSAGE = default_message or code.get_reason_phrase(code.value)
         cls._STATUS_ERRORS[code.value] = cls
         super().__init_subclass__(**kwargs)
 
@@ -64,47 +61,41 @@ class APIError(FaceitError):
         message: typing.Optional[str] = None,
     ) -> None:
         self.response = response
+        self.validated_response = self.__class__._validate_response(response)
         self.status_code = (
-            self.__class__._expected_status_code
+            self.__class__._EXPECTED_STATUS_CODE
             if response is None
             else response.status_code
         )
-        self.message = message or self._construct_message()
-        super().__init__(self.message)
-
-    def _construct_message(self) -> str:
-        if self.response is None:
-            return self.__class__._MESSAGE_FORMAT.format(
-                status_code=self.status_code,
-                message=self.__class__._default_message,
-            )
-        return self.__class__._MESSAGE_FORMAT.format(
+        self.error_detail = self._compute_error_detail()
+        self.message = message or self.__class__._MESSAGE_FORMAT.format(
             status_code=self.status_code, message=self.error_detail
         )
+        super().__init__(self.message)
 
-    @property
-    def error_detail(self) -> str:
-        if hasattr(self, "_error_detail"):
-            return self._error_detail
-
+    def _compute_error_detail(self) -> str:
         if self.response is None:
-            self._error_detail = self.__class__._default_message
-            return self._error_detail
-
-        try:
-            error = ErrorResponse.model_validate(self.response.json())
-            messages = [e.message for e in error.errors]
-            self._error_detail = (
-                " ".join(messages) if messages else self.__class__._default_message
-            )
-        except ValidationError:
-            self._error_detail = self.__class__._default_message
-
-        return self._error_detail
+            return self.__class__._DEFAULT_MESSAGE
+        messages = [e.message for e in self.validated_response.errors]
+        return " ".join(messages) if messages else self.__class__._DEFAULT_MESSAGE
 
     @classmethod
     def from_response(cls, response: httpx.Response, /) -> "APIError":
         return cls._STATUS_ERRORS.get(response.status_code, APIError)(response)
+
+    @staticmethod
+    def _validate_response(
+        response: typing.Optional[httpx.Response], /
+    ) -> ErrorResponse:
+        if response is None:
+            return ErrorResponse()
+        try:
+            # NOTE: Currently, we assume the FACEIT API strictly adheres to the `ErrorResponse` model.
+            # If we encounter cases where the API returns an unexpected format,
+            # we will promptly update this validation. Keeping it as is for now.
+            return ErrorResponse.model_validate(response.json())
+        except (ValidationError, AttributeError, ValueError):
+            return ErrorResponse()
 
 
 # fmt: off
