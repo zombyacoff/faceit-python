@@ -278,7 +278,12 @@ ELO_THRESHOLDS: typing.Final[
 @total_ordering
 @dataclass(eq=False, frozen=True)
 class SkillLevel:
-    __slots__ = ("elo_range", "game_id", "level", "name")
+    __slots__ = (
+        "elo_range",
+        "game_id",
+        "level",
+        "name",
+    )
 
     level: int
     game_id: GameID
@@ -344,9 +349,10 @@ class SkillLevel:
             return None
 
         assert isinstance(self.elo_range.upper, int)
-        return (
-            (elo - self.elo_range.lower) / (self.elo_range.upper - self.elo_range.lower)
-        ) * 100
+        progress_ratio = (elo - self.elo_range.lower) / (
+            self.elo_range.upper - self.elo_range.lower
+        )
+        return progress_ratio * 100
 
     @typing.overload
     @classmethod
@@ -393,14 +399,10 @@ class SkillLevel:
 
         if elo is not None:
             _logger.debug("Getting level for game %s and elo %s", game_id, elo)
-            return next(
-                (
-                    lvl
-                    for lvl in cls._registry[game_id].values()
-                    if lvl.contains_elo(elo)
-                ),
-                None,
+            generator = (
+                lvl for lvl in cls._registry[game_id].values() if lvl.contains_elo(elo)
             )
+            return next(generator, None)
 
         raise ValueError("Either level or elo must be specified")
 

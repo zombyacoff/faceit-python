@@ -106,7 +106,10 @@ class BaseResource(ABC, typing.Generic[ClientT]):
     ) -> typing.Union[ModelT, RawAPIItem]:
         if self._raw:
             return response
-        return self._validate_response(response, config.validator_map.get(key))
+        return self._validate_response(
+            response,
+            config.validator_map.get(key, config.default_validator),
+        )
 
     def _process_page(
         self,
@@ -156,8 +159,8 @@ class BaseResource(ABC, typing.Generic[ClientT]):
                 "parsing are unavailable. Use the raw version for explicit, "
                 "unprocessed data."
             )
-            warn_msg = default_warn_msg if warn_msg is None else warn_msg
-            warnings.warn(warn_msg, UserWarning, stacklevel=warn_stacklevel())
+            msg = default_warn_msg if warn_msg is None else warn_msg
+            warnings.warn(msg, UserWarning, stacklevel=warn_stacklevel())
             return response
         try:
             return validator.model_validate(response)

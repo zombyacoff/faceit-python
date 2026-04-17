@@ -68,7 +68,12 @@ class MaxConcurrentRequests(StrEnum):
 # support for other resources, as they may require different authentication methods.
 @representation("api_key", "base_url", "retry_args")
 class BaseAPIClient(ABC, typing.Generic[_HttpxClientT, _RetryerT]):
-    __slots__ = ("_api_key", "_build_endpoint", "_retry_args", "base_url")
+    __slots__ = (
+        "_api_key",
+        "_build_endpoint",
+        "_retry_args",
+        "base_url",
+    )
 
     @typing.final
     class env(UserString):
