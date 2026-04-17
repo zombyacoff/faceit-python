@@ -49,7 +49,8 @@ class StrEnum(str, Enum):
         if isinstance(value, (str, auto)):
             return super().__new__(cls, value, *args, **kwargs)
         raise TypeError(
-            f"StrEnum values must be of type 'str', but got {type(value).__name__}: {value!r}"
+            "StrEnum values must be of type 'str', "
+            f"but got {type(value).__name__}: {value!r}"
         )
 
     @staticmethod
@@ -241,14 +242,6 @@ def validate_positive_int(value: typing.Any, /, param_name: str = "value") -> in
     return value
 
 
-def _format_fields(obj: object, fields: typing.Tuple[str, ...], *, joiner: str) -> str:
-    return (
-        joiner.join(f"{field}={reprlib.repr(getattr(obj, field))}" for field in fields)
-        if all(hasattr(obj, field) for field in fields)
-        else repr(_UNINITIALIZED_MARKER)
-    )
-
-
 @lru_cache(maxsize=1)
 def _get_ignored_paths() -> typing.Tuple[
     typing.Tuple[str, ...],
@@ -259,7 +252,7 @@ def _get_ignored_paths() -> typing.Tuple[
 
     for mod_name in (__name__.split(".")[0], *_IGNORED_MODULES):
         mod = sys.modules.get(mod_name)
-        if not mod or not hasattr(mod, "__file__") or mod.__file__ is None:
+        if mod is None or not hasattr(mod, "__file__") or mod.__file__ is None:
             continue
 
         path = os.path.normcase(os.path.realpath(mod.__file__))
@@ -287,6 +280,7 @@ def warn_stacklevel() -> int:
             filename = frame.f_code.co_filename
             if filename and not filename.startswith("<"):
                 norm_path = os.path.normcase(os.path.realpath(filename))
+
                 if norm_path not in ignored_files and not norm_path.startswith(
                     ignored_prefixes
                 ):
@@ -296,6 +290,14 @@ def warn_stacklevel() -> int:
             level += 1
 
     return 1
+
+
+def _format_fields(obj: object, fields: typing.Tuple[str, ...], *, joiner: str) -> str:
+    return (
+        joiner.join(f"{field}={reprlib.repr(getattr(obj, field))}" for field in fields)
+        if all(hasattr(obj, field) for field in fields)
+        else repr(_UNINITIALIZED_MARKER)
+    )
 
 
 def _apply_representation(

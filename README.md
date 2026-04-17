@@ -53,7 +53,7 @@ Get started in seconds. The following example demonstrates how to fetch a player
 import faceit
 
 # 1. Initialize the Data Resource.
-# If `FACEIT_API_KEY` is set in your environment, no arguments are needed.
+# If `FACEIT_API_KEY` is set in your environment, no arguments are needed
 data = faceit.SyncDataResource()  # or faceit.SyncDataResource("YOUR_API_KEY")
 
 # 2. Fetch player data by nickname.
@@ -61,7 +61,7 @@ nickname = input("Enter the player's nickname: ")
 player = data.players.get(nickname)
 
 # 3. Get all CS2 matches for the player.
-# Returns an `ItemPage` — a type-safe collection with built-in utility methods.
+# Returns an `ItemPage` — a type-safe collection with built-in utility methods
 matches = data.players.all_matches_stats(player.id, faceit.GameID.CS2)
 
 print(f"Total CS2 matches for {player.nickname}: {len(matches)}")

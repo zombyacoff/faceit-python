@@ -1,6 +1,9 @@
 import typing
 
 import httpx
+from pydantic import ValidationError
+
+from .models.error import ErrorResponse
 
 
 class FaceitError(Exception):
@@ -39,6 +42,9 @@ class APIError(FaceitError):
     _expected_status_code: typing.ClassVar = 0
     _default_message: typing.ClassVar = "API request failed"
 
+    if typing.TYPE_CHECKING:
+        _error_detail: str
+
     def __init_subclass__(
         cls,
         code: httpx.codes,
@@ -63,19 +69,38 @@ class APIError(FaceitError):
             if response is None
             else response.status_code
         )
-        self.message = message or (
-            self.__class__._MESSAGE_FORMAT.format(
+        self.message = message or self._construct_message()
+        super().__init__(self.message)
+
+    def _construct_message(self) -> str:
+        if self.response is None:
+            return self.__class__._MESSAGE_FORMAT.format(
                 status_code=self.status_code,
                 message=self.__class__._default_message,
             )
-            if self.response is None
-            else self.__class__._MESSAGE_FORMAT.format(
-                status_code=self.status_code,
-                # TODO: Format error message
-                message=self.response.text,
-            )
+        return self.__class__._MESSAGE_FORMAT.format(
+            status_code=self.status_code, message=self.error_detail
         )
-        super().__init__(self.message)
+
+    @property
+    def error_detail(self) -> str:
+        if hasattr(self, "_error_detail"):
+            return self._error_detail
+
+        if self.response is None:
+            self._error_detail = self.__class__._default_message
+            return self._error_detail
+
+        try:
+            error = ErrorResponse.model_validate(self.response.json())
+            messages = [e.message for e in error.errors]
+            self._error_detail = (
+                " ".join(messages) if messages else self.__class__._default_message
+            )
+        except ValidationError:
+            self._error_detail = self.__class__._default_message
+
+        return self._error_detail
 
     @classmethod
     def from_response(cls, response: httpx.Response, /) -> "APIError":

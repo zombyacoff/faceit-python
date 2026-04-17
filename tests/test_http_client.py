@@ -48,6 +48,7 @@ def error_response():
     response.raise_for_status.side_effect = httpx.HTTPStatusError(
         "Bad Request", request=Mock(), response=response
     )
+    response.json.return_value = {"errors": []}
     response.url = "https://test.com/api"
     response.text = "Bad Request"
     response.is_server_error = False

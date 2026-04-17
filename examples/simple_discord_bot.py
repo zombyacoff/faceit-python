@@ -78,7 +78,7 @@ class StatsCommand(commands.Cog):
             embed.set_footer(text="FACEIT Stats Bot • CS2 Edition")
             await inter.edit_original_response(embed=embed)
 
-        except pydantic.ValidationError as e:
+        except pydantic.ValidationError:
             await inter.edit_original_response(
                 f"⚠️ We couldn't process the profile for **{player_name}**. "
                 "Please check if the nickname is entered correctly."
@@ -90,27 +90,26 @@ class StatsCommand(commands.Cog):
             )
 
         except faceit.APIError as e:
-            await inter.edit_original_response(f"⚠️ API Error: {e}")
+            await inter.edit_original_response(f"⚠️ API Error: {e.error_detail}")
 
-        except Exception as e:
+        except Exception:
             await inter.edit_original_response(
                 "💥 An unexpected error occurred. Please try again later."
             )
 
 
 async def main() -> None:
+    bot = commands.InteractionBot()
+    bot_token = decouple.config(  # Included with `faceit[env]` installation
+        "DISCORD_BOT_TOKEN"
+    )
     async with (
-        # NOTE: Ensure the `FACEIT_API_KEY` is set in your environment variables.
+        # NOTE: Ensure the `FACEIT_API_KEY` is set in your environment variables
         # (Requires `faceit[env]` to be installed)
-        faceit.AsyncDataResource()  # Or use faceit.AsyncDataResource("YOUR_FACEIT_API_KEY")
+        faceit.AsyncDataResource()  # or use faceit.AsyncDataResource("YOUR_FACEIT_API_KEY")
     ) as data:
-        bot = commands.InteractionBot()
         bot.add_cog(StatsCommand(bot, data))
-        await bot.start(
-            decouple.config(  # Included with `faceit[env]` installation
-                "DISCORD_BOT_TOKEN"
-            )
-        )
+        await bot.start(bot_token)
 
 
 if __name__ == "__main__":
