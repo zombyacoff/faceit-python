@@ -3,7 +3,7 @@ from __future__ import annotations
 import typing
 from functools import cached_property
 from itertools import chain, starmap
-from random import choice
+from random import choice as random_choice
 
 from pydantic import BaseModel, Field, field_validator
 from typing_extensions import Annotated, Self, TypeAlias
@@ -82,33 +82,44 @@ class ItemPage(BaseModel, typing.Generic[_T], frozen=True):
         return list(self._find_items(attr, value))
 
     @typing.overload
-    def first(self) -> typing.Optional[_T]: ...
+    def get_first(self) -> typing.Optional[_T]: ...
 
     @typing.overload
-    def first(self, default: _R, /) -> typing.Union[_T, _R]: ...
+    def get_first(self, default: _R, /) -> typing.Union[_T, _R]: ...
 
-    def first(self, default: typing.Optional[_R] = None) -> typing.Union[_T, _R, None]:
+    def get_first(
+        self, default: typing.Optional[_R] = None
+    ) -> typing.Union[_T, _R, None]:
         return self[0] if self else default
 
     @typing.overload
-    def last(self) -> typing.Optional[_T]: ...
+    def get_last(self) -> typing.Optional[_T]: ...
 
     @typing.overload
-    def last(self, default: _R, /) -> typing.Union[_T, _R]: ...
+    def get_last(self, default: _R, /) -> typing.Union[_T, _R]: ...
 
-    def last(self, default: typing.Optional[_R] = None) -> typing.Union[_T, _R, None]:
+    def get_last(
+        self, default: typing.Optional[_R] = None
+    ) -> typing.Union[_T, _R, None]:
         return self[-1] if self else default
 
     @typing.overload
-    def random(self) -> typing.Optional[_T]: ...
+    def get_random(self) -> typing.Optional[_T]: ...
 
     @typing.overload
-    def random(self, default: _R, /) -> typing.Union[_T, _R]: ...
+    def get_random(self, default: _R, /) -> typing.Union[_T, _R]: ...
 
-    def random(self, default: typing.Optional[_R] = None) -> typing.Union[_T, _R, None]:
+    def get_random(
+        self, default: typing.Optional[_R] = None
+    ) -> typing.Union[_T, _R, None]:
         # Intentionally using non-cryptographic RNG as this is for
         # convenience sampling rather than security-sensitive operations
-        return choice(self) if self else default  # noqa: S311
+        return random_choice(self) if self else default  # noqa: S311
+
+    # aliases for backwards compatibility
+    first = get_first
+    last = get_last
+    random = get_random
 
     def map(self, func: typing.Callable[[_T], _R], /) -> ItemPage[_R]:
         return self.__class__._construct_without_metadata(map(func, self))
@@ -117,7 +128,7 @@ class ItemPage(BaseModel, typing.Generic[_T], frozen=True):
         return self.__class__._construct_without_metadata(filter(predicate, self))
 
     def with_items(self, new_items: typing.Iterable[_T], /) -> Self:
-        return self.model_copy(update={"items": tuple(new_items)})
+        return self.model_copy(update={RAW_RESPONSE_ITEMS_KEY: tuple(new_items)})
 
     def _find_items(self, attr: str, value: typing.Any, /) -> typing.Iterator[_T]:
         return (item for item in self if get_nested_property(item, attr) == value)
@@ -135,7 +146,7 @@ class ItemPage(BaseModel, typing.Generic[_T], frozen=True):
         # methods like `map()` that change the item type from `_T` to `_R`
     ) -> ItemPage[_R]:
         return cls.model_construct(  # type: ignore[return-value]
-            items=items or (),
+            items=tuple(items or ()),
             _offset=UnsetValue.UNSET, _limit=UnsetValue.UNSET,
             _time_from=UnsetValue.UNSET, _time_to=UnsetValue.UNSET,
         )
@@ -148,16 +159,15 @@ class ItemPage(BaseModel, typing.Generic[_T], frozen=True):
         return len(self.items)
 
     def __reversed__(self) -> Self:
-        return self.with_items(tuple(reversed(self)))
+        return self.with_items(reversed(self.items))
 
     def __reduce__(
         self,
     ) -> typing.Tuple[typing.Type[Self], typing.Tuple[typing.Any, ...]]:
-        # fmt: off
-        return (self.__class__, (
-            self.items, self._offset, self._limit, self._time_from, self._time_to,
-        ))
-        # fmt: on
+        return (
+            self.__class__,
+            (self.items, self._offset, self._limit, self._time_from, self._time_to),
+        )
 
     @typing.overload
     def __getitem__(self, index: typing.SupportsIndex) -> _T: ...
@@ -180,7 +190,7 @@ class ItemPage(BaseModel, typing.Generic[_T], frozen=True):
                 f"__index__ or slices, not {type(index).__name__}"
             ) from e
 
-    def __contains__(self, item: typing.Any) -> bool:
+    def __contains__(self, item: _T) -> bool:
         return item in self.items
 
     def __bool__(self) -> bool:

@@ -1,7 +1,7 @@
 [project]
 name = "faceit"
-version = "0.1.5"
-description = "The Python wrapper for the Faceit API"
+version = "0.2.0"
+description = "The Python wrapper for the FACEIT API"
 readme = "README.md"
 requires-python = ">=3.8"
 license = "Apache-2.0"
@@ -20,6 +20,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Typing :: Typed",
 ]
 dependencies = [
@@ -35,10 +36,6 @@ env = [
     "python-decouple>=3.8",
 ]
 
-[project.urls]
-"Bug Tracker" = "https://github.com/zombyacoff/faceit-python/issues"
-"Documentation" = "https://docs.faceit.com/docs"
-
 [dependency-groups]
 dev = [
     "mypy>=1.14",
@@ -47,6 +44,12 @@ dev = [
     "pytest-asyncio>=0.21.1",
     "ruff>=0.4.8",
 ]
+examples = [
+    "disnake>=2.0.0,<3.0.0",
+    # Maybe needed later
+    # "pydantic-settings>=2.0.0",
+    # "wireup>=2.0.0,<3.0.0",
+]
 lint = [
     "ruff>=0.4.8",
 ]
@@ -54,6 +57,9 @@ test = [
     "pytest>=7.4",
     "pytest-asyncio>=0.21.1",
 ]
+
+[project.urls]
+"Documentation" = "https://docs.faceit.com/docs"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/faceit"]

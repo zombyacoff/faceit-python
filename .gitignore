@@ -3,10 +3,6 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# Build tools
-#  we use `Taskfile`
-Makefile
-
 # C extensions
 *.so
 
@@ -118,6 +114,7 @@ venv.bak/
 dmypy.json
 .pyre/
 .pytype/
+ty.toml
 
 # Linting and formatting
 .ruff_cache/

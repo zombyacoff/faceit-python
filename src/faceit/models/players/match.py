@@ -15,7 +15,9 @@ from faceit.types import RegionIdentifier, UrlOrEmpty
 
 _NoOpponent: TypeAlias = typing.Literal["bye"]
 
-_RESULT_MAP: typing.Final = {"faction1": "first", "faction2": "second"}
+_F1: typing.Final = "faction1"
+_F2: typing.Final = "faction2"
+_RESULT_MAP: typing.Final = {_F1: "first", _F2: "second"}
 
 
 class PlayerSummary(BaseModel):
@@ -37,13 +39,13 @@ class Team(BaseModel):
 
 
 class Teams(BaseModel):
-    first: Annotated[Team, Field(alias="faction1")]
-    second: Annotated[Team, Field(alias="faction2")]
+    first: Annotated[Team, Field(alias=_F1)]
+    second: Annotated[Team, Field(alias=_F2)]
 
 
 class Score(BaseModel):
-    first: Annotated[int, Field(alias="faction1")]
-    second: Annotated[int, Field(alias="faction2")]
+    first: Annotated[int, Field(alias=_F1)]
+    second: Annotated[int, Field(alias=_F2)]
 
 
 class Results(BaseModel):
@@ -88,9 +90,11 @@ class AbstractMatchPlayerStats(BaseModel, ABC):
     returned based on the game context.
     """
 
+    game: Annotated[GameID, Field(alias="Game")]
+
 
 # Не работает для игроков, игравших последний раз в ~авг. 2024 года
-# Необходимо добавить значения по умолчанию для всех полей, которые могут отсутствовать
+# TODO: Необходимо добавить значения по умолчанию для всех полей, которые могут отсутствовать
 class CS2MatchPlayerStats(AbstractMatchPlayerStats):
     game_mode: Annotated[str, Field(alias="Game Mode")]
     region: Annotated[RegionIdentifier, Field(alias="Region")]
@@ -106,7 +110,7 @@ class CS2MatchPlayerStats(AbstractMatchPlayerStats):
     map: Annotated[str, Field(alias="Map")]
     overtime_score: Annotated[int, Field(alias="Overtime score")]
     deaths: Annotated[int, Field(alias="Deaths")]
-    game: Annotated[str, Field(alias="Game")]
+    game: Annotated[typing.Literal[GameID.CS2], Field(alias="Game")]
     nickname: Annotated[str, Field(alias="Nickname")]
     updated_at: Annotated[datetime, Field(alias="Updated At")]
     second_half_score: Annotated[int, Field(alias="Second Half Score")]

@@ -3,10 +3,10 @@ from __future__ import annotations
 import logging
 import re
 import typing
+import warnings
 from dataclasses import dataclass
-from operator import attrgetter
+from functools import total_ordering
 from types import MappingProxyType
-from warnings import warn
 
 from pydantic import Field, validate_call
 from typing_extensions import Self, TypeAlias
@@ -19,7 +19,10 @@ if typing.TYPE_CHECKING:
 _logger = logging.getLogger(__name__)
 
 BASE_WIKI_URL: typing.Final = "https://docs.faceit.com"
+"""Base URL for FACEIT's documentation."""
 RAW_RESPONSE_ITEMS_KEY: typing.Final = "items"
+FACEIT_COLOR: typing.Final = 0xFF5500
+"""Hex color code for FACEIT branding."""
 FACEIT_USERNAME_REGEX: typing.Final = re.compile(r"^[a-zA-Z0-9_-]{1,24}$")
 """
 Regex pattern for validating FACEIT usernames.
@@ -173,11 +176,11 @@ class Region(StrEnum):
     # NOTE: Currently includes legacy and game-specific regions (e.g., US for CS:GO).
     # This structure may be refactored in the future for improved consistency.
     EUROPE = "EU"
+    UNITED_STATES = "US"
     NORTH_AMERICA = "NA"
+    SOUTH_AMERICA = "SA"
     OCEANIA = "OCE"
     SOUTHEAST_ASIA = "SEA"
-    SOUTH_AMERICA = "SA"
-    UNITED_STATES = "US"
 
 
 @typing.final
@@ -206,12 +209,11 @@ class EloRange(typing.NamedTuple):
         return f"{self.lower}+" if self.is_open_ended else f"{self.lower}-{self.upper}"
 
 
-_DEFAULT_FIRST_ELO_RANGE: typing.Final = EloRange(MIN_ELO, 800)
 _DEFAULT_TEN_LEVEL_LOWER: typing.Final = 2001
 
 
 def _create_default_elo_tiers() -> _EloThreshold:
-    tier_ranges = {1: _DEFAULT_FIRST_ELO_RANGE}
+    tier_ranges = {1: EloRange(MIN_ELO, 800)}
 
     for level in range(2, 10):
         # `cast(int, ...)` tells the type checker that we know `upper` is
@@ -228,8 +230,7 @@ del _create_default_elo_tiers
 
 
 def _append_elite_tier(
-    elite_upper_bound: HighTierLevel,
-    base_tiers: _EloThreshold = _BASE_ELO_RANGES,
+    elite_upper_bound: HighTierLevel, base_tiers: _EloThreshold = _BASE_ELO_RANGES
 ) -> _EloThreshold:
     return {
         **base_tiers,
@@ -237,17 +238,20 @@ def _append_elite_tier(
     }
 
 
-CHALLENGER_CAPPED_ELO_RANGES: typing.Final[_EloThreshold] = _append_elite_tier(
+CHALLENGER_CAPPED_ELO_RANGES: typing.Final = _append_elite_tier(
     HighTierLevel.CHALLENGER
 )
 # Pre-generating this range configuration for future implementation needs
 # Exposed as a constant for both internal use and potential library consumers
-OPEN_ENDED_ELO_RANGES: typing.Final[_EloThreshold] = _append_elite_tier(
-    HighTierLevel.ABSENT
-)
+OPEN_ENDED_ELO_RANGES: typing.Final = _append_elite_tier(HighTierLevel.ABSENT)
 del _append_elite_tier
 
-ELO_THRESHOLDS: typing.Final[typing.Mapping[GameID, _EloThreshold]] = MappingProxyType({
+ELO_THRESHOLDS: typing.Final[
+    typing.Mapping[
+        GameID,
+        _EloThreshold,
+    ]
+] = MappingProxyType({
     GameID.CS2: {
         1: EloRange(MIN_ELO, 500),
         2: EloRange(501, 750),
@@ -271,9 +275,15 @@ ELO_THRESHOLDS: typing.Final[typing.Mapping[GameID, _EloThreshold]] = MappingPro
 
 
 @typing.final
-@dataclass(frozen=True)
+@total_ordering
+@dataclass(eq=False, frozen=True)
 class SkillLevel:
-    __slots__ = ("elo_range", "game_id", "level", "name")
+    __slots__ = (
+        "elo_range",
+        "game_id",
+        "level",
+        "name",
+    )
 
     level: int
     game_id: GameID
@@ -281,7 +291,12 @@ class SkillLevel:
     name: str
 
     if typing.TYPE_CHECKING:
-        _registry: typing.ClassVar[typing.Mapping[GameID, typing.Mapping[int, Self]]]
+        _registry: typing.ClassVar[
+            typing.Mapping[
+                GameID,
+                typing.Mapping[int, Self],
+            ]
+        ]
 
     @property
     def is_highest_level(self) -> bool:
@@ -322,7 +337,7 @@ class SkillLevel:
         self, elo: int = Field(ge=MIN_ELO), /
     ) -> typing.Optional[float]:
         if self.is_highest_level:
-            warn(
+            warnings.warn(
                 "Cannot calculate progress percentage for highest level",
                 UserWarning,
                 stacklevel=4,
@@ -330,13 +345,14 @@ class SkillLevel:
             return None
 
         if not self.contains_elo(elo):
-            warn(f"Elo {elo} is out of range", UserWarning, stacklevel=4)
+            warnings.warn(f"Elo {elo} is out of range", UserWarning, stacklevel=4)
             return None
 
         assert isinstance(self.elo_range.upper, int)
-        return (
-            (elo - self.elo_range.lower) / (self.elo_range.upper - self.elo_range.lower)
-        ) * 100
+        progress_ratio = (elo - self.elo_range.lower) / (
+            self.elo_range.upper - self.elo_range.lower
+        )
+        return progress_ratio * 100
 
     @typing.overload
     @classmethod
@@ -362,11 +378,13 @@ class SkillLevel:
         elo: typing.Optional[int] = Field(None, ge=MIN_ELO),
     ) -> typing.Optional[Self]:
         if game_id not in cls._registry:
-            warn(f"Game {game_id!r} is not supported", UserWarning, stacklevel=4)
+            warnings.warn(
+                f"Game {game_id!r} is not supported", UserWarning, stacklevel=4
+            )
             return None
 
         if level is not None and elo is not None:
-            warn(
+            warnings.warn(
                 "Both 'level' and 'elo' parameters provided; 'level' takes precedence",
                 UserWarning,
                 stacklevel=4,
@@ -381,24 +399,41 @@ class SkillLevel:
 
         if elo is not None:
             _logger.debug("Getting level for game %s and elo %s", game_id, elo)
-            return next(
-                (
-                    lvl
-                    for lvl in cls._registry[game_id].values()
-                    if lvl.contains_elo(elo)
-                ),
-                None,
+            generator = (
+                lvl for lvl in cls._registry[game_id].values() if lvl.contains_elo(elo)
             )
+            return next(generator, None)
 
         raise ValueError("Either level or elo must be specified")
 
     @classmethod
     @validate_call
     def get_all_levels(cls, game_id: GameID, /) -> typing.List[Self]:
-        return sorted(cls._registry.get(game_id, {}).values(), key=attrgetter("level"))
+        return sorted(cls._registry.get(game_id, {}).values())
 
     def __int__(self) -> int:
         return self.level
+
+    def __eq__(self, other: object) -> bool:
+        # Explicitly defined for performance and clarity.
+        # By comparing only the core identity fields (`game_id` and `level`)
+        # instead of all dataclass fields, we reduce the number of operations.
+        if not isinstance(other, self.__class__):
+            return NotImplemented
+        return self.level == other.level and self.game_id == other.game_id
+
+    def __lt__(self, other: Self) -> bool:
+        if not isinstance(other, self.__class__):
+            return NotImplemented
+        if self.game_id != other.game_id:
+            raise TypeError(
+                "Cannot compare levels from different games: "
+                f"'{self.game_id}' vs '{other.game_id}'"
+            )
+        return self.level < other.level
+
+    def __hash__(self) -> int:
+        return hash((self.game_id, self.level))
 
     @classmethod
     def _initialize_skill_levels_registry(cls) -> None:

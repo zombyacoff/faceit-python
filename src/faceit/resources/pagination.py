@@ -1,32 +1,31 @@
 # mypy: disable-error-code="no-any-return"
 from __future__ import annotations
 
+import inspect
 import math
 import typing
+import warnings
 from abc import ABC
 from dataclasses import dataclass
-from inspect import Parameter, signature
 from itertools import chain
-from warnings import warn
+from types import MappingProxyType
 
 from annotated_types import Le
 from pydantic import PositiveInt
 from pydantic.fields import FieldInfo
-from typing_extensions import Self, TypeAlias, deprecated
+from typing_extensions import Self, TypeAlias
 
 from faceit.constants import RAW_RESPONSE_ITEMS_KEY
 from faceit.models import ItemPage
 from faceit.models.item_page import PaginationTimeRange
 from faceit.types import (
     _T,
-    AsyncPaginationMethod,
-    AsyncUnixPaginationMethod,
-    BaseUnixPaginationMethod,
+    AsyncResourceMethodProtocol,
+    BaseResourceMethodProtocol,
     PaginationMethodT,
     RawAPIItem,
     RawAPIPageResponse,
-    SyncPaginationMethod,
-    SyncUnixPaginationMethod,
+    SyncResourceMethodProtocol,
 )
 from faceit.utils import (
     StrEnum,
@@ -36,6 +35,7 @@ from faceit.utils import (
     extends,
     representation,
     validate_positive_int,
+    warn_stacklevel,
 )
 
 _PageType: TypeAlias = typing.Union[ItemPage[typing.Any], RawAPIPageResponse]
@@ -70,7 +70,7 @@ if typing.TYPE_CHECKING:
         typing.Type[ItemPage[typing.Any]], typing.Type[RawAPIPageResponse]
     ]
     _PageFactory: TypeAlias = typing.Callable[[_PageList], _PageClass]
-    _PageFactoryMap: TypeAlias = typing.Dict[CollectReturnFormat, _PageFactory]
+    _PageFactoryMap: TypeAlias = typing.Mapping[CollectReturnFormat, _PageFactory]
     _OptionalTimestampPaginationConfig: TypeAlias = typing.Union[
         TimestampPaginationConfig, typing.Literal[False]
     ]
@@ -83,7 +83,7 @@ class PaginationMaxParams(typing.NamedTuple):
 
 
 @typing.final
-class pages(int):  # noqa: N801
+class pages(int):
     __slots__ = ()
 
     @extends(int.__new__)
@@ -95,14 +95,6 @@ class pages(int):  # noqa: N801
             f"Invalid value for {cls.__name__}: {integer!r}. "
             "Expected a positive integer greater than 1."
         )
-
-
-@typing.final
-@deprecated(
-    "`MaxPages` is deprecated and will be removed in a future release. Use `pages` instead."
-)
-class MaxPages(pages):  # type: ignore[misc]
-    __slots__ = ()
 
 
 @dataclass(eq=False, frozen=True)
@@ -130,21 +122,22 @@ _UNIX_PAGINATION_PARAMS: typing.Final = PaginationTimeRange._fields
 
 
 def _has_unix_pagination_params(
-    method: BaseUnixPaginationMethod[typing.Any], /
+    method: BaseResourceMethodProtocol[typing.Any], /
 ) -> bool:
     return all(
-        param in signature(method).parameters for param in _UNIX_PAGINATION_PARAMS
+        param in inspect.signature(method).parameters
+        for param in _UNIX_PAGINATION_PARAMS
     )
 
 
-def _get_le(param: Parameter, /) -> typing.Optional[Le]:
+def _get_le(param: inspect.Parameter, /) -> typing.Optional[Le]:
     return next(
         (items for items in param.default.metadata if isinstance(items, Le)), None
     )
 
 
 def _extract_pagination_limits(
-    limit_param: Parameter, offset_param: Parameter, method_name: str, /
+    limit_param: inspect.Parameter, offset_param: inspect.Parameter, method_name: str, /
 ) -> PaginationMaxParams:
     # Validates pagination parameters for:
     # 1. Development - ensures correct function signatures with clear error messages
@@ -186,13 +179,17 @@ def check_pagination_support(
         return False
 
     limit_param, offset_param = (
-        signature(func).parameters.get(arg) for arg in _PAGINATION_ARGS
+        inspect.signature(func).parameters.get(arg) for arg in _PAGINATION_ARGS
     )
 
     if limit_param is None or offset_param is None:
         return False
 
-    return _extract_pagination_limits(limit_param, offset_param, func.__name__)
+    return _extract_pagination_limits(
+        limit_param,
+        offset_param,
+        typing.cast("str", getattr(func, "__name__", "<unknown>")),
+    )
 
 
 _ITERATOR_SLOTS = (
@@ -213,11 +210,11 @@ class BasePageIterator(ABC, typing.Generic[PaginationMethodT, _PageT]):
     if typing.TYPE_CHECKING:
         _STOP_ITERATION_EXC: typing.ClassVar[typing.Type[Exception]]
 
-    _COLLECT_RETURN_FORMATS: typing.ClassVar[_PageFactoryMap] = {
+    _COLLECT_RETURN_FORMATS: typing.ClassVar[_PageFactoryMap] = MappingProxyType({
         CollectReturnFormat.FIRST: lambda c: type(c[0]) if c else RawAPIPageResponse,
         CollectReturnFormat.RAW: lambda _: RawAPIPageResponse,
         CollectReturnFormat.MODEL: lambda _: ItemPage,
-    }
+    })
 
     SAFE_MAX_PAGES: typing.ClassVar = 100
     DEFAULT_MAX_ITEMS: typing.ClassVar = 2000
@@ -333,12 +330,12 @@ class BasePageIterator(ABC, typing.Generic[PaginationMethodT, _PageT]):
 
         def warn_if_exceeds_safe(max_pages: int, /) -> int:
             if max_pages > self.__class__.SAFE_MAX_PAGES:
-                warn(
+                warnings.warn(
                     f"The computed number of pages ({max_pages}) exceeds the "
                     f"recommended safe maximum ({self.__class__.SAFE_MAX_PAGES}). "
                     "Proceed at your own risk.",
                     UserWarning,
-                    stacklevel=2,
+                    stacklevel=warn_stacklevel(),
                 )
             return max_pages
 
@@ -393,13 +390,13 @@ class BasePageIterator(ABC, typing.Generic[PaginationMethodT, _PageT]):
 
     @staticmethod
     def _remove_pagination_args(**kwargs: _T) -> typing.Dict[str, _T]:
-        if any(kwargs.pop(arg, None) for arg in _PAGINATION_ARGS):
-            warn(
+        if any([kwargs.pop(arg, None) for arg in _PAGINATION_ARGS]):  # noqa: C419
+            warnings.warn(
                 f"Pagination parameters {_PAGINATION_ARGS} should not be "
                 "provided by users. These parameters are managed internally "
                 "by the pagination system.",
                 UserWarning,
-                stacklevel=2,
+                stacklevel=warn_stacklevel(),
             )
         return kwargs
 
@@ -415,18 +412,18 @@ class BasePageIterator(ABC, typing.Generic[PaginationMethodT, _PageT]):
         if not _has_unix_pagination_params(method):
             raise ValueError(
                 f"Method {method.__name__!r} does not appear to support Unix timestamp "
-                "pagination. Expected start and to parameters."
+                "pagination. Expected 'start' and 'to' parameters."
             )
         if any(not isinstance(value, str) or not value for value in (key, attr)):
             raise ValueError(
                 f"Key and attribute parameters must be non-empty strings: {key}, {attr}."
             )
         if any(kwargs.pop(arg, None) for arg in _UNIX_PAGINATION_PARAMS):
-            warn(
-                "The parameters start and to will be managed automatically with Unix "
+            warnings.warn(
+                "The parameters 'start' and 'to' will be managed automatically with Unix "
                 "timestamp pagination. Your provided values will be ignored.",
                 UserWarning,
-                stacklevel=3,
+                stacklevel=warn_stacklevel(),
             )
 
     @staticmethod
@@ -455,11 +452,10 @@ class BasePageIterator(ABC, typing.Generic[PaginationMethodT, _PageT]):
     ) -> typing.Optional[int]:
         if not page:
             return None
-        return (
-            deep_get(page[RAW_RESPONSE_ITEMS_KEY][-1], key)
-            if isinstance(page, dict)
-            else getattr(page.last(), attr, None)
-        )
+        if isinstance(page, dict):
+            items = page.get(RAW_RESPONSE_ITEMS_KEY) or []
+            return deep_get(items[-1], key) if items else None
+        return getattr(page.get_last(), attr, None)  # type: ignore[union-attr]
 
     @staticmethod
     def _filter_collection(
@@ -530,10 +526,7 @@ del _ITERATOR_SLOTS
 
 
 class _BaseSyncPageIterator(
-    BasePageIterator[
-        typing.Union[SyncPaginationMethod[_PageT], SyncUnixPaginationMethod[_PageT]],
-        _PageT,
-    ],
+    BasePageIterator[SyncResourceMethodProtocol[_PageT], _PageT],
     typing.Iterator[_PageT],
 ):
     __slots__ = ()
@@ -557,11 +550,8 @@ class _BaseSyncPageIterator(
         )
 
 
-class _BasyAsyncPageIterator(
-    BasePageIterator[
-        typing.Union[AsyncPaginationMethod[_PageT], AsyncUnixPaginationMethod[_PageT]],
-        _PageT,
-    ],
+class _BaseAsyncPageIterator(
+    BasePageIterator[AsyncResourceMethodProtocol[_PageT], _PageT],
     typing.AsyncIterator[_PageT],
 ):
     __slots__ = ()
@@ -610,14 +600,14 @@ class SyncPageIterator(_BaseSyncPageIterator[_PageT]):
     @classmethod
     def unix(
         cls,
-        method: SyncUnixPaginationMethod[_PageT],
+        method: SyncResourceMethodProtocol[_PageT],
         /,
         *args: typing.Any,
         max_items: MaxItemsType = BasePageIterator.DEFAULT_MAX_ITEMS,
         key: str,
         attr: str,
         **kwargs: typing.Any,
-    ) -> typing.Generator[_PageT, None, None]:
+    ) -> typing.Iterator[_PageT]:
         cls._validate_unix_pagination_parameter(method, kwargs, key, attr)
         kwargs["max_items"] = max_items
 
@@ -650,38 +640,10 @@ class SyncPageIterator(_BaseSyncPageIterator[_PageT]):
     @classmethod
     def gather_pages(
         cls,
-        method: SyncPaginationMethod[ItemPage[_T]],
+        method: SyncResourceMethodProtocol[ItemPage[_T]],
         /,
         *args: typing.Any,
-        max_items: MaxItemsType = BasePageIterator.DEFAULT_MAX_ITEMS,
-        unix: typing.Literal[False] = ...,
-        return_format: CollectReturnFormat = ...,
-        deduplicate: bool = ...,
-        **kwargs: typing.Any,
-    ) -> ItemPage[_T]: ...
-
-    @typing.overload
-    @classmethod
-    def gather_pages(
-        cls,
-        method: SyncPaginationMethod[RawAPIPageResponse],
-        /,
-        *args: typing.Any,
-        max_items: MaxItemsType = BasePageIterator.DEFAULT_MAX_ITEMS,
-        unix: typing.Literal[False] = ...,
-        return_format: CollectReturnFormat = ...,
-        deduplicate: bool = ...,
-        **kwargs: typing.Any,
-    ) -> typing.List[RawAPIItem]: ...
-
-    @typing.overload
-    @classmethod
-    def gather_pages(
-        cls,
-        method: SyncUnixPaginationMethod[ItemPage[_T]],
-        /,
-        *args: typing.Any,
-        max_items: MaxItemsType = BasePageIterator.DEFAULT_MAX_ITEMS,
+        max_items: MaxItemsType = ...,
         unix: _OptionalTimestampPaginationConfig = ...,
         return_format: CollectReturnFormat = ...,
         deduplicate: bool = ...,
@@ -692,10 +654,10 @@ class SyncPageIterator(_BaseSyncPageIterator[_PageT]):
     @classmethod
     def gather_pages(
         cls,
-        method: SyncUnixPaginationMethod[RawAPIPageResponse],
+        method: SyncResourceMethodProtocol[RawAPIPageResponse],
         /,
         *args: typing.Any,
-        max_items: MaxItemsType = BasePageIterator.DEFAULT_MAX_ITEMS,
+        max_items: MaxItemsType = ...,
         unix: _OptionalTimestampPaginationConfig = ...,
         return_format: CollectReturnFormat = ...,
         deduplicate: bool = ...,
@@ -706,8 +668,8 @@ class SyncPageIterator(_BaseSyncPageIterator[_PageT]):
     def gather_pages(
         cls,
         method: typing.Union[
-            SyncPaginationMethod[typing.Union[ItemPage[_T], RawAPIPageResponse]],
-            SyncUnixPaginationMethod[typing.Union[ItemPage[_T], RawAPIPageResponse]],
+            SyncResourceMethodProtocol[ItemPage[_T]],
+            SyncResourceMethodProtocol[RawAPIPageResponse],
         ],
         /,
         *args: typing.Any,
@@ -720,15 +682,12 @@ class SyncPageIterator(_BaseSyncPageIterator[_PageT]):
         cls._validate_unix_config(unix)
         kwargs["max_items"] = max_items
         if unix is False:
-            casted_method = typing.cast(
-                "typing.Union[SyncPaginationMethod[_PageT], SyncUnixPaginationMethod[_PageT]]",
-                method,
-            )
+            casted_method = typing.cast("SyncResourceMethodProtocol[_PageT]", method)
             # Type annotation needed as mypy can't infer that
             # both branches return compatible iterable
             iterator: typing.Iterator[typing.Any] = cls(casted_method, *args, **kwargs)
         else:
-            casted_method = typing.cast("SyncUnixPaginationMethod[_PageT]", method)
+            casted_method = typing.cast("SyncResourceMethodProtocol[_PageT]", method)
             iterator = cls.unix(casted_method, *args, **unix, **kwargs)
         return cls.gather_from_iterator(
             iterator, return_format, deduplicate=deduplicate
@@ -773,7 +732,7 @@ class SyncPageIterator(_BaseSyncPageIterator[_PageT]):
 
 
 @typing.final
-class AsyncPageIterator(_BasyAsyncPageIterator[_PageT]):
+class AsyncPageIterator(_BaseAsyncPageIterator[_PageT]):
     __slots__ = ()
 
     @typing.overload
@@ -797,14 +756,14 @@ class AsyncPageIterator(_BasyAsyncPageIterator[_PageT]):
     @classmethod
     async def unix(
         cls,
-        method: AsyncUnixPaginationMethod[_PageT],
+        method: AsyncResourceMethodProtocol[_PageT],
         /,
         *args: typing.Any,
         max_items: MaxItemsType = BasePageIterator.DEFAULT_MAX_ITEMS,
         key: str,
         attr: str,
         **kwargs: typing.Any,
-    ) -> typing.AsyncGenerator[_PageT, None]:
+    ) -> typing.AsyncIterator[_PageT]:
         cls._validate_unix_pagination_parameter(method, kwargs, key, attr)
         kwargs["max_items"] = max_items
 
@@ -837,38 +796,10 @@ class AsyncPageIterator(_BasyAsyncPageIterator[_PageT]):
     @classmethod
     async def gather_pages(
         cls,
-        method: AsyncPaginationMethod[ItemPage[_T]],
+        method: AsyncResourceMethodProtocol[ItemPage[_T]],
         /,
         *args: typing.Any,
-        max_items: MaxItemsType = BasePageIterator.DEFAULT_MAX_ITEMS,
-        unix: typing.Literal[False] = ...,
-        return_format: CollectReturnFormat = ...,
-        deduplicate: bool = ...,
-        **kwargs: typing.Any,
-    ) -> ItemPage[_T]: ...
-
-    @typing.overload
-    @classmethod
-    async def gather_pages(
-        cls,
-        method: AsyncPaginationMethod[RawAPIPageResponse],
-        /,
-        *args: typing.Any,
-        max_items: MaxItemsType = BasePageIterator.DEFAULT_MAX_ITEMS,
-        unix: typing.Literal[False] = ...,
-        return_format: CollectReturnFormat = ...,
-        deduplicate: bool = ...,
-        **kwargs: typing.Any,
-    ) -> typing.List[RawAPIItem]: ...
-
-    @typing.overload
-    @classmethod
-    async def gather_pages(
-        cls,
-        method: AsyncUnixPaginationMethod[ItemPage[_T]],
-        /,
-        *args: typing.Any,
-        max_items: MaxItemsType = BasePageIterator.DEFAULT_MAX_ITEMS,
+        max_items: MaxItemsType = ...,
         unix: _OptionalTimestampPaginationConfig = ...,
         return_format: CollectReturnFormat = ...,
         deduplicate: bool = ...,
@@ -879,10 +810,10 @@ class AsyncPageIterator(_BasyAsyncPageIterator[_PageT]):
     @classmethod
     async def gather_pages(
         cls,
-        method: AsyncUnixPaginationMethod[RawAPIPageResponse],
+        method: AsyncResourceMethodProtocol[RawAPIPageResponse],
         /,
         *args: typing.Any,
-        max_items: MaxItemsType = BasePageIterator.DEFAULT_MAX_ITEMS,
+        max_items: MaxItemsType = ...,
         unix: _OptionalTimestampPaginationConfig = ...,
         return_format: CollectReturnFormat = ...,
         deduplicate: bool = ...,
@@ -893,8 +824,8 @@ class AsyncPageIterator(_BasyAsyncPageIterator[_PageT]):
     async def gather_pages(
         cls,
         method: typing.Union[
-            AsyncPaginationMethod[typing.Union[ItemPage[_T], RawAPIPageResponse]],
-            AsyncUnixPaginationMethod[typing.Union[ItemPage[_T], RawAPIPageResponse]],
+            AsyncResourceMethodProtocol[ItemPage[_T]],
+            AsyncResourceMethodProtocol[RawAPIPageResponse],
         ],
         /,
         *args: typing.Any,
@@ -907,15 +838,12 @@ class AsyncPageIterator(_BasyAsyncPageIterator[_PageT]):
         cls._validate_unix_config(unix)
         kwargs["max_items"] = max_items
         if unix is False:
-            casted_method = typing.cast(
-                "typing.Union[AsyncPaginationMethod[_PageT], AsyncUnixPaginationMethod[_PageT]]",
-                method,
-            )
+            casted_method = typing.cast("AsyncResourceMethodProtocol[_PageT]", method)
             iterator: typing.AsyncIterator[typing.Any] = cls(
                 casted_method, *args, **kwargs
             )
         else:
-            casted_method = typing.cast("AsyncUnixPaginationMethod[_PageT]", method)
+            casted_method = typing.cast("AsyncResourceMethodProtocol[_PageT]", method)
             iterator = cls.unix(casted_method, *args, **unix, **kwargs)
         return await cls.gather_from_iterator(
             iterator, return_format, deduplicate=deduplicate

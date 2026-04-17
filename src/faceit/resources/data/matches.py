@@ -4,7 +4,7 @@ import typing
 from abc import ABC
 
 from pydantic import AfterValidator, validate_call
-from typing_extensions import Annotated, TypeAlias, deprecated
+from typing_extensions import Annotated, TypeAlias
 
 from faceit.http import AsyncClient, SyncClient
 from faceit.models.custom_types import FaceitMatchID
@@ -55,12 +55,6 @@ class SyncMatches(BaseMatches[SyncClient], typing.Generic[APIResponseFormatT]):
 
     __call__ = get
 
-    @deprecated(
-        "`details` is deprecated and will be removed in a future release. Use `get` instead."
-    )
-    def details(self, match_id: typing.Any) -> typing.Any:
-        return self.get(match_id)
-
     @typing.overload
     def stats(self: SyncMatches[Raw], match_id: _MatchID) -> RawAPIItem: ...
 
@@ -100,12 +94,6 @@ class AsyncMatches(BaseMatches[AsyncClient], typing.Generic[APIResponseFormatT])
         )
 
     __call__ = get
-
-    @deprecated(
-        "`details` is deprecated and will be removed in a future release. Use `get` instead."
-    )
-    async def details(self, match_id: typing.Any) -> typing.Any:
-        return await self.get(match_id)
 
     @typing.overload
     async def stats(self: AsyncMatches[Raw], match_id: _MatchID) -> RawAPIItem: ...

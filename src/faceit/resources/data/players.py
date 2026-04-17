@@ -3,8 +3,8 @@ from __future__ import annotations
 
 import logging
 import typing
+import warnings
 from abc import ABC
-from warnings import warn
 
 from pydantic import AfterValidator, Field, validate_call
 from typing_extensions import Annotated, TypeAlias
@@ -14,6 +14,8 @@ from faceit.http import AsyncClient, SyncClient
 from faceit.models import (
     BanEntry,
     CS2MatchPlayerStats,
+    CSPlayerStats,
+    FallbackPlayerStats,
     GeneralTeam,
     Hub,
     ItemPage,
@@ -21,20 +23,25 @@ from faceit.models import (
     Player,
     Tournament,
 )
+from faceit.models.players.general import AnyPlayerStats
 from faceit.models.players.match import AbstractMatchPlayerStats
 from faceit.resources.base import (
     BaseResource,
     FaceitResourcePath,
     MappedValidatorConfig,
-    ModelPlaceholder,
     RequestPayload,
 )
-from faceit.resources.pagination import MaxItems, MaxItemsType, pages
+from faceit.resources.pagination import (
+    MaxItems,
+    MaxItemsType,
+    TimestampPaginationConfig,
+    pages,
+)
 from faceit.types import (
+    AnyCSID,
     APIResponseFormatT,
     ClientT,
     Model,
-    ModelNotImplemented,
     Raw,
     RawAPIItem,
     RawAPIPageResponse,
@@ -68,14 +75,23 @@ class BasePlayers(
             GameID.CS2: CS2MatchPlayerStats,
             # TODO: Add other games (e.g. CSGO)
         },
-        is_paged=True,
         key_name="game",
     )
+    _stats_validator_cfg: typing.ClassVar = MappedValidatorConfig[
+        GameID, AnyPlayerStats
+    ](
+        validator_map={
+            GameID.CS2: CSPlayerStats,
+            GameID.CSGO: CSPlayerStats,
+        },
+        key_name="game",
+        default_validator=FallbackPlayerStats,
+    )
 
-    _matches_stats_timestamp_cfg: typing.ClassVar = BaseResource._timestamp_cfg(
+    _matches_stats_timestamp_cfg: typing.ClassVar = TimestampPaginationConfig(
         key="stats.Match Finished At", attr="match_finished_at"
     )
-    _history_timestamp_cfg: typing.ClassVar = BaseResource._timestamp_cfg(
+    _history_timestamp_cfg: typing.ClassVar = TimestampPaginationConfig(
         key="finished_at", attr="finished_at"
     )
 
@@ -101,7 +117,7 @@ class BasePlayers(
             return RequestPayload(endpoint=self.__class__.PATH, params=params)
 
         if game is not None or game_player_id is not None:
-            warn(
+            warnings.warn(
                 "When 'player_lookup_key' is provided, "
                 "'game' and 'game_player_id' should not be specified. "
                 "The value of 'player_lookup_key' will take precedence.",
@@ -196,7 +212,7 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
         return self._validate_response(
             self._client.get(
                 # `player_id` is validated and normalized;
-                # str() is only for mypy type narrowing.
+                # `str()` is only for mypy type narrowing.
                 self.__class__.PATH / str(player_id) / "bans",
                 params=self.__class__._build_params(offset=offset, limit=limit),
                 expect_page=True,
@@ -237,6 +253,21 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
         to: typing.Optional[int] = None,
     ) -> RawAPIPageResponse: ...
 
+    # TODO: This overload-based approach for specific games feels clunky and doesn't scale well.
+    # Need to investigate a more sophisticated way to map `GameID` to specific models,
+    # but this is the current best effort.
+    @typing.overload
+    def matches_stats(
+        self: SyncPlayers[Model],
+        player_id: PlayerID,
+        game: typing.Literal[GameID.CS2],
+        *,
+        offset: int = Field(0, ge=0, le=200),
+        limit: int = Field(20, ge=1, le=100),
+        start: typing.Optional[int] = None,
+        to: typing.Optional[int] = None,
+    ) -> ItemPage[CS2MatchPlayerStats]: ...
+
     @typing.overload
     def matches_stats(
         self: SyncPlayers[Model],
@@ -259,8 +290,8 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
         limit: int = Field(20, ge=1, le=100),
         start: typing.Optional[int] = None,
         to: typing.Optional[int] = None,
-    ) -> typing.Union[ItemPage[AbstractMatchPlayerStats], RawAPIPageResponse]:
-        return self._process_response_with_mapped_validator(
+    ) -> typing.Any:
+        return self._process_page(
             self._client.get(
                 self.__class__.PATH / str(player_id) / "games" / game / "stats",
                 params=self.__class__._build_params(
@@ -284,6 +315,14 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
     def all_matches_stats(
         self: SyncPlayers[Model],
         player_id: PlayerID,
+        game: typing.Literal[GameID.CS2],
+        max_items: MaxItemsType = pages(50),
+    ) -> ItemPage[CS2MatchPlayerStats]: ...
+
+    @typing.overload
+    def all_matches_stats(
+        self: SyncPlayers[Model],
+        player_id: PlayerID,
         game: GameID,
         max_items: MaxItemsType = pages(50),
     ) -> ItemPage[AbstractMatchPlayerStats]: ...
@@ -293,7 +332,7 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
         player_id: PlayerID,
         game: GameID,
         max_items: MaxItemsType = pages(50),
-    ) -> typing.Union[typing.List[RawAPIItem], ItemPage[AbstractMatchPlayerStats]]:
+    ) -> typing.Any:
         return self.__class__._sync_page_iterator.gather_pages(
             self.matches_stats,
             player_id,
@@ -437,23 +476,29 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
     @typing.overload
     def stats(
         self: SyncPlayers[Raw], player_id: PlayerID, game: GameID
-    ) -> RawAPIPageResponse: ...
+    ) -> RawAPIItem: ...
+
+    @typing.overload
+    def stats(  # type: ignore[overload-overlap]
+        self: SyncPlayers[Model], player_id: PlayerID, game: AnyCSID
+    ) -> CSPlayerStats: ...
 
     @typing.overload
     def stats(
         self: SyncPlayers[Model], player_id: PlayerID, game: GameID
-    ) -> ModelNotImplemented: ...
+    ) -> FallbackPlayerStats: ...
 
     @validate_call
     def stats(
         self, player_id: PlayerIDValidated, game: GameID
-    ) -> typing.Union[RawAPIPageResponse, ModelNotImplemented]:
-        return self._validate_response(
+    ) -> typing.Union[RawAPIItem, AnyPlayerStats]:
+        return self._process_item(
             self._client.get(
                 self.__class__.PATH / str(player_id) / "stats" / game,
-                expect_page=True,
+                expect_item=True,
             ),
-            ModelPlaceholder,
+            game,
+            self.__class__._stats_validator_cfg,
         )
 
     @typing.overload
@@ -683,6 +728,18 @@ class AsyncPlayers(BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT])
     async def matches_stats(
         self: AsyncPlayers[Model],
         player_id: PlayerID,
+        game: typing.Literal[GameID.CS2],
+        *,
+        offset: int = Field(0, ge=0, le=200),
+        limit: int = Field(20, ge=1, le=100),
+        start: typing.Optional[int] = None,
+        to: typing.Optional[int] = None,
+    ) -> ItemPage[CS2MatchPlayerStats]: ...
+
+    @typing.overload
+    async def matches_stats(
+        self: AsyncPlayers[Model],
+        player_id: PlayerID,
         game: GameID,
         *,
         offset: int = Field(0, ge=0, le=200),
@@ -701,8 +758,8 @@ class AsyncPlayers(BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT])
         limit: int = Field(20, ge=1, le=100),
         start: typing.Optional[int] = None,
         to: typing.Optional[int] = None,
-    ) -> typing.Union[RawAPIPageResponse, ItemPage[AbstractMatchPlayerStats]]:
-        return self._process_response_with_mapped_validator(
+    ) -> typing.Any:
+        return self._process_page(
             await self._client.get(
                 self.__class__.PATH / str(player_id) / "games" / game / "stats",
                 params=self.__class__._build_params(
@@ -726,6 +783,14 @@ class AsyncPlayers(BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT])
     async def all_matches_stats(
         self: AsyncPlayers[Model],
         player_id: PlayerID,
+        game: typing.Literal[GameID.CS2],
+        max_items: MaxItemsType = pages(50),
+    ) -> ItemPage[CS2MatchPlayerStats]: ...
+
+    @typing.overload
+    async def all_matches_stats(
+        self: AsyncPlayers[Model],
+        player_id: PlayerID,
         game: GameID,
         max_items: MaxItemsType = pages(50),
     ) -> ItemPage[AbstractMatchPlayerStats]: ...
@@ -735,7 +800,7 @@ class AsyncPlayers(BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT])
         player_id: PlayerID,
         game: GameID,
         max_items: MaxItemsType = pages(50),
-    ) -> typing.Union[typing.List[RawAPIItem], ItemPage[AbstractMatchPlayerStats]]:
+    ) -> typing.Any:
         return await self.__class__._async_page_iterator.gather_pages(
             self.matches_stats,
             player_id,
@@ -879,23 +944,29 @@ class AsyncPlayers(BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT])
     @typing.overload
     async def stats(
         self: AsyncPlayers[Raw], player_id: PlayerID, game: GameID
-    ) -> RawAPIPageResponse: ...
+    ) -> RawAPIItem: ...
+
+    @typing.overload
+    async def stats(  # type: ignore[overload-overlap]
+        self: AsyncPlayers[Model], player_id: PlayerID, game: AnyCSID
+    ) -> CSPlayerStats: ...
 
     @typing.overload
     async def stats(
         self: AsyncPlayers[Model], player_id: PlayerID, game: GameID
-    ) -> ModelNotImplemented: ...
+    ) -> FallbackPlayerStats: ...
 
     @validate_call
     async def stats(
         self, player_id: PlayerIDValidated, game: GameID
-    ) -> typing.Union[RawAPIPageResponse, ModelNotImplemented]:
-        return self._validate_response(
+    ) -> typing.Union[RawAPIItem, AnyPlayerStats]:
+        return self._process_item(
             await self._client.get(
                 self.__class__.PATH / str(player_id) / "stats" / game,
-                expect_page=True,
+                expect_item=True,
             ),
-            ModelPlaceholder,
+            game,
+            self.__class__._stats_validator_cfg,
         )
 
     @typing.overload

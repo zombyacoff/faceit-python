@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import logging
 import typing
+import warnings
 from abc import ABC
 from dataclasses import dataclass
 from types import MappingProxyType
-from warnings import warn
 
 from pydantic import ValidationError
 
@@ -15,12 +15,13 @@ from faceit.types import (
     _T,
     ClientT,
     ModelT,
+    RawAPIItem,
     RawAPIPageResponse,
     RawAPIResponse,
 )
-from faceit.utils import StrEnum
+from faceit.utils import StrEnum, warn_stacklevel
 
-from .pagination import AsyncPageIterator, SyncPageIterator, TimestampPaginationConfig
+from .pagination import AsyncPageIterator, SyncPageIterator
 
 if typing.TYPE_CHECKING:
     _ResponseT = typing.TypeVar("_ResponseT", bound=RawAPIResponse)
@@ -43,8 +44,8 @@ class RequestPayload(typing.TypedDict):
 @dataclass(eq=False, frozen=True)
 class MappedValidatorConfig(typing.Generic[_T, ModelT]):
     validator_map: typing.Mapping[_T, typing.Type[ModelT]]
-    is_paged: bool
     key_name: str = "key"
+    default_validator: typing.Optional[typing.Type[ModelT]] = None
 
 
 class FaceitResourcePath(StrEnum):
@@ -67,14 +68,13 @@ class BaseResource(ABC, typing.Generic[ClientT]):
     _client: ClientT
     _raw: bool
 
-    _sync_page_iterator: typing.ClassVar = SyncPageIterator
-    _async_page_iterator: typing.ClassVar = AsyncPageIterator
-    _timestamp_cfg: typing.ClassVar = TimestampPaginationConfig
-
     _PARAM_NAME_MAP: typing.ClassVar[typing.Mapping[str, str]] = MappingProxyType({
         "start": "from",
         "category": "type",
     })
+
+    _sync_page_iterator: typing.ClassVar = SyncPageIterator
+    _async_page_iterator: typing.ClassVar = AsyncPageIterator
 
     if typing.TYPE_CHECKING:
         PATH: typing.ClassVar[Endpoint]
@@ -88,7 +88,8 @@ class BaseResource(ABC, typing.Generic[ClientT]):
             return
         if resource_path is None:
             raise TypeError(
-                f"Class {cls.__name__} requires 'path' parameter or a parent with 'PATH' defined."
+                f"Class {cls.__name__} requires 'path' "
+                "parameter or a parent with 'PATH' defined."
             )
         cls.PATH = Endpoint(resource_path)
         super().__init_subclass__(**kwargs)
@@ -97,52 +98,48 @@ class BaseResource(ABC, typing.Generic[ClientT]):
     def is_raw(self) -> bool:
         return self._raw
 
-    # NOTE: These overloads are necessary as this function directly returns in resource
-    # methods, where typing must be strict for public API. Current implementation
-    # is sufficient, though alternative typing approaches could be considered.
-
-    @typing.overload
-    def _process_response_with_mapped_validator(
+    def _process_item(
         self,
-        response: RawAPIPageResponse,
+        response: RawAPIItem,
         key: _T,
         config: MappedValidatorConfig[_T, ModelT],
-        /,
-    ) -> typing.Union[ModelT, RawAPIPageResponse]: ...
-
-    @typing.overload
-    def _process_response_with_mapped_validator(
-        self,
-        response: RawAPIPageResponse,
-        key: _T,
-        config: MappedValidatorConfig[_T, ModelT],
-        /,
-    ) -> typing.Union[ItemPage[ModelT], RawAPIPageResponse]: ...
-
-    def _process_response_with_mapped_validator(
-        self,
-        response: RawAPIPageResponse,
-        key: _T,
-        config: MappedValidatorConfig[_T, ModelT],
-        /,
-    ) -> typing.Union[ModelT, ItemPage[ModelT], RawAPIPageResponse]:
-        _logger.debug("Processing response with mapped validator for key: %s", key)
-        validator = config.validator_map.get(key)
-        if validator is None:
-            warn(
-                f"No model defined for {config.key_name} {key!r}. Consider using the raw response.",
-                UserWarning,
-                stacklevel=5,
-            )
+    ) -> typing.Union[ModelT, RawAPIItem]:
+        if self._raw:
             return response
-        # Suppressing type checking warning because we're using a
-        # dynamic runtime subscript `ItemPage` is being subscripted
-        # with a variable (`validator`) which mypy cannot statically verify
         return self._validate_response(
             response,
-            typing.cast("typing.Type[ModelT]", ItemPage[validator])  # type: ignore[valid-type]
-            if config.is_paged
-            else validator,
+            config.validator_map.get(key, config.default_validator),
+        )
+
+    def _process_page(
+        self,
+        response: RawAPIPageResponse,
+        key: _T,
+        config: MappedValidatorConfig[_T, ModelT],
+    ) -> typing.Union[ItemPage[ModelT], RawAPIPageResponse]:
+        if self._raw:
+            return response
+
+        validator = config.validator_map.get(key, config.default_validator)
+        page_validator = None
+
+        if validator is not None:
+            page_validator = typing.cast(
+                "typing.Type[ItemPage[ModelT]]",
+                # Suppressing type checking warning because we're using a
+                # dynamic runtime subscript `ItemPage` is being subscripted
+                # with a variable (`validator`) which mypy cannot statically verify
+                ItemPage[validator],  # type: ignore[valid-type]
+            )
+
+        return self._validate_response(
+            response,
+            page_validator,
+            warn_msg=(
+                f"No model defined for {config.key_name} {key!r}. "
+                "Validation and model parsing are unavailable. "
+                "Using raw response."
+            ),
         )
 
     def _validate_response(
@@ -150,17 +147,20 @@ class BaseResource(ABC, typing.Generic[ClientT]):
         response: _ResponseT,
         validator: typing.Optional[typing.Type[ModelT]],
         /,
+        *,
+        warn_msg: typing.Optional[str] = None,
     ) -> typing.Union[_ResponseT, ModelT]:
         if self._raw:
             return response
         if validator is None:
-            warn(
+            # TODO: Better message for missing validator
+            default_warn_msg = (
                 "No model defined for this response. Validation and model "
                 "parsing are unavailable. Use the raw version for explicit, "
-                "unprocessed data.",
-                UserWarning,
-                stacklevel=5,
+                "unprocessed data."
             )
+            msg = default_warn_msg if warn_msg is None else warn_msg
+            warnings.warn(msg, UserWarning, stacklevel=warn_stacklevel())
             return response
         try:
             return validator.model_validate(response)

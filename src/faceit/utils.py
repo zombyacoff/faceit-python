@@ -1,14 +1,16 @@
 from __future__ import annotations
 
+import inspect
 import json
+import os
 import reprlib
+import sys
 import typing
 from contextlib import suppress
 from datetime import datetime, timezone
 from enum import Enum, IntEnum, auto
-from functools import reduce, wraps
+from functools import lru_cache, reduce, wraps
 from hashlib import sha256
-from inspect import isawaitable, iscoroutinefunction
 from uuid import UUID
 
 from typing_extensions import Self, TypeIs
@@ -16,16 +18,22 @@ from typing_extensions import Self, TypeIs
 if typing.TYPE_CHECKING:
     from asyncio import Lock as AsyncLock  # noqa: ICN003
     from threading import Lock as SyncLock
+    from types import FrameType
 
     from .types import _P, _T, ValidUUID
 
     _CallableT = typing.TypeVar("_CallableT", bound=typing.Callable[..., typing.Any])
     _ClassT = typing.TypeVar("_ClassT", bound=type)
 
-REDACTED_MARKER: typing.Final = "[REDACTED]"
-
+_IGNORED_MODULES: typing.Set[str] = {
+    "pydantic",
+}
 _UUID_BYTES: typing.Final = 16
 _UNINITIALIZED_MARKER: typing.Final = "uninitialized"
+
+
+class UnsetValue(IntEnum):
+    UNSET = -1
 
 
 # NOTE: Inspired by irgeek/StrEnum:
@@ -36,16 +44,17 @@ class StrEnum(str, Enum):
     _value_: str
 
     def __new__(
-        cls, value: typing.Union[str, auto], *args: typing.Any, **kwargs: typing.Any
+        cls, value: typing.Union[str, auto], *args: object, **kwargs: object
     ) -> Self:
         if isinstance(value, (str, auto)):
             return super().__new__(cls, value, *args, **kwargs)
         raise TypeError(
-            f"StrEnum values must be of type 'str', but got {type(value).__name__}: {value!r}"
+            "StrEnum values must be of type 'str', "
+            f"but got {type(value).__name__}: {value!r}"
         )
 
     @staticmethod
-    def _generate_next_value_(name: str, *_: typing.Any) -> str:
+    def _generate_next_value_(name: str, *_: object) -> str:
         return name
 
     def __str__(self) -> str:
@@ -54,23 +63,10 @@ class StrEnum(str, Enum):
 
 class StrEnumWithAll(StrEnum):
     @classmethod
-    def all(cls) -> typing.Tuple[Self, ...]:
+    def get_all_values(cls) -> typing.Tuple[Self, ...]:
         return tuple(cls)
 
-
-class UnsetValue(IntEnum):
-    UNSET = -1
-
-
-class _Noop:
-    def __call__(self, *_: typing.Any, **__: typing.Any) -> Self:
-        return self
-
-    def __await__(self) -> typing.Generator[None]:
-        yield
-
-
-noop = _Noop()
+    all = get_all_values  # alias for backwards compatibility
 
 
 def UnsupportedOperationTypeError(  # noqa: N802
@@ -85,7 +81,7 @@ def locked(
     lock: typing.Union[SyncLock, AsyncLock], /
 ) -> typing.Callable[[typing.Callable[_P, _T]], typing.Callable[_P, _T]]:
     def decorator(func: typing.Callable[_P, _T], /) -> typing.Callable[_P, _T]:
-        if iscoroutinefunction(func):
+        if inspect.iscoroutinefunction(func):
 
             @wraps(func)
             async def async_wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _T:
@@ -106,7 +102,7 @@ def locked(
 
 def extends(
     _: _CallableT, /
-) -> typing.Callable[[typing.Callable[..., typing.Any]], _CallableT]:
+) -> typing.Callable[[typing.Callable[..., object]], _CallableT]:
     """
     Decorator that assigns the type signature of the given function to the
     decorated function. Type checking is enforced only at the function boundary
@@ -121,28 +117,30 @@ async def invoke_callable(
     *args: typing.Any,
     **kwargs: typing.Any,
 ) -> _T:
-    if callable(func):
-        result = func(*args, **kwargs)
-        if isawaitable(result):
-            result = await result
-        return typing.cast("_T", result)
-    raise TypeError(
-        f"Expected a callable object, got {type(func).__name__} ({func!r}). "
-        "Argument 'func' must be a function or object with a __call__ method."
-    )
+    if not callable(func):
+        raise TypeError(
+            f"Expected a callable object, got {type(func).__name__} ({func!r}). "
+            "Argument 'func' must be a function or object with a __call__ method."
+        )
+    result = func(*args, **kwargs)
+    if inspect.isawaitable(result):
+        result = await result
+    return typing.cast("_T", result)
 
 
 def deep_get(
-    dictionary: typing.Dict[str, typing.Any],
+    dictionary: typing.Mapping[str, typing.Any],
     keys: str,
     /,
     default: typing.Optional[_T] = None,
-) -> typing.Union[_T, typing.Any]:
-    return reduce(
-        lambda d, k: d.get(k, default) if isinstance(d, dict) else default,
-        keys.split("."),
-        dictionary,
-    )
+) -> typing.Union[_T, typing.Any, None]:
+    current = dictionary
+    try:
+        for key in keys.split("."):
+            current = current[key]
+    except (KeyError, TypeError, AttributeError):
+        return default
+    return current
 
 
 def get_nested_property(
@@ -152,9 +150,7 @@ def get_nested_property(
         return default
     try:
         return reduce(
-            lambda o, k: default if o is None else getattr(o, k),
-            path.split("."),
-            obj,
+            lambda o, k: default if o is None else getattr(o, k), path.split("."), obj
         )
     except (AttributeError, TypeError):
         return default
@@ -246,6 +242,56 @@ def validate_positive_int(value: typing.Any, /, param_name: str = "value") -> in
     return value
 
 
+@lru_cache(maxsize=1)
+def _get_ignored_paths() -> typing.Tuple[
+    typing.Tuple[str, ...],
+    typing.FrozenSet[str],
+]:
+    prefixes: typing.List[str] = []
+    files: typing.Set[str] = set()
+
+    for mod_name in (__name__.split(".")[0], *_IGNORED_MODULES):
+        mod = sys.modules.get(mod_name)
+        if mod is None or not hasattr(mod, "__file__") or mod.__file__ is None:
+            continue
+
+        path = os.path.normcase(os.path.realpath(mod.__file__))
+
+        if path.endswith("__init__.py"):
+            dir_path = os.path.dirname(path) + os.sep  # noqa: PTH120
+            prefixes.append(dir_path)
+        else:
+            files.add(path)
+
+    return tuple(prefixes), frozenset(files)
+
+
+def warn_stacklevel() -> int:
+    """
+    Determines the appropriate stack level for warnings emitted by the library,
+    so that they point to the user's code instead of internal library frames.
+    """
+    with suppress(ValueError, AttributeError):
+        ignored_prefixes, ignored_files = _get_ignored_paths()
+        frame: typing.Optional[FrameType] = sys._getframe(1)
+        level = 1
+
+        while frame:
+            filename = frame.f_code.co_filename
+            if filename and not filename.startswith("<"):
+                norm_path = os.path.normcase(os.path.realpath(filename))
+
+                if norm_path not in ignored_files and not norm_path.startswith(
+                    ignored_prefixes
+                ):
+                    return level
+
+            frame = frame.f_back
+            level += 1
+
+    return 1
+
+
 def _format_fields(obj: object, fields: typing.Tuple[str, ...], *, joiner: str) -> str:
     return (
         joiner.join(f"{field}={reprlib.repr(getattr(obj, field))}" for field in fields)
@@ -260,7 +306,9 @@ def _apply_representation(
     has_str = getattr(cls, "__str__", object.__str__) is not object.__str__
 
     if use_str and not has_str:
-        raise TypeError(f"Class {cls.__name__} must define __str__ method")
+        raise TypeError(
+            f"Class {cls.__name__} must define '__str__' method when 'use_str=True'"
+        )
 
     def build_repr(self: _ClassT) -> str:
         str_args = f"'{self}'" if use_str else _format_fields(self, fields, joiner=", ")
@@ -291,6 +339,6 @@ def representation(
 ) -> typing.Union[_ClassT, typing.Callable[[_ClassT], _ClassT]]:
     return (
         _apply_representation(fields[0], fields[1:], use_str)
-        if fields and isinstance(fields[0], type)
+        if fields and inspect.isclass(fields[0])
         else lambda cls: _apply_representation(cls, fields, use_str)
     )

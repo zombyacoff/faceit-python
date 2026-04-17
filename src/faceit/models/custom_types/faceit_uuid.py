@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import typing
 from abc import ABC, abstractmethod
-from collections import UserString
 from uuid import UUID
 
 from pydantic_core import core_schema
@@ -78,7 +77,7 @@ class FaceitID(UUID, BaseFaceitID):
 
 
 @representation(use_str=True)
-class _FaceitIDWithUniquePrefix(UserString, BaseFaceitID, ABC):
+class _FaceitIDWithUniquePrefix(str, BaseFaceitID, ABC):
     __slots__ = ()
 
     if typing.TYPE_CHECKING:

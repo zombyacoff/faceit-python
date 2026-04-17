@@ -8,6 +8,7 @@ from pydantic import Field, validate_call
 
 from faceit.constants import GameID  # noqa: TC001
 from faceit.http import AsyncClient, SyncClient
+from faceit.models import ItemPage  # noqa: TC001
 from faceit.models.custom_types import CountryCode  # noqa: TC001
 from faceit.resources.base import BaseResource, FaceitResourcePath, ModelPlaceholder
 from faceit.resources.pagination import MaxItemsType, pages
@@ -56,7 +57,7 @@ class SyncRankings(BaseRankings[SyncClient], typing.Generic[APIResponseFormatT])
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
-    ) -> ModelNotImplemented: ...
+    ) -> ItemPage[ModelNotImplemented]: ...
 
     @validate_call
     def unbounded(
@@ -67,7 +68,7 @@ class SyncRankings(BaseRankings[SyncClient], typing.Generic[APIResponseFormatT])
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
-    ) -> typing.Union[RawAPIPageResponse, ModelNotImplemented]:
+    ) -> typing.Union[RawAPIPageResponse, ItemPage[ModelNotImplemented]]:
         return self._validate_response(
             self._client.get(
                 self.__class__.PATH / "games" / game / "regions" / region,
@@ -95,7 +96,7 @@ class SyncRankings(BaseRankings[SyncClient], typing.Generic[APIResponseFormatT])
         region: RegionIdentifier,
         country: typing.Optional[CountryCode] = None,
         max_items: MaxItemsType = pages(10),
-    ) -> ModelNotImplemented: ...
+    ) -> ItemPage[ModelNotImplemented]: ...
 
     @validate_call
     def all_unbounded(
@@ -104,7 +105,7 @@ class SyncRankings(BaseRankings[SyncClient], typing.Generic[APIResponseFormatT])
         region: RegionIdentifier,
         country: typing.Optional[CountryCode] = None,
         max_items: MaxItemsType = pages(10),
-    ) -> typing.Union[typing.List[RawAPIItem], ModelNotImplemented]:
+    ) -> typing.Union[typing.List[RawAPIItem], ItemPage[ModelNotImplemented]]:
         return self.__class__._sync_page_iterator.gather_pages(
             self.unbounded, game, region, country, max_items=max_items
         )
@@ -178,7 +179,7 @@ class AsyncRankings(BaseRankings[AsyncClient], typing.Generic[APIResponseFormatT
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
-    ) -> ModelNotImplemented: ...
+    ) -> ItemPage[ModelNotImplemented]: ...
 
     @validate_call
     async def unbounded(
@@ -189,7 +190,7 @@ class AsyncRankings(BaseRankings[AsyncClient], typing.Generic[APIResponseFormatT
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
-    ) -> typing.Union[RawAPIPageResponse, ModelNotImplemented]:
+    ) -> typing.Union[RawAPIPageResponse, ItemPage[ModelNotImplemented]]:
         return self._validate_response(
             await self._client.get(
                 self.__class__.PATH / "games" / game / "regions" / region,
@@ -217,7 +218,7 @@ class AsyncRankings(BaseRankings[AsyncClient], typing.Generic[APIResponseFormatT
         region: RegionIdentifier,
         country: typing.Optional[CountryCode] = None,
         max_items: MaxItemsType = pages(10),
-    ) -> ModelNotImplemented: ...
+    ) -> ItemPage[ModelNotImplemented]: ...
 
     @validate_call
     async def all_unbounded(
@@ -226,8 +227,8 @@ class AsyncRankings(BaseRankings[AsyncClient], typing.Generic[APIResponseFormatT
         region: RegionIdentifier,
         country: typing.Optional[CountryCode] = None,
         max_items: MaxItemsType = pages(10),
-    ) -> typing.Union[typing.List[RawAPIItem], ModelNotImplemented]:
-        return self.__class__._async_page_iterator.gather_pages(
+    ) -> typing.Union[typing.List[RawAPIItem], ItemPage[ModelNotImplemented]]:
+        return await self.__class__._async_page_iterator.gather_pages(
             self.unbounded, game, region, country, max_items=max_items
         )
 

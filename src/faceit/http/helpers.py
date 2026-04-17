@@ -9,15 +9,12 @@ from typing_extensions import Self, TypeAlias
 from faceit.utils import StrEnum, UnsupportedOperationTypeError, representation
 
 if typing.TYPE_CHECKING:
-    from tenacity import RetryCallState, RetryError
-    from tenacity.retry import retry_base
-    from tenacity.stop import stop_base
-    from tenacity.wait import wait_base
+    import tenacity
 
     from faceit.types import EndpointParam
 
     _RetryHook: TypeAlias = typing.Callable[
-        [RetryCallState], typing.Union[typing.Awaitable[None], None]
+        [tenacity.RetryCallState], typing.Union[typing.Awaitable[None], None]
     ]
 
 
@@ -26,20 +23,27 @@ class RetryArgs(typing.TypedDict, total=False):
     sleep: typing.Callable[
         [typing.Union[int, float]], typing.Union[typing.Awaitable[None], None]
     ]
-    stop: typing.Union[stop_base, typing.Callable[[RetryCallState], bool]]
+    stop: typing.Union[
+        tenacity.stop.stop_base, typing.Callable[[tenacity.RetryCallState], bool]
+    ]
     wait: typing.Union[
-        wait_base, typing.Callable[[RetryCallState], typing.Union[float, int]]
+        tenacity.wait.wait_base,
+        typing.Callable[[tenacity.RetryCallState], typing.Union[float, int]],
     ]
     retry: typing.Union[
-        retry_base,
-        typing.Callable[[RetryCallState], typing.Union[typing.Awaitable[bool], bool]],
+        tenacity.retry_base,
+        typing.Callable[
+            [tenacity.RetryCallState], typing.Union[typing.Awaitable[bool], bool]
+        ],
     ]
     before: _RetryHook
     after: _RetryHook
     before_sleep: typing.Optional[_RetryHook]
     reraise: bool
-    retry_error_cls: typing.Type[RetryError]
-    retry_error_callback: typing.Optional[typing.Callable[[RetryCallState], typing.Any]]
+    retry_error_cls: typing.Type[tenacity.RetryError]
+    retry_error_callback: typing.Optional[
+        typing.Callable[[tenacity.RetryCallState], typing.Any]
+    ]
 
 
 @typing.runtime_checkable
@@ -75,25 +79,28 @@ class Endpoint:
         )
 
     def __truediv__(self, other: EndpointParam) -> Self:
-        if isinstance(other, str):
-            return self.add(other)
         if isinstance(other, self.__class__):
             return self.__class__(*self.path_parts, *other.path_parts, base=self.base)
-        raise UnsupportedOperationTypeError(
-            "/", self.__class__.__name__, type(other).__name__
-        )
+        try:
+            return self.add(str(other))
+        except (TypeError, ValueError):
+            raise UnsupportedOperationTypeError(
+                "/", self.__class__.__name__, type(other).__name__
+            ) from None
 
     def __itruediv__(self, other: EndpointParam) -> Self:
-        if isinstance(other, str):
-            if other:
-                self.path_parts.append(other)
-            return self
         if isinstance(other, self.__class__):
             self.path_parts.extend(other.path_parts)
             return self
-        raise UnsupportedOperationTypeError(
-            "/=", self.__class__.__name__, type(other).__name__
-        )
+        try:
+            other_str = str(other)
+        except (TypeError, ValueError):
+            raise UnsupportedOperationTypeError(
+                "/=", self.__class__.__name__, type(other).__name__
+            ) from None
+        if other_str:
+            self.path_parts.append(other_str)
+        return self
 
 
 def is_ssl_error(exception: BaseException, /) -> bool:

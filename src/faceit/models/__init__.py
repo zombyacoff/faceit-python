@@ -1,9 +1,27 @@
-from .championships import Championship as Championship
-from .item_page import ItemPage as ItemPage
-from .players import BanEntry as BanEntry
-from .players import CS2MatchPlayerStats as CS2MatchPlayerStats
-from .players import GeneralTeam as GeneralTeam
-from .players import Hub as Hub
-from .players import Match as Match
-from .players import Player as Player
-from .players import Tournament as Tournament
+from .championships import Championship
+from .item_page import ItemPage
+from .players import (
+    BanEntry,
+    CS2MatchPlayerStats,
+    CSPlayerStats,
+    FallbackPlayerStats,
+    GeneralTeam,
+    Hub,
+    Match,
+    Player,
+    Tournament,
+)
+
+__all__ = [
+    "BanEntry",
+    "CS2MatchPlayerStats",
+    "CSPlayerStats",
+    "Championship",
+    "FallbackPlayerStats",
+    "GeneralTeam",
+    "Hub",
+    "ItemPage",
+    "Match",
+    "Player",
+    "Tournament",
+]

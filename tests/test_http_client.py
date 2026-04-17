@@ -18,7 +18,7 @@ import pytest
 from tenacity import stop_after_attempt
 
 from faceit.constants import BASE_WIKI_URL
-from faceit.exceptions import APIError
+from faceit.exceptions import APIError, BadRequestError
 from faceit.http import AsyncClient, Endpoint, SupportedMethod, SyncClient
 from faceit.http.client import (
     BaseAPIClient,
@@ -26,7 +26,6 @@ from faceit.http.client import (
     _BaseSyncClient,
     is_ssl_error,
 )
-from faceit.utils import REDACTED_MARKER
 
 
 @pytest.fixture
@@ -49,6 +48,7 @@ def error_response():
     response.raise_for_status.side_effect = httpx.HTTPStatusError(
         "Bad Request", request=Mock(), response=response
     )
+    response.json.return_value = {"errors": []}
     response.url = "https://test.com/api"
     response.text = "Bad Request"
     response.is_server_error = False
@@ -137,7 +137,6 @@ class TestBaseAPIClient:
         client = SyncClient(valid_uuid)
         masked_key = client.api_key
         assert masked_key != valid_uuid
-        assert masked_key == REDACTED_MARKER
         client.close()  # Ensure proper cleanup
 
     def test_base_headers(self, valid_uuid):
@@ -190,14 +189,17 @@ class TestBaseAPIClient:
 
     def test_handle_response_http_error(self, error_response):
         """Test HTTP error response handling."""
-        with pytest.raises(APIError) as excinfo:
+        with pytest.raises(BadRequestError) as excinfo:
             BaseAPIClient._handle_response(error_response)
         assert excinfo.value.status_code == 400
-        assert excinfo.value.message == "Bad Request"
+        assert excinfo.value.message == BadRequestError._MESSAGE_FORMAT.format(
+            status_code=excinfo.value.status_code,
+            message=httpx.codes.get_reason_phrase(400),
+        )
 
     def test_handle_response_server_error(self, server_error_response):
         """Test server error response handling."""
-        with pytest.raises(httpx.HTTPStatusError):
+        with pytest.raises(APIError):
             BaseAPIClient._handle_response(server_error_response)
 
     def test_handle_response_invalid_json(self, invalid_json_response):
@@ -586,7 +588,7 @@ class TestSSLErrorHandling:
                 # Create a mock for update_rate_limit
                 mock_update_rate_limit = Mock()
                 AsyncClient.update_rate_limit = classmethod(
-                    lambda cls, new_limit: mock_update_rate_limit(new_limit)
+                    lambda _, new_limit: mock_update_rate_limit(new_limit)
                 )
 
                 # Save original values
@@ -643,11 +645,7 @@ class TestRetryLogic:
         # Should retry on protocol error
         assert retry_predicate(httpx.RemoteProtocolError("Protocol error"))
 
-        assert retry_predicate(
-            httpx.HTTPStatusError(
-                "Server error", request=Mock(), response=server_error_response
-            )
-        )
+        assert retry_predicate(APIError(server_error_response))
 
         assert not retry_predicate(
             httpx.HTTPStatusError(
