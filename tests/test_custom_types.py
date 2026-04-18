@@ -7,7 +7,7 @@ regarding edge cases and integration with `Pydantic`.
 """
 
 import pytest
-from pydantic import AnyHttpUrl, BaseModel, ValidationError
+from pydantic import AnyHttpUrl, BaseModel, ValidationError, TypeAdapter
 
 from faceit.models.custom_types import (
     FaceitID,
@@ -15,8 +15,14 @@ from faceit.models.custom_types import (
     FaceitTeamID,
     LangFormattedAnyHttpUrl,
 )
+from faceit.models.custom_types.common import _LANG_PLACEHOLDER
 
-langph = LangFormattedAnyHttpUrl._LANG_PLACEHOLDER
+langph = _LANG_PLACEHOLDER
+
+
+@pytest.fixture(scope="session")
+def lang_adapter() -> TypeAdapter[LangFormattedAnyHttpUrl]:
+    return TypeAdapter(LangFormattedAnyHttpUrl)
 
 
 @pytest.mark.parametrize(
@@ -30,14 +36,19 @@ langph = LangFormattedAnyHttpUrl._LANG_PLACEHOLDER
         (f"foo/{langph}/bar", "foo/bar"),
         (f"foo/{langph}", "foo"),
         (f"{langph}/foo", "foo"),
+        ("", ""),
     ],
 )
-def test_validate_success(input_value, expected):
+def test_validate_success(input_value, expected, lang_adapter):
     if expected == "" or expected.startswith("http"):
-        assert LangFormattedAnyHttpUrl._validate(input_value) == AnyHttpUrl(expected)
+        assert (
+            input_value == expected
+            if expected == ""
+            else lang_adapter.validate_python(input_value) == AnyHttpUrl(expected)
+        )
         return
     with pytest.raises(ValidationError):
-        LangFormattedAnyHttpUrl._validate(input_value)
+        lang_adapter.validate_python(input_value)
 
 
 class TestFaceitID:

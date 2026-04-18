@@ -1,7 +1,6 @@
 import typing
 
 import httpx
-from pydantic import ValidationError
 
 from .models.error import ErrorResponse
 from .utils import UnsetValue
@@ -11,6 +10,7 @@ class FaceitError(Exception):
     pass
 
 
+@typing.final
 class DecoupleMissingError(FaceitError):
     def __init__(self) -> None:
         super().__init__(
@@ -24,6 +24,7 @@ class DecoupleMissingError(FaceitError):
         )
 
 
+@typing.final
 class MissingAuthTokenError(FaceitError):
     def __init__(self, key: str, /) -> None:
         self.key = key
@@ -61,49 +62,46 @@ class APIError(FaceitError):
         message: typing.Optional[str] = None,
     ) -> None:
         self.response = response
-        self.validated_response = self.__class__._validate_response(response)
         self.status_code = (
-            self.__class__._EXPECTED_STATUS_CODE
-            if response is None
-            else response.status_code
+            self._EXPECTED_STATUS_CODE if response is None else response.status_code
         )
-        self.error_detail = self._compute_error_detail()
-        self.message = message or self.__class__._MESSAGE_FORMAT.format(
+        if message is not None:
+            # If a custom message is provided (e.g., "Invalid JSON"),
+            # there's no need to parse `response.json()`
+            self.validated_response = ErrorResponse()
+            self.error_detail = message
+        elif response is not None:
+            self.validated_response = ErrorResponse.parse_safe(response.json())
+            error_messages = [e.message for e in self.validated_response.errors]
+            self.error_detail = (
+                " ".join(error_messages) if error_messages else self._DEFAULT_MESSAGE
+            )
+        else:
+            self.validated_response = ErrorResponse()
+            self.error_detail = self._DEFAULT_MESSAGE
+        self.message = self.__class__._MESSAGE_FORMAT.format(
             status_code=self.status_code, message=self.error_detail
         )
         super().__init__(self.message)
-
-    def _compute_error_detail(self) -> str:
-        if self.response is None:
-            return self.__class__._DEFAULT_MESSAGE
-        messages = [e.message for e in self.validated_response.errors]
-        return " ".join(messages) if messages else self.__class__._DEFAULT_MESSAGE
 
     @classmethod
     def from_response(cls, response: httpx.Response, /) -> "APIError":
         return cls._STATUS_ERRORS.get(response.status_code, APIError)(response)
 
-    @staticmethod
-    def _validate_response(
-        response: typing.Optional[httpx.Response], /
-    ) -> ErrorResponse:
-        if response is None:
-            return ErrorResponse()
-        try:
-            # NOTE: Currently, we assume the FACEIT API strictly adheres to the `ErrorResponse` model.
-            # If we encounter cases where the API returns an unexpected format,
-            # we will promptly update this validation. Keeping it as is for now.
-            return ErrorResponse.model_validate(response.json())
-        except (ValidationError, AttributeError, ValueError):
-            return ErrorResponse()
-
 
 # fmt: off
+@typing.final
 class BadRequestError(APIError, code=httpx.codes.BAD_REQUEST): ...
+@typing.final
 class UnauthorizedError(APIError, code=httpx.codes.UNAUTHORIZED): ...
+@typing.final
 class ForbiddenError(APIError, code=httpx.codes.FORBIDDEN): ...
+@typing.final
 class NotFoundError(APIError, code=httpx.codes.NOT_FOUND): ...
+@typing.final
 class TooManyRequestsError(APIError, code=httpx.codes.TOO_MANY_REQUESTS): ...
+@typing.final
 class InternalServerError(APIError, code=httpx.codes.INTERNAL_SERVER_ERROR): ...
+@typing.final
 class ServiceUnavailableError(APIError, code=httpx.codes.SERVICE_UNAVAILABLE): ...
 # fmt: on

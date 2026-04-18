@@ -53,6 +53,7 @@ class Results(BaseModel):
     score: Score
 
     @field_validator("winner", mode="before")
+    @classmethod
     def convert_winner(cls, value: typing.Any) -> str:
         if value in _RESULT_MAP:
             return _RESULT_MAP[value]

@@ -1,19 +1,13 @@
 from __future__ import annotations
 
+import re
 import typing
 
-from pydantic import (
-    AfterValidator,
-    AnyHttpUrl,
-    GetCoreSchemaHandler,
-    RootModel,
-    model_validator,
-)
-from pydantic_core import core_schema
+from pydantic import AfterValidator, BeforeValidator, RootModel, model_validator
 from pydantic_extra_types.country import CountryAlpha2
 from typing_extensions import Annotated, TypeAlias
 
-from faceit.types import _R, _T
+from faceit.types import _R, _T, UrlOrEmpty
 
 # NOTE: Type alias for country codes that are always validated and converted to lowercase.
 # Used because Faceit API requires country codes to be in lowercase.
@@ -28,12 +22,25 @@ else:
         CountryAlpha2, AfterValidator(lambda x: x.lower())
     ]
 
+_INJECTED_KEY: typing.Final = "injected_key"
+_LANG_PLACEHOLDER: typing.Final = "{lang}"
+_LANG_PATTERN: typing.Final = re.compile(rf"/?{re.escape(_LANG_PLACEHOLDER)}/?")
+
+LangFormattedAnyHttpUrl: TypeAlias = Annotated[
+    UrlOrEmpty,
+    BeforeValidator(
+        lambda x: _LANG_PATTERN.sub("/", x).replace("//", "/").strip("/") if x else ""
+    ),
+]
+NullableList: TypeAlias = Annotated[
+    typing.List[_T],
+    BeforeValidator(lambda x: x or []),
+]
+
 
 @typing.final
 class ResponseContainer(RootModel[typing.Dict[str, _T]]):
     __slots__ = ()
-
-    _INJECTED_KEY: typing.ClassVar = "_container_key"
 
     def items(self) -> typing.ItemsView[str, _T]:
         return self.root.items()
@@ -69,52 +76,11 @@ class ResponseContainer(RootModel[typing.Dict[str, _T]]):
         return self.root[key]
 
     @model_validator(mode="before")
+    @classmethod
     def _inject_keys(cls, data: typing.Any) -> typing.Any:
-        return (
-            {
-                k: {**v, cls._INJECTED_KEY: k} if isinstance(v, dict) else v
-                for k, v in data.items()
-            }
-            if isinstance(data, dict)
-            else data
-        )
-
-
-@typing.final
-class LangFormattedAnyHttpUrl:
-    __slots__ = ()
-
-    _LANG_PLACEHOLDER: typing.ClassVar = "{lang}"
-
-    @classmethod
-    def _validate(cls, value: str) -> AnyHttpUrl:
-        return AnyHttpUrl(
-            "/".join(v for v in value.split("/") if v != cls._LANG_PLACEHOLDER)
-        )
-
-    @classmethod
-    def __get_pydantic_core_schema__(
-        cls, _: typing.Type[typing.Any], handler: GetCoreSchemaHandler
-    ) -> core_schema.CoreSchema:
-        return core_schema.union_schema([
-            core_schema.str_schema(max_length=0),
-            core_schema.no_info_after_validator_function(cls._validate, handler(str)),
-        ])
-
-
-@typing.final
-class NullableList(typing.List[_T]):
-    @classmethod
-    def __get_pydantic_core_schema__(
-        cls,
-        source_type: typing.Type[typing.Any],
-        handler: GetCoreSchemaHandler,
-    ) -> core_schema.CoreSchema:
-        return core_schema.no_info_before_validator_function(
-            lambda x: x or [],
-            core_schema.list_schema(
-                # NOTE: Current implementation relies on type
-                # argument extraction which may be fragile.
-                handler.generate_schema(typing.get_args(source_type)[0])
-            ),
-        )
+        if not isinstance(data, dict):
+            return data
+        return {
+            k: {**v, _INJECTED_KEY: k} if isinstance(v, dict) else v
+            for k, v in data.items()
+        }

@@ -200,6 +200,7 @@ class ItemPage(BaseModel, typing.Generic[_T], frozen=True):
         return str(self.items)
 
     @field_validator(RAW_RESPONSE_ITEMS_KEY, mode="before")
+    @classmethod
     def _normalize_items(
         cls, items: typing.Any
     ) -> typing.Tuple[typing.Dict[str, typing.Any], ...]:

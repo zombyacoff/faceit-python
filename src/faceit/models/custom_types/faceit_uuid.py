@@ -48,7 +48,9 @@ class _BaseFaceitUUIDValidator(ABC):
         cls, _: typing.Type[typing.Any], handler: GetCoreSchemaHandler
     ) -> core_schema.CoreSchema:
         return core_schema.union_schema([
-            core_schema.str_schema(max_length=0),
+            core_schema.str_schema(  # TODO: Where does the API return empty strings instead of IDs?
+                max_length=0
+            ),
             core_schema.no_info_after_validator_function(
                 cls.__pydantic_parse, handler(str)
             ),

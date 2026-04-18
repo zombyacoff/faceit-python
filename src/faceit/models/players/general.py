@@ -11,6 +11,7 @@ from faceit.models.custom_types import (
     LangFormattedAnyHttpUrl,
     ResponseContainer,
 )
+from faceit.models.custom_types.common import _INJECTED_KEY
 from faceit.types import AnyCSID, RawAPIItem, RegionIdentifier, UrlOrEmpty
 
 _PlayerStatsT = typing.TypeVar("_PlayerStatsT", bound=GameID)
@@ -38,11 +39,12 @@ class GameInfo(BaseModel):
     game_profile_id: str
 
     @model_validator(mode="before")
+    @classmethod
     def _prepare_skill_level(cls, data: typing.Any) -> typing.Any:
         if not isinstance(data, dict):
             return data
 
-        game_id = data.get(ResponseContainer._INJECTED_KEY)
+        game_id = data.get(_INJECTED_KEY)
         skill_lvl = data.get(cls._SKILL_LVL)
 
         if isinstance(skill_lvl, SkillLevel) or game_id is None or skill_lvl is None:
@@ -308,11 +310,12 @@ class PlayerStats(
     id: Annotated[FaceitID, Field(alias="player_id")]
     game_id: _PlayerStatsT
     lifetime: _LifetimeStatsT  # Относительно `game_id`; для иных игр модели делать не собираюсь
-    segments: ResponseContainer[
+    segments: ResponseContainer[  # TODO: Add description; usage guide
         Segment[_SegmentStatsT]
-    ]  # TODO: Add description; usage guide
+    ]
 
     @model_validator(mode="before")
+    @classmethod
     def _prepare_segments(cls, data: typing.Any) -> typing.Any:
         if not isinstance(data, dict):
             return data

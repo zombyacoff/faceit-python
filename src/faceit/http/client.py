@@ -88,11 +88,17 @@ class BaseAPIClient(ABC, typing.Generic[_HttpxClientT, _RetryerT]):
         stop=tenacity.stop_after_attempt(3),
         wait=tenacity.wait_random_exponential(1, 10),
         retry=tenacity.retry_if_exception(
-            lambda e: isinstance(
-                e,
-                (httpx.TimeoutException, httpx.ConnectError, httpx.RemoteProtocolError),
+            lambda e: (
+                isinstance(
+                    e,
+                    (
+                        httpx.TimeoutException,
+                        httpx.ConnectError,
+                        httpx.RemoteProtocolError,
+                    ),
+                )
+                or (isinstance(e, APIError) and is_retryable_status(e.status_code))
             )
-            or (isinstance(e, APIError) and is_retryable_status(e.status_code))
         ),
         reraise=True,
         before_sleep=lambda s: _logger.warning(
@@ -364,16 +370,11 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient, tenacity.AsyncRetrying])
         original_retry = self._retry_args.get("retry", lambda _: False)
 
         async def combined_retry(exception: BaseException) -> bool:
-            return (
-                self.__class__._register_ssl_error()
-                if is_ssl_error(exception)
-                else await invoke_callable(
-                    original_retry.predicate
-                    if isinstance(original_retry, SupportsExceptionPredicate)
-                    else original_retry,
-                    exception,
-                )
-            )
+            if is_ssl_error(exception):
+                return self.__class__._register_ssl_error()
+            if isinstance(original_retry, SupportsExceptionPredicate):
+                return await invoke_callable(original_retry.predicate, exception)  # type: ignore[unreachable]
+            return await invoke_callable(original_retry, exception)
 
         original_before_sleep = self._retry_args.get("before_sleep", None) or (
             lambda _: None
