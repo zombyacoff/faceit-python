@@ -232,7 +232,7 @@ def create_uuid_validator(
 def validate_positive_int(value: typing.Any, /, param_name: str = "value") -> int:
     """
     Utility for validating that a value is a positive integer.
-    Use this when Pydantic's ``PositiveInt`` type or validation is
+    Use this when :class:`pydantic.PositiveInt` type or validation is
     impractical or unavailable.
     """
     if not isinstance(value, int):

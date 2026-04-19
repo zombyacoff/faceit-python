@@ -20,6 +20,7 @@ _F2: typing.Final = "faction2"
 _RESULT_MAP: typing.Final = {_F1: "first", _F2: "second"}
 
 
+@typing.final
 class PlayerSummary(BaseModel):
     id: Annotated[FaceitID, Field(alias="player_id")]
     nickname: str
@@ -30,6 +31,7 @@ class PlayerSummary(BaseModel):
     faceit_url: LangFormattedAnyHttpUrl
 
 
+@typing.final
 class Team(BaseModel):
     id: Annotated[typing.Union[FaceitID, _NoOpponent], Field(alias="team_id")]
     name: Annotated[str, Field(alias="nickname")]
@@ -38,16 +40,19 @@ class Team(BaseModel):
     players: typing.List[PlayerSummary]
 
 
+@typing.final
 class Teams(BaseModel):
     first: Annotated[Team, Field(alias=_F1)]
     second: Annotated[Team, Field(alias=_F2)]
 
 
+@typing.final
 class Score(BaseModel):
     first: Annotated[int, Field(alias=_F1)]
     second: Annotated[int, Field(alias=_F2)]
 
 
+@typing.final
 class Results(BaseModel):
     winner: typing.Literal["first", "second"]
     score: Score
@@ -60,6 +65,7 @@ class Results(BaseModel):
         raise ValueError(f"Invalid winner value: {value}")
 
 
+@typing.final
 class Match(BaseModel):
     id: Annotated[str, Field(alias="match_id")]
     game_id: GameID
@@ -86,7 +92,7 @@ class AbstractMatchPlayerStats(BaseModel, ABC):
     Abstract class for player match statistics models in the inheritance hierarchy.
 
     Serves as a common type for various game-specific player statistics models.
-    Useful for type annotations when the return type depends on the ``game`` parameter
+    Useful for type annotations when the return type depends on the :attr:`game` parameter
     provided by the user, allowing different ``MatchPlayerStats`` subclasses to be
     returned based on the game context.
     """
@@ -94,6 +100,7 @@ class AbstractMatchPlayerStats(BaseModel, ABC):
     game: Annotated[GameID, Field(alias="Game")]
 
 
+@typing.final
 # Не работает для игроков, игравших последний раз в ~авг. 2024 года
 # TODO: Необходимо добавить значения по умолчанию для всех полей, которые могут отсутствовать
 class CS2MatchPlayerStats(AbstractMatchPlayerStats):

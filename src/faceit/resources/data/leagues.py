@@ -37,6 +37,7 @@ class BaseLeagues(
     __slots__ = ()
 
 
+@typing.final
 class SyncLeagues(BaseLeagues[SyncClient], typing.Generic[APIResponseFormatT]):
     __slots__ = ()
 
@@ -117,6 +118,7 @@ class SyncLeagues(BaseLeagues[SyncClient], typing.Generic[APIResponseFormatT]):
         # fmt: on
 
 
+@typing.final
 class AsyncLeagues(BaseLeagues[AsyncClient], typing.Generic[APIResponseFormatT]):
     __slots__ = ()
 

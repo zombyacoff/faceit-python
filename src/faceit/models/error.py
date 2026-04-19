@@ -4,6 +4,7 @@ from pydantic import BaseModel, ValidationError
 from typing_extensions import Self
 
 
+@typing.final
 class ErrorDetail(BaseModel):
     message: str
     code: str
@@ -11,6 +12,7 @@ class ErrorDetail(BaseModel):
     parameters: typing.List[typing.Any]
 
 
+@typing.final
 class ErrorResponse(BaseModel):
     errors: typing.List[ErrorDetail] = []
 

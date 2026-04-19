@@ -11,6 +11,7 @@ from faceit.models.custom_types import (
 from faceit.types import RegionIdentifier, UrlOrEmpty, UUIDOrEmpty
 
 
+@typing.final
 class JoinChecks(BaseModel):
     min_skill_level: int
     max_skill_level: int
@@ -22,16 +23,19 @@ class JoinChecks(BaseModel):
     allowed_team_types: typing.List[str]
 
 
+@typing.final
 class SubstitutionConfiguration(BaseModel):
     max_substitutes: int
     max_substitutions: int
 
 
+@typing.final
 class Prize(BaseModel):
     rank: int
     faceit_points: int
 
 
+@typing.final
 class Stream(BaseModel):
     active: bool
     platform: str
@@ -39,6 +43,7 @@ class Stream(BaseModel):
     title: str
 
 
+@typing.final
 class Championship(BaseModel):
     id: FaceitID
     # `championship_id: FaceitID` unnecessary

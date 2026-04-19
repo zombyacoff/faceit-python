@@ -36,6 +36,7 @@ class BaseTeams(
     __slots__ = ()
 
 
+@typing.final
 class SyncTeams(BaseTeams[SyncClient], typing.Generic[APIResponseFormatT]):
     __slots__ = ()
 
@@ -129,6 +130,7 @@ class SyncTeams(BaseTeams[SyncClient], typing.Generic[APIResponseFormatT]):
         )
 
 
+@typing.final
 class AsyncTeams(BaseTeams[AsyncClient], typing.Generic[APIResponseFormatT]):
     __slots__ = ()
 

@@ -5,6 +5,7 @@ from .general import (
     GameInfo,
     GeneralTeam,
     Hub,
+    MatchResult,
     Player,
     Tournament,
 )
@@ -27,6 +28,7 @@ __all__ = [
     "GeneralTeam",
     "Hub",
     "Match",
+    "MatchResult",
     "Player",
     "PlayerSummary",
     "Results",

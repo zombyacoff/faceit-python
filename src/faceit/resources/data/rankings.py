@@ -34,6 +34,7 @@ class BaseRankings(
     __slots__ = ()
 
 
+@typing.final
 class SyncRankings(BaseRankings[SyncClient], typing.Generic[APIResponseFormatT]):
     __slots__ = ()
 
@@ -156,6 +157,7 @@ class SyncRankings(BaseRankings[SyncClient], typing.Generic[APIResponseFormatT])
         # fmt: on
 
 
+@typing.final
 class AsyncRankings(BaseRankings[AsyncClient], typing.Generic[APIResponseFormatT]):
     __slots__ = ()
 

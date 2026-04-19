@@ -35,6 +35,7 @@ class BaseMatches(
     __slots__ = ()
 
 
+@typing.final
 class SyncMatches(BaseMatches[SyncClient], typing.Generic[APIResponseFormatT]):
     __slots__ = ()
 
@@ -73,6 +74,7 @@ class SyncMatches(BaseMatches[SyncClient], typing.Generic[APIResponseFormatT]):
         )
 
 
+@typing.final
 class AsyncMatches(BaseMatches[AsyncClient], typing.Generic[APIResponseFormatT]):
     __slots__ = ()
 

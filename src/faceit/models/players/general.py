@@ -26,6 +26,7 @@ class MatchResult(IntEnum):
     WIN = 1
 
 
+@typing.final
 class GameInfo(BaseModel):
     _SKILL_LVL: typing.ClassVar = "skill_level"
 
@@ -69,10 +70,12 @@ class GameInfo(BaseModel):
         return data
 
 
+@typing.final
 class PlayerSettings(BaseModel):
     language: str
 
 
+@typing.final
 class Player(BaseModel):
     id: Annotated[FaceitID, Field(alias="player_id")]
     nickname: str
@@ -95,6 +98,7 @@ class Player(BaseModel):
     activated_at: datetime
 
 
+@typing.final
 class BanEntry(BaseModel):
     nickname: str
     type: str
@@ -103,6 +107,7 @@ class BanEntry(BaseModel):
     user_id: FaceitID
 
 
+@typing.final
 class Hub(BaseModel):
     id: Annotated[FaceitID, Field(alias="hub_id")]
     name: str
@@ -112,6 +117,7 @@ class Hub(BaseModel):
     faceit_url: LangFormattedAnyHttpUrl
 
 
+@typing.final
 class GeneralTeam(BaseModel):
     id: Annotated[FaceitID, Field(alias="team_id")]
     nickname: str
@@ -126,6 +132,7 @@ class GeneralTeam(BaseModel):
     faceit_url: LangFormattedAnyHttpUrl
 
 
+@typing.final
 class Tournament(BaseModel):
     id: Annotated[FaceitID, Field(alias="tournament_id")]
     name: str
@@ -154,6 +161,7 @@ class Tournament(BaseModel):
     faceit_url: LangFormattedAnyHttpUrl
 
 
+@typing.final
 class CSLifetimeStats(BaseModel):  # `GameID.CS2` & `GameID.CSGO`
     adr: Annotated[float, Field(0, alias="ADR")]
     average_headshots_percentage: Annotated[int, Field(alias="Average Headshots %")]
@@ -214,6 +222,7 @@ class CSLifetimeStats(BaseModel):  # `GameID.CS2` & `GameID.CSGO`
     wins: Annotated[int, Field(alias="Wins")]
 
 
+@typing.final
 class CSMapStats(BaseModel):  # `GameID.CS2` & `GameID.CSGO`
     # TODO: Преобразование в проценты (*100) таких полей, как "v2_win_rate", "v1_win_rate", ... ?
     adr: Annotated[float, Field(0.0, alias="ADR")]
@@ -289,6 +298,7 @@ class CSMapStats(BaseModel):  # `GameID.CS2` & `GameID.CSGO`
     wins: Annotated[int, Field(alias="Wins")]
 
 
+@typing.final
 class Segment(BaseModel, typing.Generic[_SegmentStatsT]):
     stats: _SegmentStatsT
     type: str
@@ -298,6 +308,7 @@ class Segment(BaseModel, typing.Generic[_SegmentStatsT]):
     img_regular: UrlOrEmpty
 
 
+@typing.final
 class PlayerStats(
     # TODO: Подумать над более элегантной типизацией в зависимости от `GameID`
     BaseModel,
@@ -310,9 +321,27 @@ class PlayerStats(
     id: Annotated[FaceitID, Field(alias="player_id")]
     game_id: _PlayerStatsT
     lifetime: _LifetimeStatsT  # Относительно `game_id`; для иных игр модели делать не собираюсь
-    segments: ResponseContainer[  # TODO: Add description; usage guide
-        Segment[_SegmentStatsT]
-    ]
+    segments: ResponseContainer[Segment[_SegmentStatsT]]
+    """
+    A container holding statistics broken down by game segments.
+
+    For games like CS2 and CSGO, segments represent individual maps (e.g., Mirage, Inferno).
+    Segment keys are normalized during validation: they are converted to lowercase
+    with spaces replaced by underscores to ensure predictable dictionary access.
+
+    .. warning::
+        The exact naming convention for segments depends strictly on the :attr:`game_id`
+        and the data returned by the FACEIT API. For instance, a map might be prefixed
+        in CS:GO (``de_mirage``), while CS2 may use its base name (``mirage``).
+        It is highly recommended to inspect available keys (e.g., via
+        ``player_stats.segments.keys()``) before hardcoding them in your logic.
+
+    Usage Example:
+    >>> # Example assumes the key is 'mirage' (e.g., for CS2)
+    >>> mirage_stats = player_stats.segments.get('mirage')
+    >>> if mirage_stats:
+    >>>     print(f"Winrate on Mirage: {mirage_stats.stats.win_rate}%")
+    """
 
     @model_validator(mode="before")
     @classmethod

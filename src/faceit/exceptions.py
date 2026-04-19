@@ -63,7 +63,9 @@ class APIError(FaceitError):
     ) -> None:
         self.response = response
         self.status_code = (
-            self._EXPECTED_STATUS_CODE if response is None else response.status_code
+            self.__class__._EXPECTED_STATUS_CODE
+            if response is None
+            else response.status_code
         )
         if message is not None:
             # If a custom message is provided (e.g., "Invalid JSON"),
@@ -74,11 +76,13 @@ class APIError(FaceitError):
             self.validated_response = ErrorResponse.parse_safe(response.json())
             error_messages = [e.message for e in self.validated_response.errors]
             self.error_detail = (
-                " ".join(error_messages) if error_messages else self._DEFAULT_MESSAGE
+                " ".join(error_messages)
+                if error_messages
+                else self.__class__._DEFAULT_MESSAGE
             )
         else:
             self.validated_response = ErrorResponse()
-            self.error_detail = self._DEFAULT_MESSAGE
+            self.error_detail = self.__class__._DEFAULT_MESSAGE
         self.message = self.__class__._MESSAGE_FORMAT.format(
             status_code=self.status_code, message=self.error_detail
         )

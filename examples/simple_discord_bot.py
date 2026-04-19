@@ -7,7 +7,7 @@ import pydantic
 from disnake.ext import commands
 
 import faceit
-from faceit.models.players.general import MatchResult
+from faceit.models.players import MatchResult
 
 
 @dataclass(repr=False, eq=False)

@@ -32,6 +32,7 @@ class BaseMatchmakings(
     __slots__ = ()
 
 
+@typing.final
 class SyncMatchmakings(
     BaseMatchmakings[SyncClient], typing.Generic[APIResponseFormatT]
 ):
@@ -61,6 +62,7 @@ class SyncMatchmakings(
     __call__ = get
 
 
+@typing.final
 class AsyncMatchmakings(
     BaseMatchmakings[AsyncClient], typing.Generic[APIResponseFormatT]
 ):
