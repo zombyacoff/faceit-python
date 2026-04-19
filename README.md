@@ -11,7 +11,7 @@
 
 **The easiest and most type-safe way to interact with the FACEIT API.**
 
-Access FACEIT data — player stats, matches, and tournaments — directly from Python.
+<!-- Access FACEIT data — player stats, matches, and tournaments — directly from Python. -->
 
 </div>
 
@@ -75,7 +75,7 @@ positive_count = len(positive_kd_matches)
 
 kd_rate = (positive_count / total_count * 100) if total_count > 0 else 0
 
-print(f"Matches with K/D >= 1: {positive_count}")
+print(f"Matches with positive K/D: {positive_count}")
 print(f"{player.nickname}'s positive K/D rate: {kd_rate:.2f}%")
 ```
 
@@ -85,7 +85,7 @@ See additional usage examples in the [examples/](examples/) directory.
 
 You can provide your API key directly in the constructor or let the library automatically load it from your environment.
 
-- **Automatic:** Set the `FACEIT_API_KEY` environment variable. _(Requires `faceit[env]` or manual [python-decouple](https://github.com/HBNetwork/python-decouple) installation)_.
+- **Automatic:** Set the `FACEIT_API_KEY` environment variable. _(Requires `faceit[env]` or manual [`python-decouple`](https://github.com/HBNetwork/python-decouple) installation)_.
 - **Manual:** Pass the key string directly: `SyncDataResource("YOUR_API_KEY")`.
 - **Custom Variable:** To use a different environment variable name, pass an instance of `EnvKey`: `SyncDataResource(EnvKey("SECRET"))`
 
