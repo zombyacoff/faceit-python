@@ -321,27 +321,9 @@ class PlayerStats(
     id: Annotated[FaceitID, Field(alias="player_id")]
     game_id: _PlayerStatsT
     lifetime: _LifetimeStatsT  # Относительно `game_id`; для иных игр модели делать не собираюсь
-    segments: ResponseContainer[Segment[_SegmentStatsT]]
-    """
-    A container holding statistics broken down by game segments.
-
-    For games like CS2 and CSGO, segments represent individual maps (e.g., Mirage, Inferno).
-    Segment keys are normalized during validation: they are converted to lowercase
-    with spaces replaced by underscores to ensure predictable dictionary access.
-
-    .. warning::
-        The exact naming convention for segments depends strictly on the :attr:`game_id`
-        and the data returned by the FACEIT API. For instance, a map might be prefixed
-        in CS:GO (``de_mirage``), while CS2 may use its base name (``mirage``).
-        It is highly recommended to inspect available keys (e.g., via
-        ``player_stats.segments.keys()``) before hardcoding them in your logic.
-
-    Usage Example:
-    >>> # Example assumes the key is 'mirage' (e.g., for CS2)
-    >>> mirage_stats = player_stats.segments.get('mirage')
-    >>> if mirage_stats:
-    >>>     print(f"Winrate on Mirage: {mirage_stats.stats.win_rate}%")
-    """
+    segments: ResponseContainer[  # TODO: Add description; usage guide
+        Segment[_SegmentStatsT]
+    ]
 
     @model_validator(mode="before")
     @classmethod

@@ -4,23 +4,9 @@ import re
 import typing
 
 from pydantic import AfterValidator, BeforeValidator, RootModel, model_validator
-from pydantic_extra_types.country import CountryAlpha2
 from typing_extensions import Annotated, TypeAlias
 
 from faceit.types import _R, _T, UrlOrEmpty
-
-# NOTE: Type alias for country codes that are always validated and converted to lowercase.
-# Used because Faceit API requires country codes to be in lowercase.
-#
-# TODO: Integrate this type alias into all data models in the future
-if typing.TYPE_CHECKING:
-    CountryCode: TypeAlias = typing.Union[CountryAlpha2, str]
-else:
-    CountryCode: TypeAlias = Annotated[
-        # I assume that there must be a better implementation than this.
-        # It is necessary to study this issue in more detail.
-        CountryAlpha2, AfterValidator(lambda x: x.lower())
-    ]
 
 _INJECTED_KEY: typing.Final = "injected_key"
 _LANG_PLACEHOLDER: typing.Final = "{lang}"
@@ -35,6 +21,15 @@ LangFormattedAnyHttpUrl: TypeAlias = Annotated[
 NullableList: TypeAlias = Annotated[
     typing.List[_T],
     BeforeValidator(lambda x: x or []),
+]
+
+# NOTE: Type alias for country codes that are always validated and converted to lowercase.
+# Used because Faceit API requires country codes to be in lowercase.
+#
+# TODO: Integrate this type alias into all data models in the future
+CountryCode: TypeAlias = Annotated[
+    str,  # TODO: Should be ISO 3166-1 alpha-2 enum
+    AfterValidator(lambda x: x.lower()),
 ]
 
 

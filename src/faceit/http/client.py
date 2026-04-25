@@ -39,7 +39,7 @@ from .helpers import (
 
 try:
     import decouple  # pyright: ignore[reportMissingImports]
-except ImportError:
+except ModuleNotFoundError:
     ENV_EXTRA_INSTALLED: typing.Final = False
 else:
     ENV_EXTRA_INSTALLED: typing.Final = True  # type: ignore[misc]

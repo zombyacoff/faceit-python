@@ -10,6 +10,7 @@ from faceit.resources.aggregator import (
 from faceit.types import ClientT, Model, Raw, ValidUUID
 
 from .championships import AsyncChampionships, BaseChampionships, SyncChampionships
+from .games import AsyncGames, BaseGames, SyncGames
 from .leagues import AsyncLeagues, BaseLeagues, SyncLeagues
 from .matches import AsyncMatches, BaseMatches, SyncMatches
 from .matchmakings import AsyncMatchmakings, BaseMatchmakings, SyncMatchmakings
@@ -20,6 +21,7 @@ from .teams import AsyncTeams, BaseTeams, SyncTeams
 __all__ = [
     "AsyncChampionships",
     "AsyncDataResource",
+    "AsyncGames",
     "AsyncLeagues",
     "AsyncMatches",
     "AsyncMatchmakings",
@@ -27,6 +29,7 @@ __all__ = [
     "AsyncRankings",
     "AsyncTeams",
     "BaseChampionships",
+    "BaseGames",
     "BaseLeagues",
     "BaseMatches",
     "BaseMatchmakings",
@@ -35,6 +38,7 @@ __all__ = [
     "BaseTeams",
     "SyncChampionships",
     "SyncDataResource",
+    "SyncGames",
     "SyncLeagues",
     "SyncMatches",
     "SyncMatchmakings",
@@ -79,6 +83,9 @@ class SyncDataResource(SyncResources, _DataResourceMixin):
     championships: SyncChampionships[Model]
     raw_championships: SyncChampionships[Raw]
 
+    games: SyncGames[Model]
+    raw_games: SyncGames[Raw]
+
     leagues: SyncLeagues[Model]
     raw_leagues: SyncLeagues[Raw]
 
@@ -103,6 +110,9 @@ class SyncDataResource(SyncResources, _DataResourceMixin):
 class AsyncDataResource(AsyncResources, _DataResourceMixin):
     championships: AsyncChampionships[Model]
     raw_championships: AsyncChampionships[Raw]
+
+    games: AsyncGames[Model]
+    raw_games: AsyncGames[Raw]
 
     leagues: AsyncLeagues[Model]
     raw_leagues: AsyncLeagues[Raw]

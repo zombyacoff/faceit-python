@@ -50,6 +50,7 @@ class MappedValidatorConfig(typing.Generic[_T, ModelT]):
 
 class FaceitResourcePath(StrEnum):
     CHAMPIONSHIPS = "championships"
+    GAMES = "games"
     LEAGUES = "leagues"
     MATCHES = "matches"
     MATCHMAKINGS = "matchmakings"

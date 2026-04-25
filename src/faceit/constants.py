@@ -172,6 +172,18 @@ class HighTierLevel(StrEnum):
     """
 
 
+# TODO: Find a more suitable place
+class CS2Season8MapPool(StrEnum):
+    DUST2 = "dust2"
+    MIRAGE = "mirage"
+    NUKE = "nuke"
+    ANCIENT = "ancient"
+    INFERNO = "inferno"
+    OVERPASS = "overpass"
+    ANUBIS = "anubis"
+    CACHE = "cache"
+
+
 class Region(StrEnum):
     # NOTE: Currently includes legacy and game-specific regions (e.g., US for CS:GO).
     # This structure may be refactored in the future for improved consistency.
