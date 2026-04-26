@@ -36,12 +36,7 @@ class APIError(FaceitError):
     _DEFAULT_MESSAGE: typing.ClassVar = "API request failed"
     _EXPECTED_STATUS_CODE: typing.ClassVar[int] = UnsetValue.UNSET
     _MESSAGE_FORMAT: typing.ClassVar = "Status {status_code}: {message}"
-    _STATUS_ERRORS: typing.ClassVar[
-        typing.Dict[
-            int,
-            typing.Type["APIError"],
-        ]
-    ] = {}
+    _STATUS_ERRORS: typing.ClassVar[typing.Dict[int, typing.Type["APIError"]]] = {}
 
     def __init_subclass__(
         cls,

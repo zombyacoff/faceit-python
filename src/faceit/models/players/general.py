@@ -310,7 +310,6 @@ class Segment(BaseModel, typing.Generic[_SegmentStatsT]):
 
 @typing.final
 class PlayerStats(
-    # TODO: Подумать над более элегантной типизацией в зависимости от `GameID`
     BaseModel,
     typing.Generic[
         _PlayerStatsT,
@@ -320,7 +319,7 @@ class PlayerStats(
 ):
     id: Annotated[FaceitID, Field(alias="player_id")]
     game_id: _PlayerStatsT
-    lifetime: _LifetimeStatsT  # Относительно `game_id`; для иных игр модели делать не собираюсь
+    lifetime: _LifetimeStatsT
     segments: ResponseContainer[  # TODO: Add description; usage guide
         Segment[_SegmentStatsT]
     ]
@@ -333,7 +332,6 @@ class PlayerStats(
 
         raw_segments = data.get("segments")
         if isinstance(raw_segments, list):
-            # TODO: Maybe create enum for segments - CS2Maps8SeasonMappool
             data["segments"] = {
                 # NOTE: Anubis --> anubis, Ancient --> ancient, ...
                 # (lowercase and replace spaces with underscores)

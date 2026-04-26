@@ -501,6 +501,7 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient, tenacity.AsyncRetrying])
             if value == MaxConcurrentRequests.ABSOLUTE
             else value
         )
+        assert isinstance(max_concurrent_requests, int)
         if max_concurrent_requests > cls._initial_max_requests:
             cls._initial_max_requests = max_concurrent_requests
             _logger.debug("Updated initial max requests to %d", max_concurrent_requests)

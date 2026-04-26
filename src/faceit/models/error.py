@@ -17,7 +17,7 @@ class ErrorResponse(BaseModel):
     errors: typing.List[ErrorDetail] = []
 
     @classmethod
-    def parse_safe(cls, data: typing.Any, /) -> Self:
+    def parse_safe(cls, data: typing.Dict[str, typing.Any], /) -> Self:
         try:
             return cls.model_validate(data)
         except ValidationError:

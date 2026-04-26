@@ -70,8 +70,8 @@ class StatsCommand(commands.Cog):
             )
 
             recent = " ".join(
-                "✅" if m == MatchResult.WIN else "❌"
-                for m in player_stats.lifetime.recent_results
+                "✅" if result is MatchResult.WIN else "❌"
+                for result in player_stats.lifetime.recent_results
             )
             if recent:
                 embed.add_field("Recent Results", recent, inline=False)

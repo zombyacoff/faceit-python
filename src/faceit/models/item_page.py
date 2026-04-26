@@ -116,7 +116,7 @@ class ItemPage(BaseModel, typing.Generic[_T], frozen=True):
         # convenience sampling rather than security-sensitive operations
         return random_choice(self) if self else default  # noqa: S311
 
-    # aliases for backwards compatibility
+    # Aliases for backwards compatibility (TODO: remove in v0.2.1)
     first = get_first
     last = get_last
     random = get_random

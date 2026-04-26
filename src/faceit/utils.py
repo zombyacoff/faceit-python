@@ -280,10 +280,11 @@ def warn_stacklevel() -> int:
             filename = frame.f_code.co_filename
             if filename and not filename.startswith("<"):
                 norm_path = os.path.normcase(os.path.realpath(filename))
-
-                if norm_path not in ignored_files and not norm_path.startswith(
-                    ignored_prefixes
-                ):
+                is_user_code = (
+                    norm_path not in ignored_files
+                    and not norm_path.startswith(ignored_prefixes)
+                )
+                if is_user_code:
                     return level
 
             frame = frame.f_back

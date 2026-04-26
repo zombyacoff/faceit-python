@@ -17,7 +17,10 @@ _NoOpponent: TypeAlias = typing.Literal["bye"]
 
 _F1: typing.Final = "faction1"
 _F2: typing.Final = "faction2"
-_RESULT_MAP: typing.Final = {_F1: "first", _F2: "second"}
+_RESULT_MAP: typing.Final = {
+    _F1: "first",
+    _F2: "second",
+}
 
 
 @typing.final
@@ -101,8 +104,9 @@ class AbstractMatchPlayerStats(BaseModel, ABC):
 
 
 @typing.final
-# Не работает для игроков, игравших последний раз в ~авг. 2024 года
-# TODO: Необходимо добавить значения по умолчанию для всех полей, которые могут отсутствовать
+# Doesn't work for players who last played around Aug 2024
+# (when extended stats were added to the API)
+# TODO: Need to add default values for all fields that may be missing
 class CS2MatchPlayerStats(AbstractMatchPlayerStats):
     game_mode: Annotated[str, Field(alias="Game Mode")]
     region: Annotated[RegionIdentifier, Field(alias="Region")]

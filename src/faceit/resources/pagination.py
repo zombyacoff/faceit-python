@@ -43,16 +43,15 @@ _PageList: TypeAlias = typing.List[_PageType]
 _PageT = typing.TypeVar("_PageT", bound=_PageType)
 
 
-@typing.final
-class TimestampPaginationConfig(typing.TypedDict):
-    key: str
-    attr: str
-
-
-class CollectReturnFormat(StrEnum):
-    FIRST = "first"
-    RAW = "raw"
-    MODEL = "model"
+if typing.TYPE_CHECKING:
+    _PageClass: TypeAlias = typing.Union[
+        typing.Type[ItemPage[typing.Any]], typing.Type[RawAPIPageResponse]
+    ]
+    _PageFactory: TypeAlias = typing.Callable[[_PageList], _PageClass]
+    _PageFactoryMap: TypeAlias = typing.Mapping["CollectReturnFormat", _PageFactory]
+    _OptionalTimestampPaginationConfig: TypeAlias = typing.Union[
+        "TimestampPaginationConfig", typing.Literal[False]
+    ]
 
 
 class MaxItems(StrEnum):
@@ -65,15 +64,17 @@ class MaxItems(StrEnum):
 # is not always practical here.
 MaxItemsType: TypeAlias = typing.Union[MaxItems, PositiveInt]
 
-if typing.TYPE_CHECKING:
-    _PageClass: TypeAlias = typing.Union[
-        typing.Type[ItemPage[typing.Any]], typing.Type[RawAPIPageResponse]
-    ]
-    _PageFactory: TypeAlias = typing.Callable[[_PageList], _PageClass]
-    _PageFactoryMap: TypeAlias = typing.Mapping[CollectReturnFormat, _PageFactory]
-    _OptionalTimestampPaginationConfig: TypeAlias = typing.Union[
-        TimestampPaginationConfig, typing.Literal[False]
-    ]
+
+class CollectReturnFormat(StrEnum):
+    FIRST = "first"
+    RAW = "raw"
+    MODEL = "model"
+
+
+@typing.final
+class TimestampPaginationConfig(typing.TypedDict):
+    key: str
+    attr: str
 
 
 @typing.final
@@ -347,13 +348,13 @@ class BasePageIterator(ABC, typing.Generic[PaginationMethodT, _PageT]):
             set_max_pages(warn_if_exceeds_safe(max_items))
             return
 
-        validate_positive_int(max_items, param_name="max_items")
-        last_page_remainder = max_items % self._pagination_limits.limit
+        validated_max_items = validate_positive_int(max_items, param_name="max_items")
+        last_page_remainder = validated_max_items % self._pagination_limits.limit
         self._max_items_info = _MaxItemsInfo(
-            max_items, last_page_remainder, last_page_remainder != 0
+            validated_max_items, last_page_remainder, last_page_remainder != 0
         )
         self._max_pages = warn_if_exceeds_safe(
-            math.ceil(max_items / self._pagination_limits.limit)
+            math.ceil(validated_max_items / self._pagination_limits.limit)
         )
 
     def _handle_iteration_state(self, page: typing.Optional[_PageT], /) -> _PageT:
@@ -455,7 +456,7 @@ class BasePageIterator(ABC, typing.Generic[PaginationMethodT, _PageT]):
         if isinstance(page, dict):
             items = page.get(RAW_RESPONSE_ITEMS_KEY) or []
             return deep_get(items[-1], key) if items else None
-        return getattr(page.get_last(), attr, None)  # type: ignore[union-attr]
+        return getattr(page.get_last(), attr, None)
 
     @staticmethod
     def _filter_collection(
