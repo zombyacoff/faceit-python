@@ -22,7 +22,7 @@ class BaseFaceit(typing.Generic[ClientT, DataResourceT]):
             DeprecationWarning,
             stacklevel=2,
         )
-        return cls._data_cls(*args, **kwargs)  # type: ignore[return-value]
+        return typing.cast("DataResourceT", cls._data_cls(*args, **kwargs))
 
 
 @typing.final

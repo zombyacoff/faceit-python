@@ -37,7 +37,7 @@ _UNINITIALIZED_MARKER: typing.Final = "uninitialized"
     "Please use `None` instead.",
 )
 class UnsetValue:
-    UNSET = None
+    UNSET: typing.ClassVar[None] = None
 
 
 # NOTE: Inspired by irgeek/StrEnum:
