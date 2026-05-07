@@ -5,22 +5,22 @@ target-version = "py38"
 [lint]
 select = ["ALL"]
 ignore = [
-    "ANN401",  # Dynamically typed expressions (`Any`) are disallowed.
-    "B024",    # Abstract base class without abstract methods.
-    "COM812",  # Trailing comma formatting conflict.
-    "CPY001",  # Missing copyright notice.
-    "D",       # pydocstyle docstring violations.
-    "DOC",     # pydoclint docstring validation violations.
-    "E501",    # Line too long.
-    "EM102",   # f-string used directly in exception.
-    "FIX002",  # TODO comment detected.
-    "PLR0904", # Too many public methods.
-    "PLR0913", # Too many function arguments.
-    "RUF003",  # Ambiguous Unicode character in comment.
-    "SLF001",  # Private member accessed outside class.
-    "S101",    # Use of assert detected.
-    "TD",      # flake8-todos violations.
-    "TRY003",  # Long exception message defined outside exception class.
+    "ANN401",  # Dynamically typed expressions (`Any`) are disallowed
+    "B024",    # Abstract base class without abstract methods
+    "COM812",  # Trailing comma formatting conflict
+    "CPY001",  # Missing copyright notice
+    "D",       # pydocstyle docstring violations
+    "DOC",     # pydoclint docstring validation violations
+    "E501",    # Line too long
+    "EM102",   # f-string used directly in exception
+    "FIX002",  # TODO comment detected
+    "PLR0904", # Too many public methods
+    "PLR0913", # Too many function arguments
+    "RUF003",  # Ambiguous Unicode character in comment
+    "SLF001",  # Private member accessed outside class
+    "S101",    # Use of assert detected
+    "TD",      # flake8-todos violations
+    "TRY003",  # Long exception message defined outside exception class
 ]
 
 [lint.flake8-bugbear]
@@ -51,30 +51,30 @@ ignore-names = ["env", "pages"]
 
 [lint.per-file-ignores]
 "__init__.py" = [
-    "RUF067", # Code is present in `__init__.py`.
+    "RUF067", # Code is present in `__init__.py`
 ]
 "examples/*" = [
-    "ICN003",  # Import a member from the module instead of importing the member directly.
-    "INP001",  # Missing `__init__.py` file in a package directory.
-    "PLR0914", # Too many local variables.
-    "PLR2004", # Magic value used in a comparison.
-    "T201",    # `print()` statement detected.
+    "ICN003",  # Import a member from the module instead of importing the member directly
+    "INP001",  # Missing `__init__.py` file in a package directory
+    "PLR0914", # Too many local variables
+    "PLR2004", # Magic value used in a comparison
+    "T201",    # `print()` statement detected
 ]
 "exceptions.py" = [
-    "E302", # Expected 2 blank lines before top-level definitions.
-    "E305", # Expected 2 blank lines after a class or function definition.
+    "E302", # Expected 2 blank lines before top-level definitions
+    "E305", # Expected 2 blank lines after a class or function definition
 ]
 "docs/*" = ["ALL"]
 "scripts/*" = [
-    "T201",   # `print()` statement detected.
-    "INP001", # Missing `__init__.py` file in a package directory.
+    "T201",   # `print()` statement detected
+    "INP001", # Missing `__init__.py` file in a package directory
 ]
 "tests/*" = ["ALL"]
 "types.py" = [
-    "E302",   # Expected 2 blank lines before top-level definitions.
-    "F401",   # Imported but unused.
-    "ICN003", # Import a member from the module instead of importing the member directly.
-    "PYI018", # Unused private `TypeVar`, `ParamSpec`, or `TypeVarTuple` declaration.
+    "E302",   # Expected 2 blank lines before top-level definitions
+    "F401",   # Imported but unused
+    "ICN003", # Import a member from the module instead of importing the member directly
+    "PYI018", # Unused private `TypeVar`, `ParamSpec`, or `TypeVarTuple` declaration
 ]
 
 [lint.pyupgrade]

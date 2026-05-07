@@ -1,5 +1,4 @@
 import typing
-import warnings
 
 from typing_extensions import deprecated
 
@@ -16,6 +15,8 @@ class BaseFaceit(typing.Generic[ClientT, DataResourceT]):
 
     @classmethod
     def data(cls, *args: typing.Any, **kwargs: typing.Any) -> DataResourceT:
+        import warnings  # noqa: PLC0415
+
         warnings.warn(
             f"`{cls.__name__}.data()` is deprecated and will be removed in a future release. "
             f"Please instantiate `{cls._data_cls.__name__}` directly.",

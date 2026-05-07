@@ -1,5 +1,3 @@
-import warnings
-
 from typing_extensions import deprecated
 
 from .client import AsyncClient, MaxConcurrentRequests, SyncClient
@@ -23,6 +21,8 @@ FromEnv = SyncClient.env
 )
 class EnvKey(SyncClient.env):  # type: ignore[misc] # pyright: ignore[reportGeneralTypeIssues]
     def __init__(self, *args, **kwargs):  # type: ignore[no-untyped-def] # noqa: ANN002, ANN003, ANN204
+        import warnings  # noqa: PLC0415
+
         warnings.warn(
             "`EnvKey` is deprecated and will be removed in a future version. Use `FromEnv` instead.",
             DeprecationWarning,

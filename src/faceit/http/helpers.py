@@ -6,7 +6,7 @@ from ssl import SSLError
 import httpx
 from typing_extensions import Self, TypeAlias
 
-from faceit.utils import StrEnum, UnsupportedOperationTypeError, representation
+from faceit.utils import StrEnum, representation
 
 if typing.TYPE_CHECKING:
     import tenacity
@@ -70,7 +70,7 @@ class Endpoint:
     def add(self, *path_parts: str) -> Self:
         return self.__class__(*self.path_parts, *path_parts, base=self.base)
 
-    def with_base(self, base: str) -> Self:
+    def with_base(self, base: str, /) -> Self:
         return self.__class__(*self.path_parts, base=base)
 
     def __str__(self) -> str:
@@ -79,29 +79,15 @@ class Endpoint:
         )
 
     def __truediv__(self, other: EndpointParam) -> Self:
-        if isinstance(other, self.__class__):
-            return self.__class__(*self.path_parts, *other.path_parts, base=self.base)
-        try:
+        if not isinstance(other, self.__class__):
             return self.add(str(other))
-        except (TypeError, ValueError):
-            raise UnsupportedOperationTypeError(
-                "/",  # noqa: EM101
-                self.__class__.__name__,
-                type(other).__name__,
-            ) from None
+        return self.__class__(*self.path_parts, *other.path_parts, base=self.base)
 
     def __itruediv__(self, other: EndpointParam) -> Self:
         if isinstance(other, self.__class__):
             self.path_parts.extend(other.path_parts)
             return self
-        try:
-            other_str = str(other)
-        except (TypeError, ValueError):
-            raise UnsupportedOperationTypeError(
-                "/=",  # noqa: EM101
-                self.__class__.__name__,
-                type(other).__name__,
-            ) from None
+        other_str = str(other)
         if other_str:
             self.path_parts.append(other_str)
         return self
