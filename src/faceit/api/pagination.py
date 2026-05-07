@@ -29,7 +29,6 @@ from faceit.types import (
 )
 from faceit.utils import (
     StrEnum,
-    UnsetValue,
     deduplicate_unhashable,
     deep_get,
     extends,
@@ -80,7 +79,7 @@ class TimestampPaginationConfig(typing.TypedDict):
 @typing.final
 class PaginationMaxParams(typing.NamedTuple):
     limit: int
-    offset: int
+    offset: typing.Optional[int]
 
 
 @typing.final
@@ -88,14 +87,15 @@ class pages(int):
     __slots__ = ()
 
     @extends(int.__new__)
-    def __new__(cls, x: typing.Any = 2, base: typing.Any = None) -> typing.Any:
+    def __new__(cls, x=2, base=None):  # type: ignore[no-untyped-def] # noqa: ANN001, ANN204
         integer = super().__new__(cls, *(x,) if base is None else (x, base))
         if integer > 1:
             return integer
-        raise ValueError(
+        msg = (
             f"Invalid value for {cls.__name__}: {integer!r}. "
             "Expected a positive integer greater than 1."
         )
+        raise ValueError(msg)
 
 
 @dataclass(eq=False, frozen=True)
@@ -112,14 +112,14 @@ class _MaxItemsInfo(typing.NamedTuple):
 
     @classmethod
     def from_max_pages(cls, max_pages: MaxItemsType, /) -> Self:
-        return cls(max_pages, 0, False)
+        return cls(max_pages, 0, is_partial_last_page=False)
 
 
 _UNIX_METHOD_REQUIRED_KEYS: typing.Final = frozenset(
     TimestampPaginationConfig.__annotations__
 )
 _PAGINATION_ARGS: typing.Final = PaginationMaxParams._fields
-_UNIX_PAGINATION_PARAMS: typing.Final = PaginationTimeRange._fields
+_UNIX_PAGINATION_PARAMS: typing.Final = PaginationTimeRange.model_fields.keys()
 
 
 def _has_unix_pagination_params(
@@ -144,27 +144,26 @@ def _extract_pagination_limits(
     # 1. Development - ensures correct function signatures with clear error messages
     # 2. Static typing - enables mypy to verify type correctness
     if limit_param.default is None or offset_param.default is None:
-        raise ValueError(
+        msg = (
             f"Function {method_name!r} missing default value for limit/offset parameter"
         )
+        raise ValueError(msg)
     if not isinstance(limit_param.default, FieldInfo) or not isinstance(
         offset_param.default, FieldInfo
     ):
-        raise TypeError(
-            f"Default for limit/offset in {method_name!r} is not a FieldInfo"
-        )
+        msg = f"Default for limit/offset in {method_name!r} is not a FieldInfo"
+        raise TypeError(msg)
     limit_constraint = _get_le(limit_param)
     if limit_constraint is None:
-        raise ValueError(
-            f"In limit metadata of {method_name!r}, no Le constraint found"
-        )
+        msg = f"In limit metadata of {method_name!r}, no Le constraint found"
+        raise ValueError(msg)
     offset_constraint = _get_le(offset_param)
-    return PaginationMaxParams(
-        validate_positive_int(limit_constraint.le),
-        UnsetValue.UNSET
+    offset = (
+        None
         if offset_constraint is None
-        else validate_positive_int(offset_constraint.le),
+        else validate_positive_int(offset_constraint.le)
     )
+    return PaginationMaxParams(validate_positive_int(limit_constraint.le), offset)
 
 
 def check_pagination_support(
@@ -172,10 +171,11 @@ def check_pagination_support(
 ) -> typing.Union[PaginationMaxParams, typing.Literal[False]]:
     # Imported here to avoid circular dependency: `base` imports iterators and config
     # to integrate them into `BaseResource` for convenient use in subclasses.
-    from .base import BaseResource  # noqa: PLC0415
+    from faceit.api.base import BaseResource  # noqa: PLC0415
 
     if not hasattr(func, "__self__") or not issubclass(
-        func.__self__.__class__, BaseResource
+        func.__self__.__class__,  # pyright: ignore[reportFunctionMemberAccess]
+        BaseResource,
     ):
         return False
 
@@ -236,10 +236,11 @@ class BasePageIterator(ABC, typing.Generic[PaginationMethodT, _PageT]):
     ) -> None:
         pagination_limits = check_pagination_support(method)
         if pagination_limits is False:
-            raise ValueError(
+            msg = (
                 f"Method {method.__name__!r} does not support pagination. "
                 "Ensure it's a BaseResource method with offset and limit parameters."
             )
+            raise ValueError(msg)
         self._method = _MethodCall[PaginationMethodT](
             method, args, self.__class__._remove_pagination_args(**kwargs)
         )
@@ -261,7 +262,7 @@ class BasePageIterator(ABC, typing.Generic[PaginationMethodT, _PageT]):
         )
 
     @max_items.setter
-    def max_items(self, value: MaxItemsType) -> None:
+    def max_items(self, value: MaxItemsType, /) -> None:
         self._max_pages_setter(value)
 
     @property
@@ -273,17 +274,19 @@ class BasePageIterator(ABC, typing.Generic[PaginationMethodT, _PageT]):
         return self._offset
 
     @current_offset.setter
-    def current_offset(self, value: int) -> None:
+    def current_offset(self, value: int, /) -> None:
         validate_positive_int(value, param_name="offset")
         if self._exhausted:
-            raise ValueError(
+            msg = (
                 "Pagination offset cannot be set after the iterator has been exhausted."
             )
+            raise ValueError(msg)
         if value > self._pagination_limits.limit:
-            raise ValueError(
+            msg = (
                 "Pagination offset cannot exceed the maximum limit "
                 f"({self._pagination_limits.limit}): {value}."
             )
+            raise ValueError(msg)
         self._offset = value
 
     @property
@@ -335,7 +338,6 @@ class BasePageIterator(ABC, typing.Generic[PaginationMethodT, _PageT]):
                     f"The computed number of pages ({max_pages}) exceeds the "
                     f"recommended safe maximum ({self.__class__.SAFE_MAX_PAGES}). "
                     "Proceed at your own risk.",
-                    UserWarning,
                     stacklevel=warn_stacklevel(),
                 )
             return max_pages
@@ -370,7 +372,7 @@ class BasePageIterator(ABC, typing.Generic[PaginationMethodT, _PageT]):
         )
 
         is_offset_exceeded = (
-            self._pagination_limits.offset != UnsetValue.UNSET
+            self._pagination_limits.offset is not None
             and self._offset >= self._pagination_limits.offset
         )
 
@@ -396,7 +398,6 @@ class BasePageIterator(ABC, typing.Generic[PaginationMethodT, _PageT]):
                 f"Pagination parameters {_PAGINATION_ARGS} should not be "
                 "provided by users. These parameters are managed internally "
                 "by the pagination system.",
-                UserWarning,
                 stacklevel=warn_stacklevel(),
             )
         return kwargs
@@ -411,19 +412,18 @@ class BasePageIterator(ABC, typing.Generic[PaginationMethodT, _PageT]):
         attr: str,
     ) -> None:
         if not _has_unix_pagination_params(method):
-            raise ValueError(
-                f"Method {method.__name__!r} does not appear to support Unix timestamp "
-                "pagination. Expected 'start' and 'to' parameters."
+            msg = (
+                f"Method {method.__name__!r} does not appear to support Unix timestamp pagination. "
+                "Expected 'start' and 'to' parameters."
             )
+            raise ValueError(msg)
         if any(not isinstance(value, str) or not value for value in (key, attr)):
-            raise ValueError(
-                f"Key and attribute parameters must be non-empty strings: {key}, {attr}."
-            )
+            msg = f"Key and attribute parameters must be non-empty strings: {key}, {attr}."
+            raise ValueError(msg)
         if any(kwargs.pop(arg, None) for arg in _UNIX_PAGINATION_PARAMS):
             warnings.warn(
                 "The parameters 'start' and 'to' will be managed automatically with Unix "
                 "timestamp pagination. Your provided values will be ignored.",
-                UserWarning,
                 stacklevel=warn_stacklevel(),
             )
 
@@ -441,11 +441,12 @@ class BasePageIterator(ABC, typing.Generic[PaginationMethodT, _PageT]):
             isinstance(unix_config, dict)
             and _UNIX_METHOD_REQUIRED_KEYS - unix_config.keys()
         ):
-            raise ValueError(
+            msg = (
                 "Invalid unix pagination configuration: "
                 f"missing required keys {tuple(_UNIX_METHOD_REQUIRED_KEYS)}. "
                 "See pagination.UnixPaginationConfig for the required format."
             )
+            raise ValueError(msg)
 
     @staticmethod
     def _extract_unix_timestamp(
@@ -477,9 +478,9 @@ class BasePageIterator(ABC, typing.Generic[PaginationMethodT, _PageT]):
         cls,
         collection: typing.List[_PageT],
         return_format: CollectReturnFormat,
-        deduplicate: bool,
+        deduplicate: bool,  # noqa: FBT001
         /,
-    ) -> typing.Union[ItemPage[_T], typing.List[RawAPIItem]]:
+    ) -> typing.Union[ItemPage[typing.Any], typing.List[RawAPIItem]]:
         is_raw_mode = (
             cls._COLLECT_RETURN_FORMATS[return_format](
                 typing.cast("_PageList", collection)

@@ -2,41 +2,31 @@ line-length = 88
 preview = true
 target-version = "py38"
 
-[format]
-docstring-code-format = true
-docstring-code-line-length = 100
-
 [lint]
 select = ["ALL"]
 ignore = [
-    "ANN401",
-    "B024",
-    "COM812",
-    "CPY001",
-    "D",
-    "DOC",
-    "E501",
-    "EM101",
-    "EM102",
-    "ERA001",
-    "FBT001",
-    "FBT003",
-    "FIX002",
-    "PLR0904",
-    "PLR0913",
-    "PLW3201",
-    "PT001",
-    "RUF003",
-    "SLF001",
-    "S101",
-    "TD",
-    "TRY003",
+    "ANN401",  # Dynamically typed expressions (`Any`) are disallowed.
+    "B024",    # Abstract base class without abstract methods.
+    "COM812",  # Trailing comma formatting conflict.
+    "CPY001",  # Missing copyright notice.
+    "D",       # pydocstyle docstring violations.
+    "DOC",     # pydoclint docstring validation violations.
+    "E501",    # Line too long.
+    "EM102",   # f-string used directly in exception.
+    "FIX002",  # TODO comment detected.
+    "PLR0904", # Too many public methods.
+    "PLR0913", # Too many function arguments.
+    "RUF003",  # Ambiguous Unicode character in comment.
+    "SLF001",  # Private member accessed outside class.
+    "S101",    # Use of assert detected.
+    "TD",      # flake8-todos violations.
+    "TRY003",  # Long exception message defined outside exception class.
 ]
 
 [lint.flake8-bugbear]
 extend-immutable-calls = [
     "faceit.http.client.env",
-    "faceit.resources.pagination.pages",
+    "faceit.api.pagination.pages",
 ]
 
 [lint.flake8-import-conventions]
@@ -57,23 +47,35 @@ banned-from = [
 ]
 
 [lint.pep8-naming]
-classmethod-decorators = ["field_validator", "model_validator"]
 ignore-names = ["env", "pages"]
 
 [lint.per-file-ignores]
-"__init__.py" = ["F401", "PLC041", "RUF067"]
-"exceptions.py" = ["E302", "E305"]
-"types.py" = [
-    "E302",
-    "F401",
-    "ICN003",
-    "PLC041",
-    "PYI018",
+"__init__.py" = [
+    "RUF067", # Code is present in `__init__.py`.
 ]
-"scripts/*" = ["T201", "INP001"]
+"examples/*" = [
+    "ICN003",  # Import a member from the module instead of importing the member directly.
+    "INP001",  # Missing `__init__.py` file in a package directory.
+    "PLR0914", # Too many local variables.
+    "PLR2004", # Magic value used in a comparison.
+    "T201",    # `print()` statement detected.
+]
+"exceptions.py" = [
+    "E302", # Expected 2 blank lines before top-level definitions.
+    "E305", # Expected 2 blank lines after a class or function definition.
+]
 "docs/*" = ["ALL"]
-"examples/*" = ["ALL"]
+"scripts/*" = [
+    "T201",   # `print()` statement detected.
+    "INP001", # Missing `__init__.py` file in a package directory.
+]
 "tests/*" = ["ALL"]
+"types.py" = [
+    "E302",   # Expected 2 blank lines before top-level definitions.
+    "F401",   # Imported but unused.
+    "ICN003", # Import a member from the module instead of importing the member directly.
+    "PYI018", # Unused private `TypeVar`, `ParamSpec`, or `TypeVarTuple` declaration.
+]
 
 [lint.pyupgrade]
 keep-runtime-typing = true

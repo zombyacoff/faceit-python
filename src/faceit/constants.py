@@ -228,7 +228,7 @@ def _create_default_elo_tiers() -> _EloThreshold:
     tier_ranges = {1: EloRange(MIN_ELO, 800)}
 
     for level in range(2, 10):
-        # `cast(int, ...)` tells the type checker that we know `upper` is
+        # `cast("int", ...)` tells the type checker that we know `upper` is
         # definitely an `int` for levels 1-9, not the full
         # `typing.Union[int, HighTierLevel]` type
         lower_bound = typing.cast("int", tier_ranges[level - 1].upper) + 1
@@ -350,14 +350,12 @@ class SkillLevel:
     ) -> typing.Optional[float]:
         if self.is_highest_level:
             warnings.warn(
-                "Cannot calculate progress percentage for highest level",
-                UserWarning,
-                stacklevel=4,
+                "Cannot calculate progress percentage for highest level", stacklevel=4
             )
             return None
 
         if not self.contains_elo(elo):
-            warnings.warn(f"Elo {elo} is out of range", UserWarning, stacklevel=4)
+            warnings.warn(f"Elo {elo} is out of range", stacklevel=4)
             return None
 
         assert isinstance(self.elo_range.upper, int)
@@ -390,15 +388,12 @@ class SkillLevel:
         elo: typing.Optional[int] = Field(None, ge=MIN_ELO),
     ) -> typing.Optional[Self]:
         if game_id not in cls._registry:
-            warnings.warn(
-                f"Game {game_id!r} is not supported", UserWarning, stacklevel=4
-            )
+            warnings.warn(f"Game {game_id!r} is not supported", stacklevel=4)
             return None
 
         if level is not None and elo is not None:
             warnings.warn(
                 "Both 'level' and 'elo' parameters provided; 'level' takes precedence",
-                UserWarning,
                 stacklevel=4,
             )
 
@@ -416,7 +411,8 @@ class SkillLevel:
             )
             return next(generator, None)
 
-        raise ValueError("Either level or elo must be specified")
+        msg = "Either level or elo must be specified"
+        raise ValueError(msg)
 
     @classmethod
     @validate_call
@@ -438,10 +434,11 @@ class SkillLevel:
         if not isinstance(other, self.__class__):
             return NotImplemented
         if self.game_id != other.game_id:
-            raise TypeError(
+            msg = (
                 "Cannot compare levels from different games: "
                 f"'{self.game_id}' vs '{other.game_id}'"
             )
+            raise TypeError(msg)
         return self.level < other.level
 
     def __hash__(self) -> int:

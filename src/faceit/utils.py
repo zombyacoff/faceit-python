@@ -8,12 +8,12 @@ import sys
 import typing
 from contextlib import suppress
 from datetime import datetime, timezone
-from enum import Enum, IntEnum, auto
+from enum import Enum, auto
 from functools import lru_cache, reduce, wraps
 from hashlib import sha256
 from uuid import UUID
 
-from typing_extensions import Self, TypeIs
+from typing_extensions import Self, TypeIs, deprecated
 
 if typing.TYPE_CHECKING:
     from asyncio import Lock as AsyncLock  # noqa: ICN003
@@ -25,15 +25,19 @@ if typing.TYPE_CHECKING:
     _CallableT = typing.TypeVar("_CallableT", bound=typing.Callable[..., typing.Any])
     _ClassT = typing.TypeVar("_ClassT", bound=type)
 
-_IGNORED_MODULES: typing.Set[str] = {
+_IGNORED_MODULES: typing.Final = {
     "pydantic",
 }
 _UUID_BYTES: typing.Final = 16
 _UNINITIALIZED_MARKER: typing.Final = "uninitialized"
 
 
-class UnsetValue(IntEnum):
-    UNSET = -1
+@deprecated(
+    "`UnsetValue` is deprecated and will be removed in a future release. "
+    "Please use `None` instead.",
+)
+class UnsetValue:
+    UNSET = None
 
 
 # NOTE: Inspired by irgeek/StrEnum:
@@ -54,7 +58,7 @@ class StrEnum(str, Enum):
         )
 
     @staticmethod
-    def _generate_next_value_(name: str, *_: object) -> str:
+    def _generate_next_value_(name: str, *_: object, **__: object) -> str:
         return name
 
     def __str__(self) -> str:
@@ -65,8 +69,6 @@ class StrEnumWithAll(StrEnum):
     @classmethod
     def get_all_values(cls) -> typing.Tuple[Self, ...]:
         return tuple(cls)
-
-    all = get_all_values  # alias for backwards compatibility
 
 
 def UnsupportedOperationTypeError(  # noqa: N802
@@ -194,15 +196,15 @@ def to_uuid(value: typing.Union[str, bytes], /) -> UUID:
     if isinstance(value, str):
         return UUID(value)
     if not isinstance(value, bytes):
-        raise TypeError("Expected str or bytes for UUID conversion")
+        msg = f"Expected str or bytes for UUID conversion, got {type(value).__name__}"  # type: ignore[unreachable]
+        raise TypeError(msg)
     try:
         return UUID(value.decode())
     except UnicodeDecodeError as e:
         if len(value) == _UUID_BYTES:
             return UUID(bytes=value)
-        raise ValueError(
-            f"Byte value must be a UTF-8 encoded UUID string or {_UUID_BYTES} bytes"
-        ) from e
+        msg = "Byte value must be a UTF-8 encoded UUID string or 16 bytes"
+        raise ValueError(msg) from e
 
 
 def is_valid_uuid(value: typing.Any, /) -> TypeIs[ValidUUID]:
@@ -236,9 +238,11 @@ def validate_positive_int(value: typing.Any, /, param_name: str = "value") -> in
     impractical or unavailable.
     """
     if not isinstance(value, int):
-        raise TypeError(f"'{param_name}' must be int, got {type(value).__name__}")
+        msg = f"'{param_name}' must be int, got {type(value).__name__}"
+        raise TypeError(msg)
     if value <= 0:
-        raise ValueError(f"'{param_name}' must be a positive integer, got {value}")
+        msg = f"'{param_name}' must be a positive integer, got {value}"
+        raise ValueError(msg)
     return value
 
 
@@ -302,14 +306,15 @@ def _format_fields(obj: object, fields: typing.Tuple[str, ...], *, joiner: str) 
 
 
 def _apply_representation(
-    cls: _ClassT, fields: typing.Tuple[str, ...], use_str: bool
+    cls: _ClassT,
+    fields: typing.Tuple[str, ...],
+    use_str: bool,  # noqa: FBT001
 ) -> _ClassT:
     has_str = getattr(cls, "__str__", object.__str__) is not object.__str__
 
     if use_str and not has_str:
-        raise TypeError(
-            f"Class {cls.__name__} must define '__str__' method when 'use_str=True'"
-        )
+        msg = f"Class {cls.__name__} must define '__str__' method when 'use_str=True'"
+        raise TypeError(msg)
 
     def build_repr(self: _ClassT) -> str:
         str_args = f"'{self}'" if use_str else _format_fields(self, fields, joiner=", ")

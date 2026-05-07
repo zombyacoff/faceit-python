@@ -2,25 +2,18 @@ import typing
 
 import httpx
 
-from .models.error import ErrorResponse
-from .utils import UnsetValue
-
 
 class FaceitError(Exception):
-    pass
+    """Base class for all FACEIT exceptions."""
 
 
 @typing.final
-class DecoupleMissingError(FaceitError):
+class DecoupleNotFoundError(FaceitError):
     def __init__(self) -> None:
         super().__init__(
-            "`python-decouple` is required but not installed.\n"
-            "You can install it by running:\n\n"
-            "    pip install python-decouple\n\n"
-            "Alternatively, you can install it as an extra dependency:\n\n"
-            "    pip install faceit[env]\n\n"
-            "If you have already installed it, "
-            "make sure you're using the correct Python environment."
+            "The `decouple` package is required but not installed.\n"
+            "Install it: pip install decouple\n"
+            "Or with faceit[env]"
         )
 
 
@@ -28,14 +21,16 @@ class DecoupleMissingError(FaceitError):
 class MissingAuthTokenError(FaceitError):
     def __init__(self, key: str, /) -> None:
         self.key = key
-        msg = f"Authorization token is missing. Please set {key} in your environment file."
-        super().__init__(msg)
+        super().__init__(
+            "Authorization token is missing. "
+            f"Please set {key} in your environment file."
+        )
 
 
 class APIError(FaceitError):
     _DEFAULT_MESSAGE: typing.ClassVar = "API request failed"
-    _EXPECTED_STATUS_CODE: typing.ClassVar[int] = UnsetValue.UNSET
-    _MESSAGE_FORMAT: typing.ClassVar = "Status {status_code}: {message}"
+    _EXPECTED_STATUS_CODE: typing.ClassVar = 0
+    _MESSAGE_FORMAT: typing.ClassVar = "[{status_code}] {message}"
     _STATUS_ERRORS: typing.ClassVar[typing.Dict[int, typing.Type["APIError"]]] = {}
 
     def __init_subclass__(
@@ -62,26 +57,20 @@ class APIError(FaceitError):
             if response is None
             else response.status_code
         )
+
         if message is not None:
-            # If a custom message is provided (e.g., "Invalid JSON"),
-            # there's no need to parse `response.json()`
-            self.validated_response = ErrorResponse()
-            self.error_detail = message
+            self.message = message
         elif response is not None:
-            self.validated_response = ErrorResponse.parse_safe(response.json())
-            error_messages = [e.message for e in self.validated_response.errors]
-            self.error_detail = (
-                " ".join(error_messages)
-                if error_messages
-                else self.__class__._DEFAULT_MESSAGE
-            )
+            # TODO: Implement proper error parsing to extract the message in a sensible form
+            self.message = response.text[:200]
         else:
-            self.validated_response = ErrorResponse()
-            self.error_detail = self.__class__._DEFAULT_MESSAGE
-        self.message = self.__class__._MESSAGE_FORMAT.format(
-            status_code=self.status_code, message=self.error_detail
+            self.message = self.__class__._DEFAULT_MESSAGE
+
+        super().__init__(
+            self.__class__._MESSAGE_FORMAT.format(
+                status_code=self.status_code, message=self.message
+            )
         )
-        super().__init__(self.message)
 
     @classmethod
     def from_response(cls, response: httpx.Response, /) -> "APIError":

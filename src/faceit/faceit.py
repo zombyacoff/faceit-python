@@ -3,8 +3,8 @@ import warnings
 
 from typing_extensions import deprecated
 
+from .api import AsyncDataResource, SyncDataResource
 from .http import AsyncClient, SyncClient
-from .resources import AsyncDataResource, SyncDataResource
 from .types import ClientT, DataResourceT
 
 
@@ -22,7 +22,7 @@ class BaseFaceit(typing.Generic[ClientT, DataResourceT]):
             DeprecationWarning,
             stacklevel=2,
         )
-        return typing.cast("DataResourceT", cls._data_cls(*args, **kwargs))
+        return cls._data_cls(*args, **kwargs)  # type: ignore[return-value]
 
 
 @typing.final

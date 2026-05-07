@@ -1,15 +1,13 @@
+"""
+FACEIT API Wrapper
+~~~~~~~~~~~~~~~~~~
+
+The easiest and most type-safe way to interact with the FACEIT API.
+"""
+
 from importlib.metadata import PackageNotFoundError, version
 
-from .constants import EventCategory, ExpandedField, GameID, Region, SkillLevel
-from .exceptions import (
-    APIError,
-    DecoupleMissingError,
-    FaceitError,
-    MissingAuthTokenError,
-)
-from .faceit import AsyncFaceit, Faceit
-from .http import EnvKey, MaxConcurrentRequests
-from .resources import (
+from .api import (
     AsyncDataResource,
     AsyncPageIterator,
     CollectReturnFormat,
@@ -19,23 +17,26 @@ from .resources import (
     TimestampPaginationConfig,
     pages,
 )
+from .constants import EventCategory, ExpandedField, GameID, Region, SkillLevel
+from .exceptions import APIError, FaceitError
+from .faceit import AsyncFaceit, Faceit
+from .http import EnvKey, FromEnv, MaxConcurrentRequests
 
 __all__ = [
     "APIError",
     "AsyncDataResource",
-    "AsyncFaceit",  # deprecated
+    "AsyncFaceit",  # deprecated (remove in v0.3.0 ?)
     "AsyncPageIterator",
     "CollectReturnFormat",
-    "DecoupleMissingError",
-    "EnvKey",
+    "EnvKey",  # deprecated (remove in v0.2.2 ?)
     "EventCategory",
     "ExpandedField",
-    "Faceit",  # deprecated
+    "Faceit",  # deprecated (remove in v0.3.0 ?)
     "FaceitError",
+    "FromEnv",
     "GameID",
     "MaxConcurrentRequests",
     "MaxItems",
-    "MissingAuthTokenError",
     "Region",
     "SkillLevel",
     "SyncDataResource",

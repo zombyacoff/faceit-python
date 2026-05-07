@@ -6,8 +6,8 @@ from abc import ABC
 from pydantic import AfterValidator, Field, validate_call
 from typing_extensions import Annotated, TypeAlias
 
+from faceit.api.base import BaseResource, FaceitResourcePath, ModelPlaceholder
 from faceit.http import AsyncClient, SyncClient
-from faceit.resources.base import BaseResource, FaceitResourcePath, ModelPlaceholder
 from faceit.types import (
     APIResponseFormatT,
     ClientT,

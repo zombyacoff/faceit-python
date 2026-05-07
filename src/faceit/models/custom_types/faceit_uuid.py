@@ -44,11 +44,11 @@ class _BaseFaceitUUIDValidator(ABC):
         return cls._validate(cls.__remove_prefix_and_suffix(value))
 
     @classmethod
-    def __get_pydantic_core_schema__(
+    def __get_pydantic_core_schema__(  # noqa: PLW3201
         cls, _: typing.Type[typing.Any], handler: GetCoreSchemaHandler
     ) -> core_schema.CoreSchema:
         return core_schema.union_schema([
-            core_schema.str_schema(  # TODO: Where does the API return empty strings instead of IDs?
+            core_schema.str_schema(  # FIXME: Where does the API return empty strings instead of IDs? # noqa: FIX001
                 max_length=0
             ),
             core_schema.no_info_after_validator_function(
@@ -92,13 +92,11 @@ class _FaceitIDWithUniquePrefix(str, BaseFaceitID, ABC):
     @classmethod
     def _validate(cls, value: str, /) -> Self:
         if not value.startswith(cls.UNIQUE_PREFIX):
-            raise ValueError(
-                f"Invalid {cls.__name__}: {value!r} must start with {cls.UNIQUE_PREFIX!r}"
-            )
+            msg = f"Invalid {cls.__name__}: {value!r} must start with {cls.UNIQUE_PREFIX!r}"
+            raise ValueError(msg)
         if not is_valid_uuid(value[len(cls.UNIQUE_PREFIX) :]):
-            raise ValueError(
-                f"Invalid {cls.__name__}: {value!r} contains invalid UUID part."
-            )
+            msg = f"Invalid {cls.__name__}: {value!r} contains invalid UUID part."
+            raise ValueError(msg)
         return cls(value)
 
 

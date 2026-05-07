@@ -7,11 +7,12 @@ from typing_extensions import NotRequired, ParamSpec, TypeAlias
 from .constants import GameID, Region
 
 if typing.TYPE_CHECKING:
+    from .api import AsyncDataResource, SyncDataResource
     from .http import Endpoint
     from .http.client import BaseAPIClient
-    from .resources import AsyncDataResource, SyncDataResource
 
 _T = typing.TypeVar("_T")
+_T_co = typing.TypeVar("_T_co", covariant=True)
 _R = typing.TypeVar("_R")
 _P = ParamSpec("_P")
 
@@ -59,10 +60,18 @@ RawAPIPageResponse = typing.TypedDict(
 RawAPIResponse: TypeAlias = typing.Union[RawAPIItem, RawAPIPageResponse]
 
 
-# fmt: off
 class BaseResourceMethodProtocol(typing.Protocol[_T]):
     __name__: str
     __call__: typing.Callable[..., _T]
-class SyncResourceMethodProtocol(BaseResourceMethodProtocol[_T], typing.Protocol): ...
-class AsyncResourceMethodProtocol(BaseResourceMethodProtocol[typing.Awaitable[_T]], typing.Protocol): ...
-# fmt: on
+
+
+class SyncResourceMethodProtocol(
+    BaseResourceMethodProtocol[_T],
+    typing.Protocol,
+): ...
+
+
+class AsyncResourceMethodProtocol(
+    BaseResourceMethodProtocol[typing.Awaitable[_T]],
+    typing.Protocol,
+): ...

@@ -2,13 +2,14 @@ import typing
 
 from pydantic import BaseModel
 
-from faceit.models.custom_types import (
+from faceit.types import RegionIdentifier, UrlOrEmpty, UUIDOrEmpty
+
+from .custom_types import (
     FaceitID,
     LangFormattedAnyHttpUrl,
     NullableList,
     ResponseContainer,
 )
-from faceit.types import RegionIdentifier, UrlOrEmpty, UUIDOrEmpty
 
 
 @typing.final

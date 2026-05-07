@@ -192,7 +192,8 @@ class TestBaseAPIClient:
         with pytest.raises(BadRequestError) as excinfo:
             BaseAPIClient._handle_response(error_response)
         assert excinfo.value.status_code == 400
-        assert excinfo.value.message == BadRequestError._MESSAGE_FORMAT.format(
+        assert excinfo.value.message == httpx.codes.get_reason_phrase(400)
+        assert str(excinfo.value) == BadRequestError._MESSAGE_FORMAT.format(
             status_code=excinfo.value.status_code,
             message=httpx.codes.get_reason_phrase(400),
         )

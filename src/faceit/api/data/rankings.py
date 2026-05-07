@@ -6,12 +6,12 @@ from abc import ABC
 
 from pydantic import Field, validate_call
 
+from faceit.api.base import BaseResource, FaceitResourcePath, ModelPlaceholder
+from faceit.api.pagination import MaxItemsType, pages
 from faceit.constants import GameID  # noqa: TC001
 from faceit.http import AsyncClient, SyncClient
 from faceit.models import ItemPage  # noqa: TC001
 from faceit.models.custom_types import CountryCode  # noqa: TC001
-from faceit.resources.base import BaseResource, FaceitResourcePath, ModelPlaceholder
-from faceit.resources.pagination import MaxItemsType, pages
 from faceit.types import (
     APIResponseFormatT,
     ClientT,
@@ -47,7 +47,7 @@ class SyncRankings(BaseRankings[SyncClient], typing.Generic[APIResponseFormatT])
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
-    ) -> typing.Union[RawAPIPageResponse]: ...
+    ) -> RawAPIPageResponse: ...
 
     @typing.overload
     def unbounded(
@@ -120,7 +120,7 @@ class SyncRankings(BaseRankings[SyncClient], typing.Generic[APIResponseFormatT])
         country: typing.Optional[CountryCode] = None,
         *,
         limit: int = Field(20, ge=1, le=100),
-    ) -> typing.Union[RawAPIPageResponse]: ...
+    ) -> RawAPIPageResponse: ...
 
     @typing.overload
     def player(
@@ -131,7 +131,7 @@ class SyncRankings(BaseRankings[SyncClient], typing.Generic[APIResponseFormatT])
         country: typing.Optional[CountryCode] = None,
         *,
         limit: int = Field(20, ge=1, le=100),
-    ) -> typing.Union[ModelNotImplemented]: ...
+    ) -> ModelNotImplemented: ...
 
     @validate_call
     def player(
@@ -170,7 +170,7 @@ class AsyncRankings(BaseRankings[AsyncClient], typing.Generic[APIResponseFormatT
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
-    ) -> typing.Union[RawAPIPageResponse]: ...
+    ) -> RawAPIPageResponse: ...
 
     @typing.overload
     async def unbounded(
@@ -243,7 +243,7 @@ class AsyncRankings(BaseRankings[AsyncClient], typing.Generic[APIResponseFormatT
         country: typing.Optional[CountryCode] = None,
         *,
         limit: int = Field(20, ge=1, le=100),
-    ) -> typing.Union[RawAPIPageResponse]: ...
+    ) -> RawAPIPageResponse: ...
 
     @typing.overload
     async def player(
@@ -254,7 +254,7 @@ class AsyncRankings(BaseRankings[AsyncClient], typing.Generic[APIResponseFormatT
         country: typing.Optional[CountryCode] = None,
         *,
         limit: int = Field(20, ge=1, le=100),
-    ) -> typing.Union[ModelNotImplemented]: ...
+    ) -> ModelNotImplemented: ...
 
     @validate_call
     async def player(

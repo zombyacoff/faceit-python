@@ -85,7 +85,9 @@ class Endpoint:
             return self.add(str(other))
         except (TypeError, ValueError):
             raise UnsupportedOperationTypeError(
-                "/", self.__class__.__name__, type(other).__name__
+                "/",  # noqa: EM101
+                self.__class__.__name__,
+                type(other).__name__,
             ) from None
 
     def __itruediv__(self, other: EndpointParam) -> Self:
@@ -96,7 +98,9 @@ class Endpoint:
             other_str = str(other)
         except (TypeError, ValueError):
             raise UnsupportedOperationTypeError(
-                "/=", self.__class__.__name__, type(other).__name__
+                "/=",  # noqa: EM101
+                self.__class__.__name__,
+                type(other).__name__,
             ) from None
         if other_str:
             self.path_parts.append(other_str)

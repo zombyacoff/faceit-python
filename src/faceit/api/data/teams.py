@@ -7,11 +7,11 @@ from abc import ABC
 from pydantic import AfterValidator, Field, validate_call
 from typing_extensions import Annotated, TypeAlias
 
+from faceit.api.base import BaseResource, FaceitResourcePath, ModelPlaceholder
+from faceit.api.pagination import MaxItemsType, pages
 from faceit.constants import GameID  # noqa: TC001
 from faceit.http import AsyncClient, SyncClient
 from faceit.models import ItemPage  # noqa: TC001
-from faceit.resources.base import BaseResource, FaceitResourcePath, ModelPlaceholder
-from faceit.resources.pagination import MaxItemsType, pages
 from faceit.types import (
     APIResponseFormatT,
     ClientT,

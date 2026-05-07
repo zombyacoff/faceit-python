@@ -1,12 +1,12 @@
 import typing
 
-from faceit.http.client import BaseAPIClient
-from faceit.resources.aggregator import (
+from faceit.api.aggregator import (
     AsyncResources,
     BaseResources,
     SyncResources,
     resource_aggregator,
 )
+from faceit.http.client import BaseAPIClient
 from faceit.types import ClientT, Model, Raw, ValidUUID
 
 from .championships import AsyncChampionships, BaseChampionships, SyncChampionships
@@ -53,7 +53,11 @@ class _DataResourceMixin:
     def __init__(self) -> None: ...
 
     @typing.overload
-    def __init__(self, *, client: ClientT) -> None: ...
+    def __init__(  # type: ignore[misc]
+        self: BaseResources[ClientT],
+        *,
+        client: ClientT,
+    ) -> None: ...
 
     @typing.overload
     def __init__(
@@ -63,7 +67,7 @@ class _DataResourceMixin:
     ) -> None: ...
 
     def __init__(  # type: ignore[misc]
-        self: BaseResources[ClientT],
+        self: BaseResources[ClientT],  # pyright: ignore[reportGeneralTypeIssues]
         api_key: typing.Union[ValidUUID, BaseAPIClient.env, None] = None,
         *,
         client: typing.Optional[ClientT] = None,

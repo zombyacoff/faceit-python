@@ -60,9 +60,8 @@ class ResponseContainer(RootModel[typing.Dict[str, _T]]):
     def __getattr__(self, name: str) -> _T:
         if name in self.root:
             return self.root[name]
-        raise AttributeError(
-            f"'{self.__class__.__name__}' object has no attribute '{name}'"
-        )
+        msg = f"'{self.__class__.__name__}' object has no attribute '{name}'"
+        raise AttributeError(msg)
 
     def __iter__(self) -> typing.Iterator[str]:  # type: ignore[override]
         yield from self.root

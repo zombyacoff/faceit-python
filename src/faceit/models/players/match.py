@@ -65,7 +65,8 @@ class Results(BaseModel):
     def convert_winner(cls, value: typing.Any) -> str:
         if value in _RESULT_MAP:
             return _RESULT_MAP[value]
-        raise ValueError(f"Invalid winner value: {value}")
+        msg = f"Invalid winner value: {value}"
+        raise ValueError(msg)
 
 
 @typing.final
@@ -95,7 +96,7 @@ class AbstractMatchPlayerStats(BaseModel, ABC):
     Abstract class for player match statistics models in the inheritance hierarchy.
 
     Serves as a common type for various game-specific player statistics models.
-    Useful for type annotations when the return type depends on the :attr:`game` parameter
+    Useful for type annotations when the return type depends on the :attr:`~.game` parameter
     provided by the user, allowing different ``MatchPlayerStats`` subclasses to be
     returned based on the game context.
     """
@@ -122,7 +123,6 @@ class CS2MatchPlayerStats(AbstractMatchPlayerStats):
     map: Annotated[str, Field(alias="Map")]
     overtime_score: Annotated[int, Field(alias="Overtime score")]
     deaths: Annotated[int, Field(alias="Deaths")]
-    game: Annotated[typing.Literal[GameID.CS2], Field(alias="Game")]
     nickname: Annotated[str, Field(alias="Nickname")]
     updated_at: Annotated[datetime, Field(alias="Updated At")]
     second_half_score: Annotated[int, Field(alias="Second Half Score")]

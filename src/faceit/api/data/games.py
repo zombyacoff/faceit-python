@@ -6,10 +6,10 @@ from abc import ABC
 
 from pydantic import Field, validate_call
 
+from faceit.api.base import BaseResource, FaceitResourcePath, ModelPlaceholder
+from faceit.api.pagination import MaxItems, MaxItemsType
 from faceit.http import AsyncClient, SyncClient
 from faceit.models import ItemPage  # noqa: TC001
-from faceit.resources.base import BaseResource, FaceitResourcePath, ModelPlaceholder
-from faceit.resources.pagination import MaxItems, MaxItemsType
 from faceit.types import (
     APIResponseFormatT,
     ClientT,

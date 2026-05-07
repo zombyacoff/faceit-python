@@ -156,7 +156,7 @@ class Tournament(BaseModel):
     number_of_players_checkedin: int
     number_of_players_participants: int
     anticheat_required: bool
-    started_at: int
+    started_at: datetime
     subscriptions_count: int
     faceit_url: LangFormattedAnyHttpUrl
 

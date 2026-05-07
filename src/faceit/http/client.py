@@ -19,7 +19,7 @@ from pydantic import PositiveInt, validate_call
 from typing_extensions import Never, Self
 
 from faceit.constants import BASE_WIKI_URL
-from faceit.exceptions import APIError, DecoupleMissingError, MissingAuthTokenError
+from faceit.exceptions import APIError, DecoupleNotFoundError, MissingAuthTokenError
 from faceit.utils import (
     StrEnum,
     create_uuid_validator,
@@ -36,13 +36,6 @@ from .helpers import (
     is_retryable_status,
     is_ssl_error,
 )
-
-try:
-    import decouple  # pyright: ignore[reportMissingImports]
-except ModuleNotFoundError:
-    ENV_EXTRA_INSTALLED: typing.Final = False
-else:
-    ENV_EXTRA_INSTALLED: typing.Final = True  # type: ignore[misc]
 
 if typing.TYPE_CHECKING:
     from faceit.types import (
@@ -113,7 +106,7 @@ class BaseAPIClient(ABC, typing.Generic[_HttpxClientT, _RetryerT]):
         _client: _HttpxClientT
         _retryer: _RetryerT
 
-    __api_key_validator: typing.ClassVar[typing.Callable[[ValidUUID], str]] = (
+    _api_key_validator: typing.ClassVar[typing.Callable[[ValidUUID], str]] = (
         create_uuid_validator(
             "Invalid FACEIT API key format: {value!r}. "
             "Please visit the official wiki for API key information: "
@@ -137,7 +130,7 @@ class BaseAPIClient(ABC, typing.Generic[_HttpxClientT, _RetryerT]):
         return self._api_key[:4] + "..." + self._api_key[-4:]
 
     @api_key.setter
-    def api_key(self, value: typing.Union[ValidUUID, env]) -> None:
+    def api_key(self, value: typing.Union[ValidUUID, env], /) -> None:
         self._api_key_setter(value)
 
     @property
@@ -145,7 +138,7 @@ class BaseAPIClient(ABC, typing.Generic[_HttpxClientT, _RetryerT]):
         return self._retry_args
 
     @retry_args.setter
-    def retry_args(self, value: RetryArgs) -> None:
+    def retry_args(self, value: RetryArgs, /) -> None:
         self._retry_args_setter(value)
 
     # Provide read-only access to the underlying client for
@@ -170,7 +163,7 @@ class BaseAPIClient(ABC, typing.Generic[_HttpxClientT, _RetryerT]):
         return Endpoint(*path_parts, base=self.base_url)
 
     def _api_key_setter(self, value: typing.Union[ValidUUID, env], /) -> None:
-        self._api_key = self.__class__.__api_key_validator(
+        self._api_key = self.__class__._api_key_validator(
             self.__class__._get_secret_from_env(str(value))
             if isinstance(value, self.__class__.env)
             else value
@@ -178,7 +171,8 @@ class BaseAPIClient(ABC, typing.Generic[_HttpxClientT, _RetryerT]):
 
     def _retry_args_setter(self, retry_args: RetryArgs, /) -> None:
         if not isinstance(retry_args, dict):
-            raise TypeError(f"Expected RetryArgs, got {type(retry_args).__name__}")
+            msg = f"Expected RetryArgs, got {type(retry_args).__name__}"
+            raise TypeError(msg)
         self._retry_args = {**self.__class__.DEFAULT_RETRY_ARGS, **retry_args}
 
     def _build_endpoint_unwrapped(self, endpoint: EndpointParam, /) -> str:
@@ -199,10 +193,11 @@ class BaseAPIClient(ABC, typing.Generic[_HttpxClientT, _RetryerT]):
 
     @staticmethod
     def _get_secret_from_env(key: str, /) -> str:
-        if not ENV_EXTRA_INSTALLED:
-            raise DecoupleMissingError
         try:
-            # cast is required because `decouple` is untyped
+            import decouple  # noqa: PLC0415  # pyright: ignore[reportMissingImports]
+        except ModuleNotFoundError:
+            raise DecoupleNotFoundError from None
+        try:
             return typing.cast("str", decouple.config(key))
         except decouple.UndefinedValueError:
             raise MissingAuthTokenError(key) from None
@@ -351,6 +346,7 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient, tenacity.AsyncRetrying])
             limits=limits,
             **raw_client_kwargs,
         )
+        self._setup_ssl_retry_args()
         self._retryer = tenacity.AsyncRetrying(**self._retry_args)  # type: ignore[arg-type]
 
         # Initialize or update the semaphore if needed
@@ -363,7 +359,6 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient, tenacity.AsyncRetrying])
                 "Semaphore initialized with limit: %d", max_concurrent_requests
             )
 
-        self._setup_ssl_retry_args()
         self.__class__._instances.add(self)
 
     def _setup_ssl_retry_args(self) -> None:
@@ -373,8 +368,10 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient, tenacity.AsyncRetrying])
             if is_ssl_error(exception):
                 return self.__class__._register_ssl_error()
             if isinstance(original_retry, SupportsExceptionPredicate):
-                return await invoke_callable(original_retry.predicate, exception)  # type: ignore[unreachable]
-            return await invoke_callable(original_retry, exception)
+                retry = original_retry.predicate  # type: ignore[unreachable]
+            else:
+                retry = original_retry
+            return await invoke_callable(retry, exception)
 
         original_before_sleep = self._retry_args.get("before_sleep", None) or (
             lambda _: None
@@ -512,11 +509,12 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient, tenacity.AsyncRetrying])
         """
         This method intentionally raises an error to prevent incorrect usage.
 
-        Async clients should use :meth:`aclose` instead.
+        Async clients should use :meth:`~.aclose` instead.
         """
-        raise RuntimeError(
-            f"Use 'await {cls.__name__}.aclose()' instead of '{cls.__name__}.close()'."
+        msg = (
+            f"Use 'await {cls.__name__}.aclose()' instead of '{cls.__name__}.close().'"
         )
+        raise RuntimeError(msg)
 
     @classmethod
     async def close_all(cls) -> None:
@@ -531,7 +529,6 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient, tenacity.AsyncRetrying])
             warnings.warn(
                 f"Request limit of {new_limit} exceeds "
                 f"maximum allowed ({cls.MAX_CONCURRENT_REQUESTS_ABSOLUTE})",
-                UserWarning,
                 stacklevel=4,
             )
             new_limit = cls.MAX_CONCURRENT_REQUESTS_ABSOLUTE
@@ -553,7 +550,7 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient, tenacity.AsyncRetrying])
         ssl_error_threshold: typing.Optional[PositiveInt] = None,
         min_connections: typing.Optional[PositiveInt] = None,
         recovery_interval: typing.Optional[PositiveInt] = None,
-        enabled: typing.Optional[bool] = None,
+        enabled: typing.Optional[bool] = None,  # noqa: FBT001
     ) -> None:
         params = {
             "ssl_error_threshold": ("_ssl_error_threshold", ssl_error_threshold),
@@ -592,7 +589,8 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient, tenacity.AsyncRetrying])
             )
 
     def __enter__(self) -> Never:
-        raise RuntimeError("Use 'async with' instead.")
+        msg = "Use 'async with' instead."
+        raise RuntimeError(msg)
 
     def __exit__(self, *_: object, **__: object) -> None:
         pass
@@ -611,15 +609,10 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient, tenacity.AsyncRetrying])
 # the core implementation details in the base classes
 
 
-# fmt: off
-_TYPE_HINT_KEYS: typing.Final = {"expect_item", "expect_page"}
-def _clean_type_hints(  # noqa: E302
+def _clean_type_hints(
     kwargs: typing.Dict[str, typing.Any], /
 ) -> typing.Dict[str, typing.Any]:
-    for key in _TYPE_HINT_KEYS:
-        kwargs.pop(key, None)
-    return kwargs
-# fmt: on
+    return {k: v for k, v in kwargs.items() if k not in {"expect_item", "expect_page"}}
 
 
 @typing.final

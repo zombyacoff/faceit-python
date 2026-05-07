@@ -7,14 +7,16 @@ from functools import cached_property
 
 from typing_extensions import Never, Self
 
-from faceit.http import AsyncClient, EnvKey, SyncClient
+from faceit.http import AsyncClient, FromEnv, SyncClient
 from faceit.types import ClientT, Raw, ValidUUID
 
 if typing.TYPE_CHECKING:
     from types import TracebackType
 
+    from faceit.api.base import BaseResource
     from faceit.http.client import BaseAPIClient
 
+    _ResourceT = typing.TypeVar("_ResourceT", bound="BaseResource[typing.Any]")
     _AggregatorT = typing.TypeVar("_AggregatorT", bound="BaseResources[typing.Any]")
 
 
@@ -35,13 +37,12 @@ class BaseResources(ABC, typing.Generic[ClientT]):
         **client_options: typing.Any,
     ) -> None:
         if auth is not None and client is not None:
-            raise ValueError(f"Provide either {secret_type!r} or 'client', not both")
+            msg = f"Provide either {secret_type!r} or 'client', not both"
+            raise ValueError(msg)
 
         if client is None:
-            self._client = self._client_cls(
-                EnvKey(f"FACEIT_{secret_type.upper()}") if auth is None else auth,
-                **client_options,
-            )
+            key = FromEnv(f"FACEIT_{secret_type.upper()}") if auth is None else auth
+            self._client = self._client_cls(key, **client_options)
             return
 
         if client_options:
@@ -49,7 +50,6 @@ class BaseResources(ABC, typing.Generic[ClientT]):
                 "'client_options' are ignored when an existing client "
                 "instance is provided. Configure your client before "
                 "passing it to this constructor.",
-                UserWarning,
                 stacklevel=3,
             )
 
@@ -106,9 +106,12 @@ def resource_aggregator(cls: typing.Type[_AggregatorT], /) -> typing.Type[_Aggre
     for name, resource_type in cls.__annotations__.items():
 
         def make_property(
-            is_raw: bool, resource_type: typing.Type[typing.Any]
-        ) -> cached_property[_AggregatorT]:
-            return cached_property(lambda self: resource_type(self._client, is_raw))
+            is_raw: bool,  # noqa: FBT001
+            resource_type: typing.Type[_ResourceT],
+        ) -> cached_property[_ResourceT]:
+            return cached_property(
+                lambda self: resource_type(client=self._client, raw=is_raw)
+            )
 
         prop = make_property(Raw in typing.get_args(resource_type), resource_type)
         setattr(cls, name, prop)

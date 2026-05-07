@@ -62,12 +62,15 @@ class FaceitResourcePath(StrEnum):
 # TODO: Refactor the base resource class if/when support for resources
 # other than Data is required, since the current implementation is
 # too Data-centric.
-@dataclass(eq=False, frozen=True)
 class BaseResource(ABC, typing.Generic[ClientT]):
-    __slots__ = ("_client", "_raw")
+    __slots__ = (
+        "_client",
+        "_raw",
+        "_strict_validation",
+    )
 
-    _client: ClientT
-    _raw: bool
+    if typing.TYPE_CHECKING:
+        PATH: typing.ClassVar[Endpoint]
 
     _PARAM_NAME_MAP: typing.ClassVar[typing.Mapping[str, str]] = MappingProxyType({
         "start": "from",
@@ -77,8 +80,16 @@ class BaseResource(ABC, typing.Generic[ClientT]):
     _sync_page_iterator: typing.ClassVar = SyncPageIterator
     _async_page_iterator: typing.ClassVar = AsyncPageIterator
 
-    if typing.TYPE_CHECKING:
-        PATH: typing.ClassVar[Endpoint]
+    def __init__(
+        self,
+        client: ClientT,
+        *,
+        raw: bool,
+        strict_validation: bool = True,  # IDEA: Should this be configured in the aggregator?
+    ) -> None:
+        self._client = client
+        self._raw = raw
+        self._strict_validation = strict_validation
 
     def __init_subclass__(
         cls,
@@ -88,16 +99,21 @@ class BaseResource(ABC, typing.Generic[ClientT]):
         if hasattr(cls, "PATH"):
             return
         if resource_path is None:
-            raise TypeError(
+            msg = (
                 f"Class {cls.__name__} requires 'path' "
                 "parameter or a parent with 'PATH' defined."
             )
+            raise TypeError(msg)
         cls.PATH = Endpoint(resource_path)
         super().__init_subclass__(**kwargs)
 
     @property
     def is_raw(self) -> bool:
         return self._raw
+
+    @property
+    def strict_validation_enabled(self) -> bool:
+        return self._strict_validation
 
     def _process_item(
         self,
@@ -122,9 +138,9 @@ class BaseResource(ABC, typing.Generic[ClientT]):
             return response
 
         validator = config.validator_map.get(key, config.default_validator)
-        page_validator = None
-
-        if validator is not None:
+        if validator is None:
+            page_validator = None
+        else:
             page_validator = typing.cast(
                 "typing.Type[ItemPage[ModelT]]",
                 # Suppressing type checking warning because we're using a
@@ -161,12 +177,19 @@ class BaseResource(ABC, typing.Generic[ClientT]):
                 "unprocessed data."
             )
             msg = default_warn_msg if warn_msg is None else warn_msg
-            warnings.warn(msg, UserWarning, stacklevel=warn_stacklevel())
+            warnings.warn(msg, stacklevel=warn_stacklevel())
             return response
         try:
             return validator.model_validate(response)
         except ValidationError:
             _logger.exception("Validation failed for %s", validator.__name__)
+            if self.strict_validation_enabled:
+                raise
+            warnings.warn(
+                "Validation failed but strict mode disabled. Raw response returned.",
+                RuntimeWarning,
+                stacklevel=2,  # ???: What should be the stack level in this case
+            )
             return response
 
     @classmethod

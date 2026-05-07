@@ -120,10 +120,12 @@ ty.toml
 .ruff_cache/
 .flake8
 .pylintrc
+pyrightconfig.json
 
 # IDE settings
 .idea/
 .vscode/
+.zed/
 *.swp
 *.swo
 

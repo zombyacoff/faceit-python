@@ -9,6 +9,18 @@ from abc import ABC
 from pydantic import AfterValidator, Field, validate_call
 from typing_extensions import Annotated, TypeAlias
 
+from faceit.api.base import (
+    BaseResource,
+    FaceitResourcePath,
+    MappedValidatorConfig,
+    RequestPayload,
+)
+from faceit.api.pagination import (
+    MaxItems,
+    MaxItemsType,
+    TimestampPaginationConfig,
+    pages,
+)
 from faceit.constants import GameID
 from faceit.http import AsyncClient, SyncClient
 from faceit.models import (
@@ -25,18 +37,6 @@ from faceit.models import (
 )
 from faceit.models.players.general import AnyPlayerStats
 from faceit.models.players.match import AbstractMatchPlayerStats
-from faceit.resources.base import (
-    BaseResource,
-    FaceitResourcePath,
-    MappedValidatorConfig,
-    RequestPayload,
-)
-from faceit.resources.pagination import (
-    MaxItems,
-    MaxItemsType,
-    TimestampPaginationConfig,
-    pages,
-)
 from faceit.types import (
     AnyCSID,
     APIResponseFormatT,
@@ -105,10 +105,11 @@ class BasePlayers(
 
         if player_lookup_key is None:
             if game is None or game_player_id is None:
-                raise ValueError(
-                    "When 'player_lookup_key' is not provided,"
+                msg = (
+                    "When 'player_lookup_key' is not provided, "
                     "both 'game' AND 'game_player_id' must be specified"
                 )
+                raise ValueError(msg)
             _logger.debug(
                 "Fetching player by game parameters: game=%s, game_player_id=%s",
                 game,
@@ -121,7 +122,6 @@ class BasePlayers(
                 "When 'player_lookup_key' is provided, "
                 "'game' and 'game_player_id' should not be specified. "
                 "The value of 'player_lookup_key' will take precedence.",
-                UserWarning,
                 stacklevel=5,
             )
 
@@ -290,7 +290,11 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
         limit: int = Field(20, ge=1, le=100),
         start: typing.Optional[int] = None,
         to: typing.Optional[int] = None,
-    ) -> typing.Any:
+    ) -> typing.Union[
+        RawAPIPageResponse,
+        ItemPage[AbstractMatchPlayerStats],
+        ItemPage[CS2MatchPlayerStats],
+    ]:
         return self._process_page(
             self._client.get(
                 self.__class__.PATH / str(player_id) / "games" / game / "stats",
@@ -332,7 +336,11 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
         player_id: PlayerID,
         game: GameID,
         max_items: MaxItemsType = pages(50),
-    ) -> typing.Any:
+    ) -> typing.Union[
+        typing.List[RawAPIItem],
+        ItemPage[CS2MatchPlayerStats],
+        ItemPage[AbstractMatchPlayerStats],
+    ]:
         return self.__class__._sync_page_iterator.gather_pages(
             self.matches_stats,
             player_id,
@@ -758,7 +766,11 @@ class AsyncPlayers(BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT])
         limit: int = Field(20, ge=1, le=100),
         start: typing.Optional[int] = None,
         to: typing.Optional[int] = None,
-    ) -> typing.Any:
+    ) -> typing.Union[
+        RawAPIPageResponse,
+        ItemPage[AbstractMatchPlayerStats],
+        ItemPage[CS2MatchPlayerStats],
+    ]:
         return self._process_page(
             await self._client.get(
                 self.__class__.PATH / str(player_id) / "games" / game / "stats",
@@ -800,7 +812,11 @@ class AsyncPlayers(BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT])
         player_id: PlayerID,
         game: GameID,
         max_items: MaxItemsType = pages(50),
-    ) -> typing.Any:
+    ) -> typing.Union[
+        typing.List[RawAPIItem],
+        ItemPage[AbstractMatchPlayerStats],
+        ItemPage[CS2MatchPlayerStats],
+    ]:
         return await self.__class__._async_page_iterator.gather_pages(
             self.matches_stats,
             player_id,
