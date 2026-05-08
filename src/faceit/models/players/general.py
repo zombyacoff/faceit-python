@@ -62,10 +62,9 @@ class GameInfo(BaseModel):
             return data
 
         resolved = SkillLevel.get_level(game_id, skill_lvl)
-        assert resolved is not None, (
-            "`resolved` cannot be None because `game_id` was already validated "
-            "to be present in `ELO_THRESHOLDS`"
-        )
+        # `resolved` cannot be None because `game_id` was already validated
+        # to be present in `ELO_THRESHOLDS`
+        assert resolved is not None
         data[cls._SKILL_LVL] = resolved
         return data
 

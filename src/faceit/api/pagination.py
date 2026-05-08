@@ -457,7 +457,7 @@ class BasePageIterator(ABC, typing.Generic[PaginationMethodT, _PageT]):
         if isinstance(page, dict):
             items = page.get(RAW_RESPONSE_ITEMS_KEY) or []
             return deep_get(items[-1], key) if items else None
-        assert isinstance(page, ItemPage)
+        assert isinstance(page, ItemPage)  # Type narrowing for mypy on Python < 3.9
         return getattr(page.get_last(), attr, None)
 
     @staticmethod
