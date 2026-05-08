@@ -18,7 +18,7 @@ from .api import (
     pages,
 )
 from .constants import EventCategory, ExpandedField, GameID, Region, SkillLevel
-from .exceptions import APIError, FaceitError
+from .exceptions import APIError, FaceitError  # deprecated import
 from .faceit import AsyncFaceit, Faceit
 from .http import EnvKey, FromEnv, MaxConcurrentRequests
 

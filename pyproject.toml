@@ -1,6 +1,6 @@
 [project]
 name = "faceit"
-version = "0.2.1"
+version = "0.2.2"
 description = "The Python wrapper for the FACEIT API"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -30,9 +30,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-env = [
-    "python-decouple>=3.8",
-]
+env = ["python-decouple>=3.8"]
 
 [dependency-groups]
 dev = [

@@ -11,8 +11,6 @@ from faceit.http import AsyncClient, FromEnv, SyncClient
 from faceit.types import ClientT, Raw, ValidUUID
 
 if typing.TYPE_CHECKING:
-    from types import TracebackType
-
     from faceit.api.base import BaseResource
     from faceit.http.client import BaseAPIClient
 
@@ -70,13 +68,8 @@ class SyncResources(BaseResources[SyncClient]):
         self._client.__enter__()
         return self
 
-    def __exit__(
-        self,
-        typ: typing.Optional[typing.Type[BaseException]],
-        exc: typing.Optional[BaseException],
-        tb: typing.Optional[TracebackType],
-    ) -> None:
-        self._client.__exit__(typ, exc, tb)
+    def __exit__(self, *args: object, **kwargs: object) -> None:
+        self._client.__exit__(*args, **kwargs)
 
 
 class AsyncResources(BaseResources[AsyncClient]):
@@ -93,28 +86,26 @@ class AsyncResources(BaseResources[AsyncClient]):
         await self._client.__aenter__()
         return self
 
-    async def __aexit__(
-        self,
-        typ: typing.Optional[typing.Type[BaseException]],
-        exc: typing.Optional[BaseException],
-        tb: typing.Optional[TracebackType],
-    ) -> None:
-        await self._client.__aexit__(typ, exc, tb)
+    async def __aexit__(self, *args: object, **kwargs: object) -> None:
+        await self._client.__aexit__(*args, **kwargs)
 
 
 def resource_aggregator(cls: typing.Type[_AggregatorT], /) -> typing.Type[_AggregatorT]:
     for name, resource_type in cls.__annotations__.items():
 
         def make_property(
-            is_raw: bool,  # noqa: FBT001
-            resource_type: typing.Type[_ResourceT],
+            resource_type: typing.Type[_ResourceT], *, is_raw: bool
         ) -> cached_property[_ResourceT]:
-            return cached_property(
-                lambda self: resource_type(client=self._client, raw=is_raw)
-            )
+            def factory(self: _AggregatorT) -> _ResourceT:
+                return resource_type(self._client, raw=is_raw)
 
-        prop = make_property(Raw in typing.get_args(resource_type), resource_type)
-        setattr(cls, name, prop)
-        prop.__set_name__(cls, name)
+            return cached_property(factory)
+
+        property_ = make_property(
+            resource_type,
+            is_raw=Raw in typing.get_args(resource_type),
+        )
+        setattr(cls, name, property_)
+        property_.__set_name__(cls, name)
 
     return cls

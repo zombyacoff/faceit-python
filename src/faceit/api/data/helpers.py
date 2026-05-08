@@ -4,7 +4,7 @@ from contextlib import suppress
 from faceit.constants import FACEIT_USERNAME_REGEX
 from faceit.utils import create_uuid_validator
 
-validate_player_id = create_uuid_validator("player_id")
+validate_player_id = create_uuid_validator(arg_name="player_id")
 
 
 def validate_player_id_or_nickname(value: typing.Any, /) -> str:

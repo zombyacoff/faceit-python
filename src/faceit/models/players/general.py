@@ -112,7 +112,7 @@ class Hub(BaseModel):
     name: str
     avatar: UrlOrEmpty
     game_id: GameID
-    organizer_id: FaceitID
+    organizer_id: str
     faceit_url: LangFormattedAnyHttpUrl
 
 
@@ -121,11 +121,11 @@ class GeneralTeam(BaseModel):
     id: Annotated[FaceitID, Field(alias="team_id")]
     nickname: str
     name: str
-    avatar: UrlOrEmpty
+    avatar: UrlOrEmpty = ""
     cover_image: typing.Optional[str] = None
     game: GameID
     type: Annotated[str, Field(alias="team_type")]
-    members: typing.Optional[typing.List[str]] = None  # Maybe `List[Player]`?
+    members: typing.Optional[typing.List[str]] = None
     leader_id: Annotated[FaceitID, Field(alias="leader")]
     chat_room_id: str  # To be honest, I'm not totally sure what the ID is
     faceit_url: LangFormattedAnyHttpUrl

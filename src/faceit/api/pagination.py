@@ -132,9 +132,8 @@ def _has_unix_pagination_params(
 
 
 def _get_le(param: inspect.Parameter, /) -> typing.Optional[Le]:
-    return next(
-        (items for items in param.default.metadata if isinstance(items, Le)), None
-    )
+    generator = (items for items in param.default.metadata if isinstance(items, Le))
+    return next(generator, None)
 
 
 def _extract_pagination_limits(

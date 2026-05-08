@@ -108,7 +108,7 @@ class BaseAPIClient(ABC, typing.Generic[_HttpxClientT, _RetryerT]):
 
     _api_key_validator: typing.ClassVar[typing.Callable[[ValidUUID], str]] = (
         create_uuid_validator(
-            "Invalid FACEIT API key format: {value!r}. "
+            error_message="Invalid FACEIT API key format: {value!r}. "
             "Please visit the official wiki for API key information: "
             f"{BASE_WIKI_URL}/getting-started/authentication/api-keys"
         )
@@ -122,8 +122,8 @@ class BaseAPIClient(ABC, typing.Generic[_HttpxClientT, _RetryerT]):
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self._api_key_setter(api_key)
-        self._retry_args_setter(retry_args or RetryArgs())
         self._build_endpoint = lru_cache(self._build_endpoint_unwrapped)
+        self._retry_args_setter(retry_args or RetryArgs())
 
     @property
     def api_key(self) -> str:

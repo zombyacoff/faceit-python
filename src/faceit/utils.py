@@ -7,7 +7,6 @@ import reprlib
 import sys
 import typing
 from contextlib import suppress
-from datetime import datetime, timezone
 from enum import Enum, auto
 from functools import lru_cache, reduce, wraps
 from hashlib import sha256
@@ -69,14 +68,6 @@ class StrEnumWithAll(StrEnum):
     @classmethod
     def get_all_values(cls) -> typing.Tuple[Self, ...]:
         return tuple(cls)
-
-
-def UnsupportedOperationTypeError(  # noqa: N802
-    sign: str, self_name: str, other_name: str
-) -> TypeError:
-    return TypeError(
-        f"unsupported operand type(s) for {sign}: {self_name!r} and {other_name!r}"
-    )
 
 
 def locked(
@@ -172,26 +163,6 @@ def deduplicate_unhashable(values: typing.Iterable[_T], /) -> typing.List[_T]:
     return list({get_hashable_representation(v): v for v in values}.values())
 
 
-def to_unix(
-    value: typing.Optional[datetime], /, *, millis: bool = False
-) -> typing.Optional[int]:
-    if value is None:
-        return None
-    if isinstance(value, datetime):
-        return int(value.timestamp() * (1000 if millis else 1))
-    raise ValueError(f"Expected datetime or None, got {type(value).__name__}")
-
-
-def from_unix(
-    value: typing.Optional[float], /, *, millis: bool = False
-) -> typing.Optional[datetime]:
-    if value is None:
-        return None
-    if isinstance(value, (int, float)):
-        return datetime.fromtimestamp(value / (1000 if millis else 1), tz=timezone.utc)
-    raise ValueError(f"Expected int, float or None, got {type(value).__name__}")
-
-
 def to_uuid(value: typing.Union[str, bytes], /) -> UUID:
     if isinstance(value, str):
         return UUID(value)
@@ -220,9 +191,13 @@ def is_valid_uuid(value: typing.Any, /) -> TypeIs[ValidUUID]:
 
 
 def create_uuid_validator(
-    error_message: str = "Invalid {arg_name}: {value}. Expected a valid UUID.",
+    *,
     arg_name: str = "value",
+    error_message: typing.Optional[str] = None,
 ) -> typing.Callable[[typing.Any], str]:
+    if error_message is None:
+        error_message = f"Invalid {arg_name}: {{value}}. Expected a valid UUID."
+
     def validator(value: typing.Any, /) -> str:
         if is_valid_uuid(value):
             return str(value if isinstance(value, (UUID, str)) else to_uuid(value))
@@ -331,17 +306,20 @@ def _apply_representation(
 
 
 @typing.overload
-def representation(cls: _ClassT, /, *fields: str, use_str: bool = False) -> _ClassT: ...
-
-
+def representation(
+    cls: _ClassT,
+    /,
+    *fields: str,
+    use_str: bool = ...,
+) -> _ClassT: ...
 @typing.overload
 def representation(
-    *fields: str, use_str: bool = False
+    *fields: str,
+    use_str: bool = ...,
 ) -> typing.Callable[[_ClassT], _ClassT]: ...
-
-
 def representation(
-    *fields: typing.Any, use_str: bool = False
+    *fields: typing.Any,
+    use_str: bool = False,
 ) -> typing.Union[_ClassT, typing.Callable[[_ClassT], _ClassT]]:
     return (
         _apply_representation(fields[0], fields[1:], use_str)

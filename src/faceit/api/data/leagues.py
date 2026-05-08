@@ -24,7 +24,7 @@ from .players import PlayerID, PlayerIDValidated  # noqa: TC001
 _LeagueID: TypeAlias = ValidUUID
 _LeagueIDValidated: TypeAlias = Annotated[
     _LeagueID,
-    AfterValidator(create_uuid_validator(arg_name="league ID")),
+    AfterValidator(create_uuid_validator(arg_name="league_id")),
 ]
 _SeasonID: TypeAlias = Annotated[int, Field(ge=1)]
 

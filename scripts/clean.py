@@ -1,8 +1,9 @@
 import shutil
 from pathlib import Path
+from typing import Final  # noqa: ICN003
 
-PYCACHE = "__pycache__"
-DIRS = (
+PYCACHE: Final = "__pycache__"
+DIRS: Final = {
     PYCACHE,
     ".pytest_cache",
     ".mypy_cache",
@@ -10,7 +11,7 @@ DIRS = (
     ".qodo",
     "dist",
     "output_dir",
-)
+}
 
 
 def remove_dir(path: Path, *, dry_run: bool = False) -> None:

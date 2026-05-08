@@ -22,7 +22,6 @@ NullableList: TypeAlias = Annotated[
     typing.List[_T],
     BeforeValidator(lambda x: x or []),
 ]
-
 # NOTE: Type alias for country codes that are always validated and converted to lowercase.
 # Used because Faceit API requires country codes to be in lowercase.
 #

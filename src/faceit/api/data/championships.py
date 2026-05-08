@@ -27,7 +27,7 @@ from faceit.utils import create_uuid_validator
 _ChampionshipID: TypeAlias = ValidUUID
 _ChampionshipIDValidated: TypeAlias = Annotated[
     _ChampionshipID,
-    AfterValidator(create_uuid_validator(arg_name="championship ID")),
+    AfterValidator(create_uuid_validator(arg_name="championship_id")),
 ]
 
 

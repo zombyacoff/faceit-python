@@ -5,8 +5,9 @@ from abc import ABC, abstractmethod
 from uuid import UUID
 
 from pydantic_core import core_schema
-from typing_extensions import Self
+from typing_extensions import Self, TypeAlias
 
+from faceit.types import EmptyString
 from faceit.utils import is_valid_uuid, representation
 
 if typing.TYPE_CHECKING:
@@ -25,7 +26,7 @@ class _BaseFaceitUUIDValidator(ABC):
         raise NotImplementedError
 
     @classmethod
-    def __remove_prefix_and_suffix(cls, value: str, /) -> str:
+    def _remove_prefix_and_suffix(cls, value: str, /) -> str:
         if not cls._PREFIX and not cls._SUFFIX:
             return value
 
@@ -40,20 +41,14 @@ class _BaseFaceitUUIDValidator(ABC):
         return value[start:end]
 
     @classmethod
-    def __pydantic_parse(cls, value: str, /) -> Self:
-        return cls._validate(cls.__remove_prefix_and_suffix(value))
-
-    @classmethod
     def __get_pydantic_core_schema__(  # noqa: PLW3201
         cls, _: typing.Type[typing.Any], handler: GetCoreSchemaHandler
     ) -> core_schema.CoreSchema:
         return core_schema.union_schema([
-            core_schema.str_schema(  # FIXME: Where does the API return empty strings instead of IDs? # noqa: FIX001
-                max_length=0
-            ),
             core_schema.no_info_after_validator_function(
-                cls.__pydantic_parse, handler(str)
-            ),
+                lambda v: cls._validate(cls._remove_prefix_and_suffix(v)),
+                handler(str),
+            )
         ])
 
 
@@ -76,6 +71,9 @@ class FaceitID(UUID, BaseFaceitID):
         raise ValueError(
             f"Invalid {cls.__name__}: {value!r} is not a valid UUID format."
         )
+
+
+MaybeFaceitID: TypeAlias = typing.Union[FaceitID, EmptyString]
 
 
 @representation(use_str=True)
