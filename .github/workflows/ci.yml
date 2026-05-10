@@ -22,8 +22,8 @@ jobs:
       - name: Set up Python
         run: uv python install ${{ matrix.python-version }}
 
-      - name: Sync dependencies (dev)
-        run: uv sync --group dev --python ${{ matrix.python-version }}
+      - name: Sync dependencies
+        run: uv sync --all-extras --all-groups --python ${{ matrix.python-version }}
 
       - name: Ruff (lint)
         run: uv run ruff check .

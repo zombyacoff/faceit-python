@@ -42,37 +42,39 @@ async def async_data() -> typing.AsyncGenerator[AsyncDataResource, None]:
         yield client
 
 
-class TestDataResourceE2E:
-    def test_sync_player_flow(self, data: SyncDataResource, test_player: str) -> None:
-        player = data.players.get(test_player)
+def test_sync_player_flow(data: SyncDataResource, test_player: str) -> None:
+    player = data.players.get(test_player)
 
-        assert player.nickname == test_player
-        assert player.id is not None
+    assert player.nickname == test_player
+    assert player.id is not None
 
-        matches = data.raw_players.matches_stats(player.id, GameID.CS2, limit=2)
+    matches = data.raw_players.matches_stats(player.id, GameID.CS2, limit=2)
 
-        assert isinstance(matches, dict)
-        if "items" in matches:
-            assert len(matches["items"]) > 0
-            assert "match_id" in matches["items"][0] or "stats" in matches["items"][0]
+    assert isinstance(matches, dict)
+    if "items" in matches:
+        assert len(matches["items"]) > 0
+        assert "match_id" in matches["items"][0] or "stats" in matches["items"][0]
 
-    def test_sync_games_list(self, data: SyncDataResource) -> None:
-        games_page = data.raw_games.items(limit=10)
 
-        assert "items" in games_page
-        assert len(games_page["items"]) > 0
+def test_sync_games_list(data: SyncDataResource) -> None:
+    games_page = data.raw_games.items(limit=10)
 
-        game_ids = [g["game_id"] for g in games_page["items"]]
-        assert "cs2" in game_ids or "csgo" in game_ids
+    assert "items" in games_page
+    assert len(games_page["items"]) > 0
 
-    async def test_async_player_flow(
-        self, async_data: AsyncDataResource, test_player: str
-    ) -> None:
-        player = await async_data.players.get(test_player)
+    game_ids = [g["game_id"] for g in games_page["items"]]
+    assert "cs2" in game_ids or "csgo" in game_ids
 
-        assert player.nickname == test_player
-        assert player.id is not None
 
-    def test_pagination_loop_e2e(self, data: SyncDataResource) -> None:
-        games = data.raw_games.all_items(max_items=3)
-        assert len(games) >= 3
+async def test_async_player_flow(
+    async_data: AsyncDataResource, test_player: str
+) -> None:
+    player = await async_data.players.get(test_player)
+
+    assert player.nickname == test_player
+    assert player.id is not None
+
+
+def test_pagination_loop_e2e(data: SyncDataResource) -> None:
+    games = data.raw_games.all_items(max_items=3)
+    assert len(games) >= 3

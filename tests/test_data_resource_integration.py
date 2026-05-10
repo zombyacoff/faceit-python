@@ -55,7 +55,6 @@ async def test_async_resources_accessibility(mock_api_key: str) -> None:
 
 
 def test_sync_request_flow(mock_api_key: str) -> None:
-    """Test that a call to a resource method correctly reaches the client."""
     with patch("httpx.Client") as mock_httpx:
         mock_instance = mock_httpx.return_value
         mock_instance.is_closed = False
@@ -80,7 +79,6 @@ def test_sync_request_flow(mock_api_key: str) -> None:
 
 
 async def test_async_request_flow(mock_api_key: str) -> None:
-    """Test that an async call to a resource method correctly reaches the client."""
     with patch("httpx.AsyncClient") as mock_httpx:
         mock_instance = mock_httpx.return_value
         mock_instance.is_closed = False

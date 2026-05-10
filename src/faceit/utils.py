@@ -33,7 +33,7 @@ _UNINITIALIZED_MARKER: typing.Final = "uninitialized"
 
 @deprecated(
     "`UnsetValue` is deprecated and will be removed in a future release. "
-    "Please use `None` instead.",
+    "Please use `None` instead of `UnsetValue.UNSET`.",
 )
 class UnsetValue:
     UNSET: typing.ClassVar[None] = None
