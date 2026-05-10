@@ -9,10 +9,8 @@ from faceit.models.custom_types import (
 )
 from faceit.models.custom_types.common import _LANG_PLACEHOLDER
 
-langph = _LANG_PLACEHOLDER
 
-
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def lang_adapter() -> TypeAdapter[LangFormattedAnyHttpUrl]:
     return TypeAdapter(LangFormattedAnyHttpUrl)
 
@@ -20,14 +18,14 @@ def lang_adapter() -> TypeAdapter[LangFormattedAnyHttpUrl]:
 @pytest.mark.parametrize(
     ("input_value", "expected"),
     [
-        (f"https://example.com/{langph}/docs", "https://example.com/docs"),
-        (f"http://{langph}/foo/bar", "http://foo/bar"),
-        (f"{langph}/foo/{langph}/bar", "foo/bar"),
+        (f"https://example.com/{_LANG_PLACEHOLDER}/docs", "https://example.com/docs"),
+        (f"http://{_LANG_PLACEHOLDER}/foo/bar", "http://foo/bar"),
+        (f"{_LANG_PLACEHOLDER}/foo/{_LANG_PLACEHOLDER}/bar", "foo/bar"),
         ("https://example.com/foo/bar", "https://example.com/foo/bar"),
         ("foo/bar", "foo/bar"),
-        (f"foo/{langph}/bar", "foo/bar"),
-        (f"foo/{langph}", "foo"),
-        (f"{langph}/foo", "foo"),
+        (f"foo/{_LANG_PLACEHOLDER}/bar", "foo/bar"),
+        (f"foo/{_LANG_PLACEHOLDER}", "foo"),
+        (f"{_LANG_PLACEHOLDER}/foo", "foo"),
         ("", ""),
     ],
 )

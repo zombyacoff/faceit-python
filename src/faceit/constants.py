@@ -58,6 +58,7 @@ class GameID(StrEnum):
     COD_MW3 = "cod-mw3"
     COD_WZ = "cod-wz"
     CS2 = "cs2"
+    CSCO = "csco"  # ???: What is this
     CSDZ = "csdz"
     CSGO = "csgo"
     DEADLOCK = "deadlock"

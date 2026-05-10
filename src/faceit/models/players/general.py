@@ -177,7 +177,8 @@ class CSLifetimeStats(BaseModel):  # `GameID.CS2` & `GameID.CSGO`
     longest_win_streak: Annotated[int, Field(alias="Longest Win Streak")]
     matches: Annotated[int, Field(alias="Matches")]
     recent_results: Annotated[
-        typing.List[MatchResult], Field(alias="Recent Results", max_length=5)
+        typing.List[typing.Optional[MatchResult]],
+        Field(alias="Recent Results", max_length=5),
     ]
     sniper_kill_rate: Annotated[float, Field(0.0, alias="Sniper Kill Rate")]
     sniper_kill_rate_per_round: Annotated[
@@ -193,7 +194,7 @@ class CSLifetimeStats(BaseModel):  # `GameID.CS2` & `GameID.CSGO`
     total_entry_wins: Annotated[int, Field(0, alias="Total Entry Wins")]
     total_flash_count: Annotated[int, Field(0, alias="Total Flash Count")]
     total_flash_successes: Annotated[int, Field(0, alias="Total Flash Successes")]
-    total_headshots_percentage: Annotated[int, Field(alias="Total Headshots %")]
+    total_headshots_percentage: Annotated[float, Field(alias="Total Headshots %")]
     total_kills_with_extended_stats: Annotated[
         int, Field(0, alias="Total Kills with extended stats")
     ]
@@ -268,7 +269,7 @@ class CSMapStats(BaseModel):  # `GameID.CS2` & `GameID.CSGO`
     total_entry_wins: Annotated[int, Field(0, alias="Total Entry Wins")]
     total_flash_count: Annotated[int, Field(0, alias="Total Flash Count")]
     total_flash_successes: Annotated[int, Field(0, alias="Total Flash Successes")]
-    total_headshots_percentage: Annotated[int, Field(alias="Total Headshots %")]
+    total_headshots_percentage: Annotated[float, Field(alias="Total Headshots %")]
     total_kills_with_extended_stats: Annotated[
         int, Field(0, alias="Total Kills with extended stats")
     ]
@@ -334,8 +335,11 @@ class PlayerStats(
             data["segments"] = {
                 # NOTE: Anubis --> anubis, Ancient --> ancient, ...
                 # (lowercase and replace spaces with underscores)
-                seg.get(_SEGMENT_NAME).lower().replace(" ", "_"): seg
-                for seg in raw_segments
+                seg[_SEGMENT_NAME].lower().replace(" ", "_"): seg
+                for seg in typing.cast(
+                    "typing.List[typing.Dict[str, str]]",
+                    raw_segments,
+                )
                 if _SEGMENT_NAME in seg
             }
 

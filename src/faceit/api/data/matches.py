@@ -6,7 +6,7 @@ from abc import ABC
 from pydantic import AfterValidator, validate_call
 from typing_extensions import Annotated, TypeAlias
 
-from faceit.api.base import BaseResource, FaceitResourcePath, ModelPlaceholder
+from faceit.api.base import BaseResource, ModelPlaceholder
 from faceit.http import AsyncClient, SyncClient
 from faceit.models.custom_types import FaceitMatchID
 from faceit.types import (
@@ -30,7 +30,7 @@ _MatchIDValidated: TypeAlias = Annotated[
 class BaseMatches(
     BaseResource[ClientT],
     ABC,
-    resource_path=FaceitResourcePath.MATCHES,
+    resource_path="matches",
 ):
     __slots__ = ()
 

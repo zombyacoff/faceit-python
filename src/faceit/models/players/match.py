@@ -3,7 +3,7 @@ from abc import ABC
 from datetime import datetime
 
 from pydantic import BaseModel, Field, field_validator
-from typing_extensions import Annotated, TypeAlias
+from typing_extensions import Annotated
 
 from faceit.constants import GameID
 from faceit.models.custom_types import (
@@ -11,9 +11,8 @@ from faceit.models.custom_types import (
     FaceitMatchID,
     LangFormattedAnyHttpUrl,
 )
-from faceit.types import RegionIdentifier, UrlOrEmpty
-
-_NoOpponent: TypeAlias = typing.Literal["bye"]
+from faceit.types import RegionIdentifier, TimestampMillis, UrlOrEmpty
+from faceit.utils import StrEnum
 
 _F1: typing.Final = "faction1"
 _F2: typing.Final = "faction2"
@@ -21,6 +20,10 @@ _RESULT_MAP: typing.Final = {
     _F1: "first",
     _F2: "second",
 }
+
+
+class Opponent(StrEnum):
+    ABSENT = "bye"
 
 
 @typing.final
@@ -36,7 +39,10 @@ class PlayerSummary(BaseModel):
 
 @typing.final
 class Team(BaseModel):
-    id: Annotated[typing.Union[FaceitID, _NoOpponent], Field(alias="team_id")]
+    id: Annotated[
+        typing.Union[FaceitID, Opponent],
+        Field(alias="team_id"),
+    ]
     name: Annotated[str, Field(alias="nickname")]
     avatar: UrlOrEmpty
     type: str
@@ -85,8 +91,8 @@ class Match(BaseModel):
     competition_type: str
     organizer_id: str
     status: str
-    started_at: int
-    finished_at: int
+    started_at: TimestampMillis
+    finished_at: TimestampMillis
     results: Results
     faceit_url: LangFormattedAnyHttpUrl
 
@@ -109,17 +115,18 @@ class AbstractMatchPlayerStats(BaseModel, ABC):
 # (when extended stats were added to the API)
 # TODO: Need to add default values for all fields that may be missing
 class CS2MatchPlayerStats(AbstractMatchPlayerStats):
+    id: Annotated[FaceitMatchID, Field(alias="Match Id")]
     game_mode: Annotated[str, Field(alias="Game Mode")]
     region: Annotated[RegionIdentifier, Field(alias="Region")]
     kd_ratio: Annotated[float, Field(alias="K/D Ratio")]
-    winner: Annotated[FaceitID, Field(alias="Winner")]
+    winner: Annotated[typing.Optional[FaceitID], Field(None, alias="Winner")]
     player_id: Annotated[FaceitID, Field(alias="Player Id")]
     first_half_score: Annotated[int, Field(alias="First Half Score")]
     triple_kills: Annotated[int, Field(alias="Triple Kills")]
     assists: Annotated[int, Field(alias="Assists")]
     final_score: Annotated[int, Field(alias="Final Score")]
     penta_kills: Annotated[int, Field(alias="Penta Kills")]
-    match_finished_at: Annotated[int, Field(alias="Match Finished At")]
+    finished_at: Annotated[TimestampMillis, Field(alias="Match Finished At")]
     map: Annotated[str, Field(alias="Map")]
     overtime_score: Annotated[int, Field(alias="Overtime score")]
     deaths: Annotated[int, Field(alias="Deaths")]
@@ -128,7 +135,6 @@ class CS2MatchPlayerStats(AbstractMatchPlayerStats):
     second_half_score: Annotated[int, Field(alias="Second Half Score")]
     team: Annotated[str, Field(alias="Team")]
     mvps: Annotated[int, Field(alias="MVPs")]
-    match_id: Annotated[FaceitMatchID, Field(alias="Match Id")]
     headshots: Annotated[int, Field(alias="Headshots")]
     kills: Annotated[int, Field(alias="Kills")]
     result: Annotated[int, Field(alias="Result")]
@@ -136,7 +142,7 @@ class CS2MatchPlayerStats(AbstractMatchPlayerStats):
     match_round: Annotated[int, Field(alias="Match Round")]
     created_at: Annotated[datetime, Field(alias="Created At")]
     best_of: Annotated[int, Field(alias="Best Of")]
-    adr: Annotated[float, Field(0, alias="ADR")]
+    adr: Annotated[float, Field(0.0, alias="ADR")]
     headshots_percentage: Annotated[float, Field(alias="Headshots %")]
     competition_id: Annotated[FaceitID, Field(alias="Competition Id")]
     score: Annotated[str, Field(alias="Score")]

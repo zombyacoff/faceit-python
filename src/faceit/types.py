@@ -45,6 +45,7 @@ ModelNotImplemented: TypeAlias = BaseModel
 RegionIdentifier: TypeAlias = typing.Union[Region, str]
 
 RawAPIItem = typing.NewType("RawAPIItem", typing.Dict[str, typing.Any])
+TimestampMillis: TypeAlias = int
 RawAPIPageResponse = typing.TypedDict(
     "RawAPIPageResponse",
     {
@@ -53,8 +54,8 @@ RawAPIPageResponse = typing.TypedDict(
         "start": int,
         "end": int,
         # Unix timestamps (in milliseconds)
-        "from": NotRequired[int],
-        "to": NotRequired[int],
+        "from": NotRequired[TimestampMillis],
+        "to": NotRequired[TimestampMillis],
     },
 )
 RawAPIResponse: TypeAlias = typing.Union[RawAPIItem, RawAPIPageResponse]

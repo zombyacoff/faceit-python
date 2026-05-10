@@ -60,22 +60,22 @@ def _create_error_response(status_code: int = 400) -> Mock:
     return response
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def mock_response() -> Mock:
     return _create_response_mock()
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def error_response() -> Mock:
     return _create_error_response(400)
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def server_error_response() -> Mock:
     return _create_error_response(500)
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def invalid_json_response() -> Mock:
     return _create_response_mock(
         status_code=200,
@@ -296,7 +296,6 @@ class TestSyncClient:
 
 
 class TestAsyncClient:
-    @pytest.mark.asyncio
     async def test_init(
         self, async_client_factory: typing.Callable[[], AsyncClient]
     ) -> None:
@@ -304,7 +303,6 @@ class TestAsyncClient:
         assert isinstance(client, AsyncClient)
         await client.aclose()
 
-    @pytest.mark.asyncio
     async def test_aclose(
         self, async_client_factory: typing.Callable[[], AsyncClient]
     ) -> None:
@@ -312,7 +310,6 @@ class TestAsyncClient:
         await client.aclose()
         client._client.aclose.assert_called_once()
 
-    @pytest.mark.asyncio
     @patch.object(_BaseAsyncClient, "request")
     @pytest.mark.parametrize(
         ("client_method", "endpoint", "call_kwargs", "expected_supported_method"),
@@ -341,7 +338,6 @@ class TestAsyncClient:
         )
         await client.aclose()
 
-    @pytest.mark.asyncio
     @patch("httpx.AsyncClient")
     async def test_context_manager(self, mock_client: Mock, valid_uuid: str) -> None:
         mock_instance = Mock()
@@ -353,7 +349,6 @@ class TestAsyncClient:
             assert isinstance(client, AsyncClient)
         mock_instance.aclose.assert_called_once()
 
-    @pytest.mark.asyncio
     @patch("httpx.AsyncClient")
     async def test_request_with_retry(
         self, mock_client: Mock, valid_uuid: str, mock_response: Mock
@@ -371,7 +366,6 @@ class TestAsyncClient:
             assert result == {"data": "test_data"}
             mock_instance.request.assert_called_once()
 
-    @pytest.mark.asyncio
     @patch("httpx.AsyncClient")
     async def test_request_with_timeout(
         self, mock_client: Mock, valid_uuid: str
@@ -388,7 +382,6 @@ class TestAsyncClient:
             with pytest.raises(httpx.TimeoutException):
                 await client.request(SupportedMethod.GET, "users/123")
 
-    @pytest.mark.asyncio
     @patch("httpx.AsyncClient")
     async def test_close_all(self, mock_client: Mock, valid_uuid: str) -> None:
         mock_instance = Mock()
@@ -421,7 +414,6 @@ class TestAsyncClient:
             finally:
                 asyncio.run(client.aclose())
 
-    @pytest.mark.asyncio
     async def test_update_rate_limit(
         self, async_client_factory: typing.Callable[[], AsyncClient]
     ) -> None:
@@ -445,7 +437,6 @@ class TestAsyncClient:
         finally:
             await client.aclose()
 
-    @pytest.mark.asyncio
     async def test_configure_adaptive_limits(
         self, async_client_factory: typing.Callable[[], AsyncClient]
     ) -> None:
@@ -485,7 +476,6 @@ class TestSSLErrorHandling:
         assert is_ssl_error(httpx.ConnectError("TLS handshake failed"))
         assert not is_ssl_error(ValueError("Not an SSL error"))
 
-    @pytest.mark.asyncio
     @patch("httpx.AsyncClient")
     async def test_register_ssl_error(self, mock_client: Mock, valid_uuid: str) -> None:
         mock_instance = Mock()
@@ -534,7 +524,6 @@ class TestSSLErrorHandling:
                 AsyncClient._ssl_error_threshold = original_ssl_error_threshold
                 AsyncClient._min_connections = original_min_connections
 
-    @pytest.mark.asyncio
     @patch("httpx.AsyncClient")
     async def test_check_connection_recovery(
         self, mock_client: Mock, valid_uuid: str
@@ -596,7 +585,6 @@ class TestRetryLogic:
         )
         assert not retry_predicate(ValueError("Random error"))
 
-    @pytest.mark.asyncio
     async def test_ssl_before_sleep(self, valid_uuid: str) -> None:
         with patch("httpx.AsyncClient") as mock_client, patch(
             "faceit.http.client._logger"

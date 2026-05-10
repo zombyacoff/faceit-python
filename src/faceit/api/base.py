@@ -19,7 +19,7 @@ from faceit.types import (
     RawAPIPageResponse,
     RawAPIResponse,
 )
-from faceit.utils import StrEnum, warn_stacklevel
+from faceit.utils import warn_stacklevel
 
 from .pagination import AsyncPageIterator, SyncPageIterator
 
@@ -46,17 +46,6 @@ class MappedValidatorConfig(typing.Generic[_T, ModelT]):
     validator_map: typing.Mapping[_T, typing.Type[ModelT]]
     key_name: str = "key"
     default_validator: typing.Optional[typing.Type[ModelT]] = None
-
-
-class FaceitResourcePath(StrEnum):
-    CHAMPIONSHIPS = "championships"
-    GAMES = "games"
-    LEAGUES = "leagues"
-    MATCHES = "matches"
-    MATCHMAKINGS = "matchmakings"
-    PLAYERS = "players"
-    RANKINGS = "rankings"
-    TEAMS = "teams"
 
 
 # TODO: Refactor the base resource class if/when support for resources
@@ -93,7 +82,7 @@ class BaseResource(ABC, typing.Generic[ClientT]):
 
     def __init_subclass__(
         cls,
-        resource_path: typing.Optional[FaceitResourcePath] = None,
+        resource_path: typing.Optional[str] = None,
         **kwargs: typing.Any,
     ) -> None:
         if hasattr(cls, "PATH"):

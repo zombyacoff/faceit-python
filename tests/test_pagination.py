@@ -7,7 +7,7 @@ from unittest.mock import patch
 import pytest
 from pydantic import Field
 
-from faceit.api.base import BaseResource, FaceitResourcePath
+from faceit.api.base import BaseResource
 from faceit.api.pagination import (
     AsyncPageIterator,
     BasePageIterator,
@@ -23,9 +23,7 @@ if typing.TYPE_CHECKING:
     from faceit.types import RawAPIItem, RawAPIPageResponse
 
 
-class _DummyResource(
-    BaseResource[typing.Any], resource_path=FaceitResourcePath.PLAYERS
-):
+class _DummyResource(BaseResource[typing.Any], resource_path="players"):
     __slots__ = ("_items",)
 
     def __init__(self, items: typing.List[typing.Dict[str, typing.Any]]) -> None:
@@ -277,7 +275,6 @@ def test_sync_gather_pages_respects_safe_max_items(
     assert len(result) == 2
 
 
-@pytest.mark.asyncio
 async def test_async_gather_from_iterator_raw() -> None:
     async def source() -> typing.AsyncIterator[RawAPIPageResponse]:  # noqa: RUF029
         yield {
@@ -299,7 +296,6 @@ async def test_async_gather_from_iterator_raw() -> None:
     assert result == [{"id": 1}, {"id": 2}]
 
 
-@pytest.mark.asyncio
 async def test_async_unix_iterator_yields_pages(dummy_resource: _DummyResource) -> None:
     iterator = AsyncPageIterator.unix(
         dummy_resource.async_raw_method_with_unix,
@@ -312,7 +308,6 @@ async def test_async_unix_iterator_yields_pages(dummy_resource: _DummyResource) 
     assert all("items" in page for page in pages_result)
 
 
-@pytest.mark.asyncio
 async def test_async_gather_pages_with_invalid_unix_config_raises(
     dummy_resource: _DummyResource,
 ) -> None:

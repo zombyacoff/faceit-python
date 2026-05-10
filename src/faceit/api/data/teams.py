@@ -7,7 +7,7 @@ from abc import ABC
 from pydantic import AfterValidator, Field, validate_call
 from typing_extensions import Annotated, TypeAlias
 
-from faceit.api.base import BaseResource, FaceitResourcePath, ModelPlaceholder
+from faceit.api.base import BaseResource, ModelPlaceholder
 from faceit.api.pagination import MaxItemsType, pages
 from faceit.constants import GameID  # noqa: TC001
 from faceit.http import AsyncClient, SyncClient
@@ -31,7 +31,7 @@ _TeamIDValidated: TypeAlias = Annotated[
 class BaseTeams(
     BaseResource[ClientT],
     ABC,
-    resource_path=FaceitResourcePath.TEAMS,
+    resource_path="teams",
 ):
     __slots__ = ()
 

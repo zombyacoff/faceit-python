@@ -461,9 +461,7 @@ class BasePageIterator(ABC, typing.Generic[PaginationMethodT, _PageT]):
 
     @staticmethod
     def _filter_collection(
-        collection: typing.List[_PageT],
-        expected_type: typing.Type[typing.Any],
-        /,
+        collection: typing.List[_PageT], expected_type: typing.Type[typing.Any], /
     ) -> typing.List[typing.Any]:
         return [item for item in collection if isinstance(item, expected_type)]
 

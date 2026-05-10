@@ -6,7 +6,7 @@ from abc import ABC
 
 from pydantic import Field, validate_call
 
-from faceit.api.base import BaseResource, FaceitResourcePath, ModelPlaceholder
+from faceit.api.base import BaseResource, ModelPlaceholder
 from faceit.api.pagination import MaxItemsType, pages
 from faceit.constants import GameID  # noqa: TC001
 from faceit.http import AsyncClient, SyncClient
@@ -29,7 +29,7 @@ from .players import PlayerID, PlayerIDValidated  # noqa: TC001
 class BaseRankings(
     BaseResource[ClientT],
     ABC,
-    resource_path=FaceitResourcePath.RANKINGS,
+    resource_path="rankings",
 ):
     __slots__ = ()
 

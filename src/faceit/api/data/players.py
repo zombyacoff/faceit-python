@@ -11,7 +11,6 @@ from typing_extensions import Annotated, TypeAlias
 
 from faceit.api.base import (
     BaseResource,
-    FaceitResourcePath,
     MappedValidatorConfig,
     RequestPayload,
 )
@@ -45,6 +44,7 @@ from faceit.types import (
     Raw,
     RawAPIItem,
     RawAPIPageResponse,
+    TimestampMillis,
     ValidUUID,
 )
 from faceit.utils import is_valid_uuid
@@ -64,7 +64,7 @@ _PlayerIdentifierValidated: TypeAlias = Annotated[
 class BasePlayers(
     BaseResource[ClientT],
     ABC,
-    resource_path=FaceitResourcePath.PLAYERS,
+    resource_path="players",
 ):
     __slots__ = ()
 
@@ -89,7 +89,7 @@ class BasePlayers(
     )
 
     _matches_stats_timestamp_cfg: typing.ClassVar = TimestampPaginationConfig(
-        key="stats.Match Finished At", attr="match_finished_at"
+        key="stats.Match Finished At", attr="finished_at"
     )
     _history_timestamp_cfg: typing.ClassVar = TimestampPaginationConfig(
         key="finished_at", attr="finished_at"
@@ -249,8 +249,8 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
         *,
         offset: int = Field(0, ge=0, le=200),
         limit: int = Field(20, ge=1, le=100),
-        start: typing.Optional[int] = None,
-        to: typing.Optional[int] = None,
+        start: typing.Optional[TimestampMillis] = None,
+        to: typing.Optional[TimestampMillis] = None,
     ) -> RawAPIPageResponse: ...
 
     # TODO: This overload-based approach for specific games feels clunky and doesn't scale well.
@@ -264,8 +264,8 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
         *,
         offset: int = Field(0, ge=0, le=200),
         limit: int = Field(20, ge=1, le=100),
-        start: typing.Optional[int] = None,
-        to: typing.Optional[int] = None,
+        start: typing.Optional[TimestampMillis] = None,
+        to: typing.Optional[TimestampMillis] = None,
     ) -> ItemPage[CS2MatchPlayerStats]: ...
 
     @typing.overload
@@ -276,8 +276,8 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
         *,
         offset: int = Field(0, ge=0, le=200),
         limit: int = Field(20, ge=1, le=100),
-        start: typing.Optional[int] = None,
-        to: typing.Optional[int] = None,
+        start: typing.Optional[TimestampMillis] = None,
+        to: typing.Optional[TimestampMillis] = None,
     ) -> ItemPage[AbstractMatchPlayerStats]: ...
 
     @validate_call
@@ -288,8 +288,8 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
         *,
         offset: int = Field(0, ge=0, le=200),
         limit: int = Field(20, ge=1, le=100),
-        start: typing.Optional[int] = None,
-        to: typing.Optional[int] = None,
+        start: typing.Optional[TimestampMillis] = None,
+        to: typing.Optional[TimestampMillis] = None,
     ) -> typing.Union[
         RawAPIPageResponse,
         ItemPage[AbstractMatchPlayerStats],
@@ -357,8 +357,8 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
         *,
         offset: int = Field(0, ge=0, le=1000),
         limit: int = Field(20, ge=1, le=100),
-        start: typing.Optional[int] = None,
-        to: typing.Optional[int] = None,
+        start: typing.Optional[TimestampMillis] = None,
+        to: typing.Optional[TimestampMillis] = None,
     ) -> RawAPIPageResponse: ...
 
     @typing.overload
@@ -369,8 +369,8 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
         *,
         offset: int = Field(0, ge=0, le=1000),
         limit: int = Field(20, ge=1, le=100),
-        start: typing.Optional[int] = None,
-        to: typing.Optional[int] = None,
+        start: typing.Optional[TimestampMillis] = None,
+        to: typing.Optional[TimestampMillis] = None,
     ) -> ItemPage[Match]: ...
 
     @validate_call
@@ -381,8 +381,8 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
         *,
         offset: int = Field(0, ge=0, le=1000),
         limit: int = Field(20, ge=1, le=100),
-        start: typing.Optional[int] = None,
-        to: typing.Optional[int] = None,
+        start: typing.Optional[TimestampMillis] = None,
+        to: typing.Optional[TimestampMillis] = None,
     ) -> typing.Union[RawAPIPageResponse, ItemPage[Match]]:
         return self._validate_response(
             self._client.get(
@@ -728,8 +728,8 @@ class AsyncPlayers(BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT])
         *,
         offset: int = Field(0, ge=0, le=200),
         limit: int = Field(20, ge=1, le=100),
-        start: typing.Optional[int] = None,
-        to: typing.Optional[int] = None,
+        start: typing.Optional[TimestampMillis] = None,
+        to: typing.Optional[TimestampMillis] = None,
     ) -> RawAPIPageResponse: ...
 
     @typing.overload
@@ -740,8 +740,8 @@ class AsyncPlayers(BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT])
         *,
         offset: int = Field(0, ge=0, le=200),
         limit: int = Field(20, ge=1, le=100),
-        start: typing.Optional[int] = None,
-        to: typing.Optional[int] = None,
+        start: typing.Optional[TimestampMillis] = None,
+        to: typing.Optional[TimestampMillis] = None,
     ) -> ItemPage[CS2MatchPlayerStats]: ...
 
     @typing.overload
@@ -752,8 +752,8 @@ class AsyncPlayers(BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT])
         *,
         offset: int = Field(0, ge=0, le=200),
         limit: int = Field(20, ge=1, le=100),
-        start: typing.Optional[int] = None,
-        to: typing.Optional[int] = None,
+        start: typing.Optional[TimestampMillis] = None,
+        to: typing.Optional[TimestampMillis] = None,
     ) -> ItemPage[AbstractMatchPlayerStats]: ...
 
     @validate_call
@@ -764,8 +764,8 @@ class AsyncPlayers(BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT])
         *,
         offset: int = Field(0, ge=0, le=200),
         limit: int = Field(20, ge=1, le=100),
-        start: typing.Optional[int] = None,
-        to: typing.Optional[int] = None,
+        start: typing.Optional[TimestampMillis] = None,
+        to: typing.Optional[TimestampMillis] = None,
     ) -> typing.Union[
         RawAPIPageResponse,
         ItemPage[AbstractMatchPlayerStats],
@@ -833,8 +833,8 @@ class AsyncPlayers(BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT])
         *,
         offset: int = Field(0, ge=0, le=1000),
         limit: int = Field(20, ge=1, le=100),
-        start: typing.Optional[int] = None,
-        to: typing.Optional[int] = None,
+        start: typing.Optional[TimestampMillis] = None,
+        to: typing.Optional[TimestampMillis] = None,
     ) -> RawAPIPageResponse: ...
 
     @typing.overload
@@ -845,8 +845,8 @@ class AsyncPlayers(BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT])
         *,
         offset: int = Field(0, ge=0, le=1000),
         limit: int = Field(20, ge=1, le=100),
-        start: typing.Optional[int] = None,
-        to: typing.Optional[int] = None,
+        start: typing.Optional[TimestampMillis] = None,
+        to: typing.Optional[TimestampMillis] = None,
     ) -> ItemPage[Match]: ...
 
     @validate_call
@@ -857,8 +857,8 @@ class AsyncPlayers(BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT])
         *,
         offset: int = Field(0, ge=0, le=1000),
         limit: int = Field(20, ge=1, le=100),
-        start: typing.Optional[int] = None,
-        to: typing.Optional[int] = None,
+        start: typing.Optional[TimestampMillis] = None,
+        to: typing.Optional[TimestampMillis] = None,
     ) -> typing.Union[RawAPIPageResponse, ItemPage[Match]]:
         return self._validate_response(
             await self._client.get(

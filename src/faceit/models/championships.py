@@ -2,7 +2,7 @@ import typing
 
 from pydantic import BaseModel
 
-from faceit.types import RegionIdentifier, UrlOrEmpty, UUIDOrEmpty
+from faceit.types import RegionIdentifier, TimestampMillis, UrlOrEmpty, UUIDOrEmpty
 
 from .custom_types import (
     FaceitID,
@@ -45,10 +45,17 @@ class Stream(BaseModel):
 
 
 @typing.final
+class Screening(BaseModel):
+    id: FaceitID
+    enabled: bool
+
+
+@typing.final
 class Championship(BaseModel):
     id: FaceitID
     # `championship_id: FaceitID` unnecessary
     name: str
+    screening: typing.Optional[Screening] = None
     cover_image: UrlOrEmpty
     background_image: UrlOrEmpty
     avatar: UrlOrEmpty
@@ -59,11 +66,11 @@ class Championship(BaseModel):
     game_id: str
     region: RegionIdentifier
     featured: bool
-    subscription_start: int
-    checkin_start: int
-    checkin_clear: int
-    subscription_end: int
-    championship_start: int
+    subscription_start: TimestampMillis
+    checkin_start: TimestampMillis
+    checkin_clear: TimestampMillis
+    subscription_end: TimestampMillis
+    championship_start: TimestampMillis
     slots: int
     current_subscriptions: int
     join_checks: JoinChecks

@@ -7,7 +7,7 @@ from abc import ABC
 from pydantic import AfterValidator, Field, validate_call
 from typing_extensions import Annotated, TypeAlias
 
-from faceit.api.base import BaseResource, FaceitResourcePath, ModelPlaceholder
+from faceit.api.base import BaseResource, ModelPlaceholder
 from faceit.api.pagination import MaxItemsType, pages
 from faceit.constants import EventCategory, ExpandedField, GameID
 from faceit.http import AsyncClient, SyncClient
@@ -34,7 +34,7 @@ _ChampionshipIDValidated: TypeAlias = Annotated[
 class BaseChampionships(
     BaseResource[ClientT],
     ABC,
-    resource_path=FaceitResourcePath.CHAMPIONSHIPS,
+    resource_path="championships",
 ):
     __slots__ = ()
 

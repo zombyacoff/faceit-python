@@ -48,6 +48,7 @@ class _BaseFaceitUUIDValidator(ABC):
             core_schema.no_info_after_validator_function(
                 lambda v: cls._validate(cls._remove_prefix_and_suffix(v)),
                 handler(str),
+                serialization=core_schema.to_string_ser_schema(when_used="json"),
             )
         ])
 

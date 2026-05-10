@@ -12,14 +12,14 @@ if typing.TYPE_CHECKING:
 
 
 def test_process_get_request_requires_game_and_game_player_id(
-    sync_players_raw: SyncPlayers[typing.Any],
+    sync_players_raw: SyncPlayers,
 ) -> None:
     with pytest.raises(ValueError):
         sync_players_raw._process_get_request(None, None, None)
 
 
 def test_process_get_request_by_nickname(
-    sync_players_raw: SyncPlayers[typing.Any],
+    sync_players_raw: SyncPlayers,
 ) -> None:
     payload = sync_players_raw._process_get_request("zomby", None, None)
 
@@ -28,7 +28,7 @@ def test_process_get_request_by_nickname(
 
 
 def test_process_get_request_by_uuid(
-    sync_players_raw: SyncPlayers[typing.Any], valid_uuid: str
+    sync_players_raw: SyncPlayers, valid_uuid: str
 ) -> None:
     payload = sync_players_raw._process_get_request(valid_uuid, None, None)
     assert str(payload["endpoint"]) == f"players/{valid_uuid}"
@@ -36,7 +36,7 @@ def test_process_get_request_by_uuid(
 
 
 def test_process_get_request_warns_when_lookup_key_conflicts_with_game_filters(
-    sync_players_raw: SyncPlayers[typing.Any],
+    sync_players_raw: SyncPlayers,
 ) -> None:
     with pytest.warns(UserWarning):
         payload = sync_players_raw._process_get_request(
@@ -48,7 +48,7 @@ def test_process_get_request_warns_when_lookup_key_conflicts_with_game_filters(
 
 
 def test_sync_get_calls_client_with_expect_item(
-    sync_players_raw: SyncPlayers[typing.Any], mock_sync_client: Mock
+    sync_players_raw: SyncPlayers, mock_sync_client: Mock
 ) -> None:
     result = sync_players_raw.get("nickname")
 
@@ -61,7 +61,7 @@ def test_sync_get_calls_client_with_expect_item(
 
 
 def test_sync_all_matches_stats_delegates_to_pagination_with_unix_cfg(
-    sync_players_raw: SyncPlayers[typing.Any], valid_uuid: str
+    sync_players_raw: SyncPlayers, valid_uuid: str
 ) -> None:
     with patch.object(
         sync_players_raw.__class__._sync_page_iterator,
@@ -79,9 +79,8 @@ def test_sync_all_matches_stats_delegates_to_pagination_with_unix_cfg(
     assert kwargs["unix"] == sync_players_raw.__class__._matches_stats_timestamp_cfg
 
 
-@pytest.mark.asyncio
 async def test_async_get_calls_client_with_expect_item(
-    async_players_raw: AsyncPlayers[typing.Any], mock_async_client: Mock
+    async_players_raw: AsyncPlayers, mock_async_client: Mock
 ) -> None:
     result = await async_players_raw.get("nickname")
 
@@ -93,9 +92,8 @@ async def test_async_get_calls_client_with_expect_item(
     assert kwargs["params"] == {"nickname": "nickname"}
 
 
-@pytest.mark.asyncio
 async def test_async_all_history_delegates_to_pagination_with_unix_cfg(
-    async_players_raw: AsyncPlayers[typing.Any], valid_uuid: str
+    async_players_raw: AsyncPlayers, valid_uuid: str
 ) -> None:
     with patch.object(
         async_players_raw.__class__._async_page_iterator,
