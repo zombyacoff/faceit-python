@@ -14,16 +14,21 @@ from faceit.api.pagination import (
     CollectReturnFormat,
     MaxItems,
     SyncPageIterator,
+    TimestampPaginationConfig,
     check_pagination_support,
     pages,
 )
 from faceit.models import ItemPage
+from faceit.models.custom_types import TimestampMs
 
 if typing.TYPE_CHECKING:
     from faceit.types import RawAPIItem, RawAPIPageResponse
 
 
-class _DummyResource(BaseResource[typing.Any], resource_path="players"):
+class _DummyResource(
+    BaseResource[typing.Any],
+    resource_path="players",
+):
     __slots__ = ("_items",)
 
     def __init__(self, items: typing.List[typing.Dict[str, typing.Any]]) -> None:
@@ -181,7 +186,8 @@ def test_extract_unix_timestamp_from_raw_page() -> None:
         "end": 2,
     }
     timestamp = BasePageIterator._extract_unix_timestamp(
-        page, "stats.Match Finished At", "finished_at"
+        page,
+        TimestampPaginationConfig(key="stats.Match Finished At", attr="finished_at"),
     )
     assert timestamp == second_item_timestamp
 
@@ -191,7 +197,7 @@ def test_extract_unix_timestamp_from_model_page() -> None:
     page = ItemPage[_ModelItem].model_construct(
         items=(
             _ModelItem(id=1, finished_at=111),
-            _ModelItem(id=2, finished_at=second_item_timestamp),
+            _ModelItem(id=2, finished_at=TimestampMs(second_item_timestamp)),
         ),
         offset=0,
         limit=2,
@@ -199,7 +205,7 @@ def test_extract_unix_timestamp_from_model_page() -> None:
         time_to=None,
     )
     timestamp = BasePageIterator._extract_unix_timestamp(
-        page, "stats.Match Finished At", "finished_at"
+        page, TimestampPaginationConfig(key="finished_at", attr="finished_at")
     )
     assert timestamp == second_item_timestamp
 
@@ -255,8 +261,7 @@ def test_sync_unix_iterator_yields_pages(dummy_resource: _DummyResource) -> None
     iterator = SyncPageIterator.unix(
         dummy_resource.raw_method_with_unix,
         max_items=pages(2),
-        key="finished_at",
-        attr="finished_at",
+        cfg=TimestampPaginationConfig(key="finished_at", attr="finished_at"),
     )
     pages_result = list(iterator)
     assert len(pages_result) >= 1
@@ -300,8 +305,7 @@ async def test_async_unix_iterator_yields_pages(dummy_resource: _DummyResource) 
     iterator = AsyncPageIterator.unix(
         dummy_resource.async_raw_method_with_unix,
         max_items=pages(2),
-        key="finished_at",
-        attr="finished_at",
+        cfg=TimestampPaginationConfig(key="finished_at", attr="finished_at"),
     )
     pages_result = [page async for page in iterator]
     assert len(pages_result) >= 1

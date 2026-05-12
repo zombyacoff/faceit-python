@@ -5,7 +5,7 @@ import pytest
 
 from faceit.utils import _UNINITIALIZED_MARKER, representation
 
-DEFINE_STR_ERROR_MSG = "must define '__str__' method"
+DEFINE_STR_ERROR_MSG: typing.Final = "must define '__str__' method"
 
 
 @pytest.fixture(scope="module")
@@ -58,9 +58,8 @@ def test_representation_with_missing_fields(
 
 
 def test_representation_with_use_str_but_no_str_method() -> None:
-    with pytest.raises(TypeError) as excinfo:
+    with pytest.raises(TypeError, match=DEFINE_STR_ERROR_MSG):
         representation("name", use_str=True)(object)
-    assert DEFINE_STR_ERROR_MSG in str(excinfo.value)
 
 
 def test_representation_preserves_existing_str(
@@ -81,9 +80,8 @@ def test_representation_preserves_existing_str(
 
 
 def test_representation_with_empty_fields() -> None:
-    with pytest.raises(TypeError) as excinfo:
+    with pytest.raises(TypeError, match=DEFINE_STR_ERROR_MSG):
         representation(object, use_str=True)()
-    assert DEFINE_STR_ERROR_MSG in str(excinfo.value)
 
     @representation
     class Empty2:

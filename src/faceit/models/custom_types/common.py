@@ -2,9 +2,18 @@ from __future__ import annotations
 
 import re
 import typing
+from abc import ABC
+from datetime import datetime, timezone
 
-from pydantic import AfterValidator, BeforeValidator, RootModel, model_validator
-from typing_extensions import Annotated, TypeAlias
+from pydantic import (
+    AfterValidator,
+    BeforeValidator,
+    GetCoreSchemaHandler,
+    RootModel,
+    model_validator,
+)
+from pydantic_core import core_schema
+from typing_extensions import Annotated, Self, TypeAlias
 
 from faceit.types import _R, _T, UrlOrEmpty
 
@@ -22,14 +31,64 @@ NullableList: TypeAlias = Annotated[
     typing.List[_T],
     BeforeValidator(lambda x: x or []),
 ]
-# NOTE: Type alias for country codes that are always validated and converted to lowercase.
-# Used because Faceit API requires country codes to be in lowercase.
+# NOTE: Type alias for country codes that are always validated and converted to lowercase
+# Used because Faceit API requires country codes to be in lowercase
 #
 # TODO: Integrate this type alias into all data models in the future
 CountryCode: TypeAlias = Annotated[
     str,  # TODO: Should be ISO 3166-1 alpha-2 enum
     AfterValidator(lambda x: x.lower()),
 ]
+
+
+class _BaseTimestamp(int, ABC):
+    __slots__ = ()
+
+    if typing.TYPE_CHECKING:
+        _UNITS_PER_SEC: typing.ClassVar[int]
+
+    def __init_subclass__(cls, units_per_sec: int, **kwargs: typing.Any) -> None:
+        cls._UNITS_PER_SEC = units_per_sec
+        return super().__init_subclass__(**kwargs)
+
+    def to_datetime(self) -> datetime:
+        return datetime.fromtimestamp(self / self._UNITS_PER_SEC, tz=timezone.utc)
+
+    @classmethod
+    def from_datetime(cls, dt: datetime, /) -> Self:
+        return cls(round(dt.timestamp() * cls._UNITS_PER_SEC))
+
+    @classmethod
+    def _validate(cls, value: int, /) -> Self:
+        if value >= 0:
+            return cls(value)
+        msg = f"Value {value} is negative. Timestamp cannot be negative"
+        raise ValueError(msg)
+
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls, _: typing.Type[typing.Any], handler: GetCoreSchemaHandler
+    ) -> core_schema.CoreSchema:
+        return core_schema.no_info_after_validator_function(cls._validate, handler(int))
+
+
+@typing.final
+class TimestampMs(_BaseTimestamp, units_per_sec=1000):
+    @property
+    def as_sec(self) -> TimestampSec:
+        return TimestampSec(self // 1000)
+
+
+@typing.final
+class TimestampSec(_BaseTimestamp, units_per_sec=1):
+    @property
+    def as_ms(self) -> TimestampMs:
+        return TimestampMs(self * 1000)
+
+
+TimestampLike: TypeAlias = typing.Union[TimestampSec, TimestampMs, int]
+NotStrictTimestampMs: TypeAlias = typing.Union[TimestampMs, int]
+NotStrictTimestampSec: TypeAlias = typing.Union[TimestampSec, int]
 
 
 @typing.final

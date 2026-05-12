@@ -10,6 +10,7 @@ if typing.TYPE_CHECKING:
     from .api import AsyncDataResource, SyncDataResource
     from .http import Endpoint
     from .http.client import BaseAPIClient
+    from .models.custom_types import TimestampMs
 
 _T = typing.TypeVar("_T")
 _T_co = typing.TypeVar("_T_co", covariant=True)
@@ -44,8 +45,7 @@ ModelNotImplemented: TypeAlias = BaseModel
 
 RegionIdentifier: TypeAlias = typing.Union[Region, str]
 
-RawAPIItem = typing.NewType("RawAPIItem", typing.Dict[str, typing.Any])
-TimestampMillis: TypeAlias = int
+RawAPIItem: TypeAlias = typing.Dict[str, typing.Any]
 RawAPIPageResponse = typing.TypedDict(
     "RawAPIPageResponse",
     {
@@ -54,8 +54,8 @@ RawAPIPageResponse = typing.TypedDict(
         "start": int,
         "end": int,
         # Unix timestamps (in milliseconds)
-        "from": NotRequired[TimestampMillis],
-        "to": NotRequired[TimestampMillis],
+        "from": NotRequired["TimestampMs"],
+        "to": NotRequired["TimestampMs"],
     },
 )
 RawAPIResponse: TypeAlias = typing.Union[RawAPIItem, RawAPIPageResponse]

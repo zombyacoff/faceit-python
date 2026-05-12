@@ -10,8 +10,10 @@ from faceit.models.custom_types import (
     FaceitID,
     FaceitMatchID,
     LangFormattedAnyHttpUrl,
+    TimestampMs,
+    TimestampSec,
 )
-from faceit.types import RegionIdentifier, TimestampMillis, UrlOrEmpty
+from faceit.types import RegionIdentifier, UrlOrEmpty
 from faceit.utils import StrEnum
 
 _F1: typing.Final = "faction1"
@@ -91,8 +93,8 @@ class Match(BaseModel):
     competition_type: str
     organizer_id: str
     status: str
-    started_at: TimestampMillis
-    finished_at: TimestampMillis
+    started_at: TimestampSec
+    finished_at: TimestampSec
     results: Results
     faceit_url: LangFormattedAnyHttpUrl
 
@@ -126,7 +128,7 @@ class CS2MatchPlayerStats(AbstractMatchPlayerStats):
     assists: Annotated[int, Field(alias="Assists")]
     final_score: Annotated[int, Field(alias="Final Score")]
     penta_kills: Annotated[int, Field(alias="Penta Kills")]
-    finished_at: Annotated[TimestampMillis, Field(alias="Match Finished At")]
+    finished_at: Annotated[TimestampMs, Field(alias="Match Finished At")]
     map: Annotated[str, Field(alias="Map")]
     overtime_score: Annotated[int, Field(alias="Overtime score")]
     deaths: Annotated[int, Field(alias="Deaths")]

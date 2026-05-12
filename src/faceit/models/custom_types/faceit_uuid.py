@@ -41,20 +41,18 @@ class _BaseFaceitUUIDValidator(ABC):
         return value[start:end]
 
     @classmethod
-    def __get_pydantic_core_schema__(  # noqa: PLW3201
+    def __get_pydantic_core_schema__(
         cls, _: typing.Type[typing.Any], handler: GetCoreSchemaHandler
     ) -> core_schema.CoreSchema:
-        return core_schema.union_schema([
-            core_schema.no_info_after_validator_function(
-                lambda v: cls._validate(cls._remove_prefix_and_suffix(v)),
-                handler(str),
-                serialization=core_schema.to_string_ser_schema(when_used="json"),
-            )
-        ])
+        return core_schema.no_info_after_validator_function(
+            lambda v: cls._validate(cls._remove_prefix_and_suffix(v)),
+            handler(str),
+            serialization=core_schema.to_string_ser_schema(when_used="json"),
+        )
 
 
 # The inconsistency was discovered when verifying account friend lists,
-# where some UUIDs would fail validation due to this unexpected suffix.
+# where some UUIDs would fail validation due to this unexpected suffix
 class BaseFaceitID(_BaseFaceitUUIDValidator):
     __slots__ = ()
 
@@ -69,9 +67,8 @@ class FaceitID(UUID, BaseFaceitID):
     def _validate(cls, value: str, /) -> Self:
         if is_valid_uuid(value):
             return cls(str(value))
-        raise ValueError(
-            f"Invalid {cls.__name__}: {value!r} is not a valid UUID format."
-        )
+        msg = f"Invalid {cls.__name__}: {value!r} is not a valid UUID format."  # type: ignore[unreachable]
+        raise ValueError(msg)
 
 
 MaybeFaceitID: TypeAlias = typing.Union[FaceitID, EmptyString]

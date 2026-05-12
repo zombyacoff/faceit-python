@@ -51,10 +51,8 @@ class StrEnum(str, Enum):
     ) -> Self:
         if isinstance(value, (str, auto)):
             return super().__new__(cls, value, *args, **kwargs)
-        raise TypeError(
-            "StrEnum values must be of type 'str', "
-            f"but got {type(value).__name__}: {value!r}"
-        )
+        msg = f"StrEnum values must be of type 'str', but got {type(value).__name__}: {value!r}"  # type: ignore[unreachable]
+        raise TypeError(msg)
 
     @staticmethod
     def _generate_next_value_(name: str, *_: object, **__: object) -> str:
@@ -111,10 +109,11 @@ async def invoke_callable(
     **kwargs: typing.Any,
 ) -> _T:
     if not callable(func):
-        raise TypeError(
+        msg = (  # type: ignore[unreachable]
             f"Expected a callable object, got {type(func).__name__} ({func!r}). "
             "Argument 'func' must be a function or object with a __call__ method."
         )
+        raise TypeError(msg)
     result = func(*args, **kwargs)
     if inspect.isawaitable(result):
         result = await result

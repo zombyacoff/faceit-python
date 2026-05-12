@@ -10,7 +10,9 @@ except ModuleNotFoundError:
 import pytest
 
 import faceit
-from faceit.constants import GameID
+from faceit.models import CS2MatchPlayerStats, ItemPage
+from faceit.models.custom_types import TimestampSec
+from faceit.models.custom_types.faceit_uuid import FaceitMatchID
 
 if typing.TYPE_CHECKING:
     from faceit.api import AsyncDataResource, SyncDataResource
@@ -44,16 +46,27 @@ async def async_data() -> typing.AsyncGenerator[AsyncDataResource, None]:
 
 def test_sync_player_flow(data: SyncDataResource, test_player: str) -> None:
     player = data.players.get(test_player)
-
     assert player.nickname == test_player
     assert player.id is not None
 
-    matches = data.raw_players.matches_stats(player.id, GameID.CS2, limit=2)
+    if player.games.get(player.id, faceit.GameID.CS2) is None:
+        pytest.skip("Choose a different player: no CS2 game found for this account")
 
+    matches = data.raw_players.matches_stats(player.id, faceit.GameID.CS2, limit=2)
     assert isinstance(matches, dict)
     if "items" in matches:
         assert len(matches["items"]) > 0
         assert "match_id" in matches["items"][0] or "stats" in matches["items"][0]
+
+    matches = data.players.matches_stats(player.id, faceit.GameID.CS2, limit=1)
+    assert isinstance(matches, ItemPage)
+    if len(matches) > 0:
+        match = matches[0]
+        assert isinstance(match, CS2MatchPlayerStats)
+        assert isinstance(match.id, FaceitMatchID)
+        assert isinstance(match.finished_at.as_sec, TimestampSec)
+    else:
+        pytest.skip(f"No matches found for player {test_player}: skipping test")
 
 
 def test_sync_games_list(data: SyncDataResource) -> None:

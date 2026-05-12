@@ -1,4 +1,3 @@
-# mypy: disable-error-code="no-any-return"
 from __future__ import annotations
 
 import typing

@@ -2,13 +2,14 @@ import typing
 
 from pydantic import BaseModel
 
-from faceit.types import RegionIdentifier, TimestampMillis, UrlOrEmpty, UUIDOrEmpty
+from faceit.types import RegionIdentifier, UrlOrEmpty, UUIDOrEmpty
 
 from .custom_types import (
     FaceitID,
     LangFormattedAnyHttpUrl,
     NullableList,
     ResponseContainer,
+    TimestampMs,
 )
 
 
@@ -66,11 +67,11 @@ class Championship(BaseModel):
     game_id: str
     region: RegionIdentifier
     featured: bool
-    subscription_start: TimestampMillis
-    checkin_start: TimestampMillis
-    checkin_clear: TimestampMillis
-    subscription_end: TimestampMillis
-    championship_start: TimestampMillis
+    subscription_start: TimestampMs
+    checkin_start: TimestampMs
+    checkin_clear: TimestampMs
+    subscription_end: TimestampMs
+    championship_start: TimestampMs
     slots: int
     current_subscriptions: int
     join_checks: JoinChecks

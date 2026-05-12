@@ -12,7 +12,6 @@ ignore = [
     "D",       # pydocstyle docstring violations
     "DOC",     # pydoclint docstring validation violations
     "E501",    # Line too long
-    "EM102",   # f-string used directly in exception
     "FIX002",  # TODO comment detected
     "PLR0904", # Too many public methods
     "PLR0913", # Too many function arguments
@@ -20,7 +19,6 @@ ignore = [
     "SLF001",  # Private member accessed outside class
     "S101",    # Use of assert detected
     "TD",      # flake8-todos violations
-    "TRY003",  # Long exception message defined outside exception class
 ]
 
 [lint.flake8-bugbear]
@@ -83,6 +81,11 @@ ignore-names = ["env", "pages"]
     "F401",    # Imported but unused
     "ICN003",  # Import a member from the module instead of importing the member directly
     "PYI018",  # Unused private `TypeVar`, `ParamSpec`, or `TypeVarTuple` declaration
+]
+
+[lint.pylint]
+allow-dunder-method-names = [
+    "__get_pydantic_core_schema__",
 ]
 
 [lint.pyupgrade]

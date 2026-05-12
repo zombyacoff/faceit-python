@@ -407,8 +407,8 @@ class BasePageIterator(ABC, typing.Generic[PaginationMethodT, _PageT]):
         # Process `kwargs` to filter pagination parameters and issue warnings
         # when user-provided values will be ignored
         kwargs: typing.Dict[str, typing.Any],
-        key: str,
-        attr: str,
+        cfg: TimestampPaginationConfig,
+        /,
     ) -> None:
         if not _has_unix_pagination_params(method):
             msg = (
@@ -416,8 +416,11 @@ class BasePageIterator(ABC, typing.Generic[PaginationMethodT, _PageT]):
                 "Expected 'start' and 'to' parameters."
             )
             raise ValueError(msg)
-        if any(not isinstance(value, str) or not value for value in (key, attr)):
-            msg = f"Key and attribute parameters must be non-empty strings: {key}, {attr}."
+        if any(
+            not isinstance(value, str) or not value
+            for value in (cfg["key"], cfg["attr"])
+        ):
+            msg = f"Key and attribute parameters must be non-empty strings: {cfg['key']}, {cfg['attr']}."
             raise ValueError(msg)
         if any(kwargs.pop(arg, None) for arg in _UNIX_PAGINATION_PARAMS):
             warnings.warn(
@@ -431,11 +434,12 @@ class BasePageIterator(ABC, typing.Generic[PaginationMethodT, _PageT]):
         unix_config: _OptionalTimestampPaginationConfig, /
     ) -> None:
         if unix_config is not False and not isinstance(unix_config, dict):
-            raise ValueError(
-                "Invalid unix pagination configuration: expected UnixPaginationConfig "
+            msg = (  # type: ignore[unreachable]
+                "Invalid unix pagination configuration: expected TimestampPaginationConfig "
                 f"dictionary or False, got {type(unix_config).__name__}. "
-                "See pagination.UnixPaginationConfig for the required format."
+                "See pagination.TimestampPaginationConfig for the required format."
             )
+            raise ValueError(msg)
         if (
             isinstance(unix_config, dict)
             and _UNIX_METHOD_REQUIRED_KEYS - unix_config.keys()
@@ -443,21 +447,21 @@ class BasePageIterator(ABC, typing.Generic[PaginationMethodT, _PageT]):
             msg = (
                 "Invalid unix pagination configuration: "
                 f"missing required keys {tuple(_UNIX_METHOD_REQUIRED_KEYS)}. "
-                "See pagination.UnixPaginationConfig for the required format."
+                "See pagination.TimestampPaginationConfig for the required format."
             )
             raise ValueError(msg)
 
     @staticmethod
     def _extract_unix_timestamp(
-        page: typing.Optional[_PageT], key: str, attr: str, /
+        page: typing.Optional[_PageT], cfg: TimestampPaginationConfig, /
     ) -> typing.Optional[int]:
         if not page:
             return None
         if isinstance(page, dict):
             items = page.get(RAW_RESPONSE_ITEMS_KEY) or []
-            return deep_get(items[-1], key) if items else None
+            return deep_get(items[-1], cfg["key"]) if items else None
         assert isinstance(page, ItemPage)  # Type narrowing for mypy on Python < 3.9
-        return getattr(page.get_last(), attr, None)
+        return getattr(page.get_last(), cfg["attr"], None)
 
     @staticmethod
     def _filter_collection(
@@ -531,7 +535,7 @@ class _BaseSyncPageIterator(
 ):
     __slots__ = ()
 
-    _STOP_ITERATION_EXC: typing.ClassVar = StopIteration
+    _STOP_ITERATION_EXC = StopIteration
 
     def __iter__(self) -> Self:
         return self
@@ -556,7 +560,7 @@ class _BaseAsyncPageIterator(
 ):
     __slots__ = ()
 
-    _STOP_ITERATION_EXC: typing.ClassVar = StopAsyncIteration
+    _STOP_ITERATION_EXC = StopAsyncIteration
 
     def __aiter__(self) -> Self:
         return self
@@ -603,12 +607,11 @@ class SyncPageIterator(_BaseSyncPageIterator[_PageT]):
         method: SyncResourceMethodProtocol[_PageT],
         /,
         *args: typing.Any,
+        cfg: TimestampPaginationConfig,
         max_items: MaxItemsType = BasePageIterator.DEFAULT_MAX_ITEMS,
-        key: str,
-        attr: str,
         **kwargs: typing.Any,
     ) -> typing.Iterator[_PageT]:
-        cls._validate_unix_pagination_parameter(method, kwargs, key, attr)
+        cls._validate_unix_pagination_parameter(method, kwargs, cfg)
         kwargs["max_items"] = max_items
 
         current_timestamp = None
@@ -629,7 +632,7 @@ class SyncPageIterator(_BaseSyncPageIterator[_PageT]):
             if not pages or total_yielded >= iterator.max_items:
                 break
 
-            new_timestamp = cls._extract_unix_timestamp(pages[-1], key, attr)
+            new_timestamp = cls._extract_unix_timestamp(pages[-1], cfg)
             if new_timestamp is None or new_timestamp == current_timestamp:
                 break
             current_timestamp = new_timestamp
@@ -759,12 +762,11 @@ class AsyncPageIterator(_BaseAsyncPageIterator[_PageT]):
         method: AsyncResourceMethodProtocol[_PageT],
         /,
         *args: typing.Any,
+        cfg: TimestampPaginationConfig,
         max_items: MaxItemsType = BasePageIterator.DEFAULT_MAX_ITEMS,
-        key: str,
-        attr: str,
         **kwargs: typing.Any,
     ) -> typing.AsyncIterator[_PageT]:
-        cls._validate_unix_pagination_parameter(method, kwargs, key, attr)
+        cls._validate_unix_pagination_parameter(method, kwargs, cfg)
         kwargs["max_items"] = max_items
 
         current_timestamp = None
@@ -785,7 +787,7 @@ class AsyncPageIterator(_BaseAsyncPageIterator[_PageT]):
             if not pages or total_yielded >= iterator.max_items:
                 break
 
-            new_timestamp = cls._extract_unix_timestamp(pages[-1], key, attr)
+            new_timestamp = cls._extract_unix_timestamp(pages[-1], cfg)
             if new_timestamp is None or new_timestamp == current_timestamp:
                 break
             current_timestamp = new_timestamp

@@ -18,21 +18,17 @@ from .api import (
     pages,
 )
 from .constants import EventCategory, ExpandedField, GameID, Region, SkillLevel
-from .exceptions import APIError, FaceitError  # deprecated import
 from .faceit import AsyncFaceit, Faceit
-from .http import EnvKey, FromEnv, MaxConcurrentRequests
+from .http import FromEnv, MaxConcurrentRequests
 
 __all__ = [
-    "APIError",
     "AsyncDataResource",
     "AsyncFaceit",  # deprecated (remove in v0.3.0 ?)
     "AsyncPageIterator",
     "CollectReturnFormat",
-    "EnvKey",  # deprecated (remove in v0.2.2 ?)
     "EventCategory",
     "ExpandedField",
     "Faceit",  # deprecated (remove in v0.3.0 ?)
-    "FaceitError",
     "FromEnv",
     "GameID",
     "MaxConcurrentRequests",

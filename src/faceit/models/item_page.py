@@ -12,17 +12,18 @@ from pydantic import (
     computed_field,
     field_validator,
 )
-from typing_extensions import Annotated, Self
+from typing_extensions import Annotated, Self, deprecated
 
 from faceit.constants import RAW_RESPONSE_ITEMS_KEY
+from faceit.models.custom_types import TimestampMs  # noqa: TC001
 from faceit.types import _R, _T
 from faceit.utils import get_nested_property
 
 
 @typing.final
 class PaginationTimeRange(BaseModel, frozen=True):
-    start: NonNegativeInt
-    to: NonNegativeInt
+    start: TimestampMs
+    to: TimestampMs
 
 
 @typing.final
@@ -51,19 +52,13 @@ class ItemPage(BaseModel, typing.Generic[_T],
     ]
 
     time_from: Annotated[
-        typing.Optional[NonNegativeInt],
-        Field(
-            None,
-            alias="from",
-            exclude=True,
-            # 1746316800000 = UTC timestamp for 2025-05-04 00:00:00, in milliseconds
-            examples=[1746316800000],
-        ),
+        typing.Optional[TimestampMs],
+        Field(None, alias="from", exclude=True),
     ]
     """Unix time in milliseconds to start the range."""
     time_to: Annotated[
-        typing.Optional[NonNegativeInt],
-        Field(None, alias="to", exclude=True, examples=[1746316800000]),
+        typing.Optional[TimestampMs],
+        Field(None, alias="to", exclude=True),
     ]
     """Unix time in milliseconds to end the range."""
 
@@ -84,12 +79,13 @@ class ItemPage(BaseModel, typing.Generic[_T],
             time_range=self.time_range,
         )
 
-    @computed_field  # type: ignore[prop-decorator]
+    @computed_field(deprecated=True)  # type: ignore[prop-decorator]
     @property
+    # This property is redundant because all metadata is reset during page merging
+    # to avoid complex calculations that would likely be inaccurate anyway
+    @deprecated("`page` is deprecated and will be removed in a future version.")
     def page(self) -> typing.Optional[int]:
-        if self.offset is None or self.limit is None:
-            return None
-        return (self.offset // self.limit) + 1
+        return None if self.offset is None or self.limit is None else 1
 
     @typing.overload
     def find(self, attr: str, value: object) -> typing.Optional[_T]: ...
