@@ -7,7 +7,12 @@ from pydantic import AfterValidator, Field, validate_call
 from typing_extensions import Annotated, TypeAlias
 
 from faceit.api.base import BaseResource, ModelPlaceholder
-from faceit.api.pagination import MaxItemsType, pages
+from faceit.api.pagination import (
+    AsyncPageIterator,
+    MaxItemsType,
+    SyncPageIterator,
+    pages,
+)
 from faceit.constants import GameID  # noqa: TC001
 from faceit.http import AsyncClient, SyncClient
 from faceit.models import ItemPage  # noqa: TC001
@@ -124,9 +129,7 @@ class SyncTeams(BaseTeams[SyncClient], typing.Generic[APIResponseFormatT]):
     def all_tournaments(
         self, team_id: _TeamIDValidated, max_items: MaxItemsType = pages(30)
     ) -> typing.Union[typing.List[RawAPIItem], ItemPage[ModelNotImplemented]]:
-        iterator = self.__class__._sync_page_iterator(
-            self.tournaments, team_id, max_items=max_items
-        )
+        iterator = SyncPageIterator(self.tournaments, team_id, max_items=max_items)
         return iterator.collect()
 
 
@@ -221,7 +224,5 @@ class AsyncTeams(BaseTeams[AsyncClient], typing.Generic[APIResponseFormatT]):
     async def all_tournaments(
         self, team_id: _TeamIDValidated, max_items: MaxItemsType = pages(30)
     ) -> typing.Union[typing.List[RawAPIItem], ItemPage[ModelNotImplemented]]:
-        iterator = self.__class__._async_page_iterator(
-            self.tournaments, team_id, max_items=max_items
-        )
+        iterator = AsyncPageIterator(self.tournaments, team_id, max_items=max_items)
         return await iterator.collect()

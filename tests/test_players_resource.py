@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
+from faceit.api import AsyncPageIterator, SyncPageIterator
 from faceit.constants import GameID
 
 if typing.TYPE_CHECKING:
@@ -63,11 +64,10 @@ def test_sync_get_calls_client_with_expect_item(
 def test_sync_all_matches_stats_delegates_to_pagination_with_unix_cfg(
     sync_players_raw: SyncPlayers, valid_uuid: str
 ) -> None:
-    iterator_cls = sync_players_raw.__class__._sync_page_iterator
     with patch.object(
-        iterator_cls, "unix", return_value=iter([])
+        SyncPageIterator, "unix", return_value=iter([])
     ) as mock_unix, patch.object(
-        iterator_cls, "gather_from_iterator", return_value=[{"id": "m1"}]
+        SyncPageIterator, "gather_from_iterator", return_value=[{"id": "m1"}]
     ) as mock_gather:
         result = sync_players_raw.all_matches_stats(valid_uuid, GameID.CS2)
 
@@ -97,8 +97,6 @@ async def test_async_get_calls_client_with_expect_item(
 async def test_async_all_history_delegates_to_pagination_with_unix_cfg(
     async_players_raw: AsyncPlayers, valid_uuid: str
 ) -> None:
-    iterator_cls = async_players_raw.__class__._async_page_iterator
-
     async def empty_async_iter() -> typing.AsyncIterator[typing.Any]:  # noqa: RUF029
         if False:
             yield
@@ -106,9 +104,11 @@ async def test_async_all_history_delegates_to_pagination_with_unix_cfg(
     mock_iterator = empty_async_iter()
 
     with patch.object(
-        iterator_cls, "unix", return_value=mock_iterator
+        AsyncPageIterator, "unix", return_value=mock_iterator
     ) as mock_unix, patch.object(
-        iterator_cls, "gather_from_iterator", new=AsyncMock(return_value=[{"id": "h1"}])
+        AsyncPageIterator,
+        "gather_from_iterator",
+        new=AsyncMock(return_value=[{"id": "h1"}]),
     ) as mock_gather:
         result = await async_players_raw.all_history(valid_uuid, GameID.CS2)
 

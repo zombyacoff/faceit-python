@@ -21,8 +21,6 @@ from faceit.types import (
 )
 from faceit.utils import warn_stacklevel
 
-from .pagination import AsyncPageIterator, SyncPageIterator
-
 if typing.TYPE_CHECKING:
     _ResponseT = typing.TypeVar("_ResponseT", bound=RawAPIResponse)
 
@@ -65,9 +63,6 @@ class BaseResource(ABC, typing.Generic[ClientT]):
         "start": "from",
         "category": "type",
     })
-
-    _sync_page_iterator: typing.ClassVar = SyncPageIterator
-    _async_page_iterator: typing.ClassVar = AsyncPageIterator
 
     def __init__(
         self,

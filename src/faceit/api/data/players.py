@@ -14,8 +14,10 @@ from faceit.api.base import (
     RequestPayload,
 )
 from faceit.api.pagination import (
+    AsyncPageIterator,
     MaxItems,
     MaxItemsType,
+    SyncPageIterator,
     TimestampPaginationConfig,
     pages,
 )
@@ -236,9 +238,7 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
     def all_bans(
         self, player_id: PlayerID, max_items: MaxItemsType = MaxItems.SAFE
     ) -> typing.Union[typing.List[RawAPIItem], ItemPage[BanEntry]]:
-        iterator = self.__class__._sync_page_iterator(
-            self.bans, player_id, max_items=max_items
-        )
+        iterator = SyncPageIterator(self.bans, player_id, max_items=max_items)
         return iterator.collect()
 
     @typing.overload
@@ -341,8 +341,8 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
         ItemPage[CS2MatchPlayerStats],
         ItemPage[AbstractMatchPlayerStats],
     ]:
-        return self.__class__._sync_page_iterator.gather_from_iterator(
-            self.__class__._sync_page_iterator.unix(
+        return SyncPageIterator.gather_from_iterator(
+            SyncPageIterator.unix(
                 self.matches_stats,
                 player_id,
                 game,
@@ -419,8 +419,8 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
         game: GameID,
         max_items: MaxItemsType = pages(50),
     ) -> typing.Union[typing.List[RawAPIItem], ItemPage[Match]]:
-        return self.__class__._sync_page_iterator.gather_from_iterator(
-            self.__class__._sync_page_iterator.unix(
+        return SyncPageIterator.gather_from_iterator(
+            SyncPageIterator.unix(
                 self.history,
                 player_id,
                 game,
@@ -481,9 +481,7 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
     def all_hubs(
         self, player_id: PlayerID, max_items: MaxItemsType = MaxItems.SAFE
     ) -> typing.Union[typing.List[RawAPIItem], ItemPage[Hub]]:
-        iterator = self.__class__._sync_page_iterator(
-            self.hubs, player_id, max_items=max_items
-        )
+        iterator = SyncPageIterator(self.hubs, player_id, max_items=max_items)
         return iterator.collect()
 
     @typing.overload
@@ -566,9 +564,7 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
     def all_teams(
         self, player_id: PlayerID, max_items: MaxItemsType = MaxItems.SAFE
     ) -> typing.Union[typing.List[RawAPIItem], ItemPage[GeneralTeam]]:
-        iterator = self.__class__._sync_page_iterator(
-            self.teams, player_id, max_items=max_items
-        )
+        iterator = SyncPageIterator(self.teams, player_id, max_items=max_items)
         return iterator.collect()
 
     @typing.overload
@@ -623,9 +619,7 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
     def all_tournaments(
         self, player_id: PlayerID, max_items: MaxItemsType = MaxItems.SAFE
     ) -> typing.Union[typing.List[RawAPIItem], ItemPage[Tournament]]:
-        iterator = self.__class__._sync_page_iterator(
-            self.tournaments, player_id, max_items=max_items
-        )
+        iterator = SyncPageIterator(self.tournaments, player_id, max_items=max_items)
         return iterator.collect()
 
 
@@ -723,9 +717,7 @@ class AsyncPlayers(BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT])
     async def all_bans(
         self, player_id: PlayerID, max_items: MaxItemsType = MaxItems.SAFE
     ) -> typing.Union[typing.List[RawAPIItem], ItemPage[BanEntry]]:
-        iterator = self.__class__._async_page_iterator(
-            self.bans, player_id, max_items=max_items
-        )
+        iterator = AsyncPageIterator(self.bans, player_id, max_items=max_items)
         return await iterator.collect()
 
     @typing.overload
@@ -825,8 +817,8 @@ class AsyncPlayers(BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT])
         ItemPage[AbstractMatchPlayerStats],
         ItemPage[CS2MatchPlayerStats],
     ]:
-        return await self.__class__._async_page_iterator.gather_from_iterator(
-            self.__class__._async_page_iterator.unix(
+        return await AsyncPageIterator.gather_from_iterator(
+            AsyncPageIterator.unix(
                 self.matches_stats,
                 player_id,
                 game,
@@ -903,8 +895,8 @@ class AsyncPlayers(BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT])
         game: GameID,
         max_items: MaxItemsType = pages(50),
     ) -> typing.Union[typing.List[RawAPIItem], ItemPage[Match]]:
-        return await self.__class__._async_page_iterator.gather_from_iterator(
-            self.__class__._async_page_iterator.unix(
+        return await AsyncPageIterator.gather_from_iterator(
+            AsyncPageIterator.unix(
                 self.history,
                 player_id,
                 game,
@@ -965,9 +957,7 @@ class AsyncPlayers(BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT])
     async def all_hubs(
         self, player_id: PlayerID, max_items: MaxItemsType = MaxItems.SAFE
     ) -> typing.Union[typing.List[RawAPIItem], ItemPage[Hub]]:
-        iterator = self.__class__._async_page_iterator(
-            self.hubs, player_id, max_items=max_items
-        )
+        iterator = AsyncPageIterator(self.hubs, player_id, max_items=max_items)
         return await iterator.collect()
 
     @typing.overload
@@ -1050,9 +1040,7 @@ class AsyncPlayers(BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT])
     async def all_teams(
         self, player_id: PlayerID, max_items: MaxItemsType = MaxItems.SAFE
     ) -> typing.Union[typing.List[RawAPIItem], ItemPage[GeneralTeam]]:
-        iterator = self.__class__._async_page_iterator(
-            self.teams, player_id, max_items=max_items
-        )
+        iterator = AsyncPageIterator(self.teams, player_id, max_items=max_items)
         return await iterator.collect()
 
     @typing.overload
@@ -1107,7 +1095,5 @@ class AsyncPlayers(BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT])
     async def all_tournaments(
         self, player_id: PlayerID, max_items: MaxItemsType = MaxItems.SAFE
     ) -> typing.Union[typing.List[RawAPIItem], ItemPage[Tournament]]:
-        iterator = self.__class__._async_page_iterator(
-            self.tournaments, player_id, max_items=max_items
-        )
+        iterator = AsyncPageIterator(self.tournaments, player_id, max_items=max_items)
         return await iterator.collect()

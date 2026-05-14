@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import inspect
 import json
-import os
 import reprlib
 import sys
 import typing
@@ -10,6 +9,7 @@ from contextlib import suppress
 from enum import Enum, auto
 from functools import lru_cache, reduce, wraps
 from hashlib import sha256
+from pathlib import Path
 from uuid import UUID
 
 from typing_extensions import Self, TypeIs, deprecated
@@ -222,22 +222,20 @@ def validate_positive_int(value: typing.Any, /, param_name: str = "value") -> in
 
 @lru_cache(maxsize=1)
 def _get_ignored_paths() -> typing.Tuple[
-    typing.Tuple[str, ...],
-    typing.FrozenSet[str],
+    typing.Tuple[Path, ...],
+    typing.FrozenSet[Path],
 ]:
-    prefixes: typing.List[str] = []
-    files: typing.Set[str] = set()
+    prefixes: typing.List[Path] = []
+    files: typing.Set[Path] = set()
 
     for mod_name in (__name__.split(".")[0], *_IGNORED_MODULES):
         mod = sys.modules.get(mod_name)
         if mod is None or not hasattr(mod, "__file__") or mod.__file__ is None:
             continue
 
-        path = os.path.normcase(os.path.realpath(mod.__file__))
-
-        if path.endswith("__init__.py"):
-            dir_path = os.path.dirname(path) + os.sep  # noqa: PTH120
-            prefixes.append(dir_path)
+        path = Path(mod.__file__).resolve()
+        if path.name == "__init__.py":
+            prefixes.append(path.parent)
         else:
             files.add(path)
 
@@ -257,10 +255,10 @@ def warn_stacklevel() -> int:
         while frame:
             filename = frame.f_code.co_filename
             if filename and not filename.startswith("<"):
-                norm_path = os.path.normcase(os.path.realpath(filename))
-                is_user_code = (
-                    norm_path not in ignored_files
-                    and not norm_path.startswith(ignored_prefixes)
+                path = Path(filename).resolve()
+                is_user_code = path not in ignored_files and not any(
+                    prefix in path.parents or path == prefix
+                    for prefix in ignored_prefixes
                 )
                 if is_user_code:
                     return level

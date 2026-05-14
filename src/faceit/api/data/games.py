@@ -6,7 +6,12 @@ from abc import ABC
 from pydantic import Field, validate_call
 
 from faceit.api.base import BaseResource, ModelPlaceholder
-from faceit.api.pagination import MaxItems, MaxItemsType
+from faceit.api.pagination import (
+    AsyncPageIterator,
+    MaxItems,
+    MaxItemsType,
+    SyncPageIterator,
+)
 from faceit.http import AsyncClient, SyncClient
 from faceit.models import ItemPage  # noqa: TC001
 from faceit.types import (
@@ -77,7 +82,7 @@ class SyncGames(BaseGames[SyncClient], typing.Generic[APIResponseFormatT]):
     def all_items(
         self, max_items: MaxItemsType = MaxItems.SAFE
     ) -> typing.Union[typing.List[RawAPIItem], ItemPage[ModelNotImplemented]]:
-        iterator = self.__class__._sync_page_iterator(self.items, max_items=max_items)
+        iterator = SyncPageIterator(self.items, max_items=max_items)
         return iterator.collect()
 
 
@@ -130,5 +135,5 @@ class AsyncGames(BaseGames[AsyncClient], typing.Generic[APIResponseFormatT]):
     async def all_items(
         self, max_items: MaxItemsType = MaxItems.SAFE
     ) -> typing.Union[typing.List[RawAPIItem], ItemPage[ModelNotImplemented]]:
-        iterator = self.__class__._async_page_iterator(self.items, max_items=max_items)
+        iterator = AsyncPageIterator(self.items, max_items=max_items)
         return await iterator.collect()

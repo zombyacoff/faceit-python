@@ -7,7 +7,12 @@ from pydantic import AfterValidator, Field, validate_call
 from typing_extensions import Annotated, TypeAlias
 
 from faceit.api.base import BaseResource, ModelPlaceholder
-from faceit.api.pagination import MaxItemsType, pages
+from faceit.api.pagination import (
+    AsyncPageIterator,
+    MaxItemsType,
+    SyncPageIterator,
+    pages,
+)
 from faceit.constants import EventCategory, ExpandedField, GameID
 from faceit.http import AsyncClient, SyncClient
 from faceit.models import Championship, ItemPage
@@ -106,9 +111,7 @@ class SyncChampionships(
         category: EventCategory = EventCategory.ALL,
         max_items: MaxItemsType = pages(30),
     ) -> typing.Union[typing.List[RawAPIItem], ItemPage[Championship]]:
-        iterator = self.__class__._sync_page_iterator(
-            self.items, game, category, max_items=max_items
-        )
+        iterator = SyncPageIterator(self.items, game, category, max_items=max_items)
         return iterator.collect()
 
     @typing.overload
@@ -327,9 +330,7 @@ class AsyncChampionships(
         category: EventCategory = EventCategory.ALL,
         max_items: MaxItemsType = pages(30),
     ) -> typing.Union[typing.List[RawAPIItem], ItemPage[Championship]]:
-        iterator = self.__class__._async_page_iterator(
-            self.items, game, category, max_items=max_items
-        )
+        iterator = AsyncPageIterator(self.items, game, category, max_items=max_items)
         return await iterator.collect()
 
     @typing.overload

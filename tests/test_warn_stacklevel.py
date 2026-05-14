@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 from types import FrameType
 from unittest.mock import MagicMock, patch
@@ -24,16 +23,14 @@ class TestGetIgnoredPaths:
         ):
             prefixes, _ = _get_ignored_paths()
 
-            expected_prefix = os.path.normcase(
-                str(Path(mock_mod.__file__).resolve().parent) + os.sep
-            )
+            expected_prefix = Path(mock_mod.__file__).resolve().parent
 
             assert expected_prefix in prefixes
 
     def test_get_ignored_paths_single_file(self) -> None:
         mock_mod = MagicMock()
-        fake_path = os.path.normcase(str((Path("external") / "mod.py").resolve()))
-        mock_mod.__file__ = fake_path
+        fake_path = Path("external").resolve() / "mod.py"
+        mock_mod.__file__ = str(fake_path)
 
         with patch.dict("sys.modules", {"external_mod": mock_mod}), patch(
             "faceit.utils._IGNORED_MODULES", {"external_mod"}
@@ -45,15 +42,15 @@ class TestGetIgnoredPaths:
 
 class TestWarnStacklevel:
     def test_warn_stacklevel_finds_external_frame(self) -> None:
-        ignored_path = os.path.normcase(str(Path("/faceit/internal.py").resolve()))
-        external_path = os.path.normcase(str(Path("/user_code/app.py").resolve()))
+        ignored_path = Path("/faceit/internal.py").resolve()
+        external_path = Path("/user_code/app.py").resolve()
 
         frame_ext = MagicMock(spec=FrameType)
-        frame_ext.f_code.co_filename = external_path
+        frame_ext.f_code.co_filename = str(external_path)
         frame_ext.f_back = None
 
         frame_int = MagicMock(spec=FrameType)
-        frame_int.f_code.co_filename = ignored_path
+        frame_int.f_code.co_filename = str(ignored_path)
         frame_int.f_back = frame_ext
 
         with patch("faceit.utils._get_ignored_paths") as mock_paths, patch(
@@ -79,7 +76,7 @@ def test_integration_stack_navigation() -> None:
     def wrapper() -> int:
         return warn_stacklevel()
 
-    current_file = os.path.normcase(str(Path(__file__).resolve()))
+    current_file = Path(__file__).resolve()
     with patch(
         "faceit.utils._get_ignored_paths", return_value=((), frozenset([current_file]))
     ):

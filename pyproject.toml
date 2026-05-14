@@ -1,6 +1,6 @@
 [project]
 name = "faceit"
-version = "0.2.2"
+version = "0.2.3"
 description = "The Python wrapper for the FACEIT API"
 readme = "README.md"
 requires-python = ">=3.8"
