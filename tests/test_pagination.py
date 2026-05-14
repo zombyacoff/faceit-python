@@ -22,7 +22,7 @@ from faceit.models import ItemPage
 from faceit.models.custom_types import TimestampMs
 
 if typing.TYPE_CHECKING:
-    from faceit.types import RawAPIItem, RawAPIPageResponse
+    from faceit.types import RawAPIPageResponse
 
 
 class _DummyResource(
@@ -41,9 +41,7 @@ class _DummyResource(
         offset: int = Field(0, ge=0),
         limit: int = Field(2, ge=1, le=2),
     ) -> RawAPIPageResponse:
-        items = typing.cast(
-            "typing.List[RawAPIItem]", self._items[offset : offset + limit]
-        )
+        items = self._items[offset : offset + limit]
         return {"items": items, "start": offset, "end": offset + limit}
 
     async def async_raw_method(
@@ -67,9 +65,7 @@ class _DummyResource(
             if to is None
             else [item for item in self._items if item["finished_at"] < to]
         )
-        items = typing.cast(
-            "typing.List[RawAPIItem]", filtered[offset : offset + limit]
-        )
+        items = filtered[offset : offset + limit]
         return {"items": items, "start": offset, "end": offset + limit}
 
     async def async_raw_method_with_unix(
@@ -108,22 +104,8 @@ def dummy_resource(
 @pytest.fixture
 def raw_pages() -> typing.Tuple[RawAPIPageResponse, RawAPIPageResponse]:
     return (
-        {
-            "items": [
-                typing.cast("RawAPIItem", {"id": "a"}),
-                typing.cast("RawAPIItem", {"id": "b"}),
-            ],
-            "start": 0,
-            "end": 2,
-        },
-        {
-            "items": [
-                typing.cast("RawAPIItem", {"id": "b"}),
-                typing.cast("RawAPIItem", {"id": "c"}),
-            ],
-            "start": 2,
-            "end": 4,
-        },
+        {"items": [{"id": "a"}, {"id": "b"}], "start": 0, "end": 2},
+        {"items": [{"id": "b"}, {"id": "c"}], "start": 2, "end": 4},
     )
 
 
@@ -177,10 +159,8 @@ def test_extract_unix_timestamp_from_raw_page() -> None:
     second_item_timestamp = 200
     page: RawAPIPageResponse = {
         "items": [
-            typing.cast("RawAPIItem", {"stats": {"Match Finished At": 100}}),
-            typing.cast(
-                "RawAPIItem", {"stats": {"Match Finished At": second_item_timestamp}}
-            ),
+            {"stats": {"Match Finished At": 100}},
+            {"stats": {"Match Finished At": second_item_timestamp}},
         ],
         "start": 0,
         "end": 2,
@@ -280,16 +260,8 @@ def test_sync_iterator_collect_respects_safe_max_items(
 
 async def test_async_gather_from_iterator_raw() -> None:
     async def source() -> typing.AsyncIterator[RawAPIPageResponse]:  # noqa: RUF029
-        yield {
-            "items": [typing.cast("RawAPIItem", {"id": 1})],
-            "start": 0,
-            "end": 1,
-        }
-        yield {
-            "items": [typing.cast("RawAPIItem", {"id": 2})],
-            "start": 1,
-            "end": 2,
-        }
+        yield {"items": [{"id": 1}], "start": 0, "end": 1}
+        yield {"items": [{"id": 2}], "start": 1, "end": 2}
 
     result = await AsyncPageIterator.gather_from_iterator(
         source(),

@@ -195,7 +195,7 @@ def create_uuid_validator(
     error_message: typing.Optional[str] = None,
 ) -> typing.Callable[[typing.Any], str]:
     if error_message is None:
-        error_message = f"Invalid {arg_name}: {{value}}. Expected a valid UUID."
+        error_message = "Invalid {arg_name}: {value}. Expected a valid UUID."
 
     def validator(value: typing.Any, /) -> str:
         if is_valid_uuid(value):

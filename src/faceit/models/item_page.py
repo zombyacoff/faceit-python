@@ -158,7 +158,7 @@ class ItemPage(BaseModel, typing.Generic[_T],
         cls, items: typing.Optional[typing.Iterable[_R]] = None, /
     ) -> ItemPage[_R]:
         # fmt: off
-        return ItemPage[_R](
+        return cls.model_construct(  # type: ignore[return-value]
             items=tuple(items or ()),
             offset=None, limit=None,
             time_from=None, time_to=None,

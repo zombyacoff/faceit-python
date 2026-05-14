@@ -490,10 +490,9 @@ class BasePageIterator(ABC, typing.Generic[PaginationMethodT, _PageT]):
         collection: typing.Union[ItemPage[_T], typing.List[RawAPIItem]],
         /,
     ) -> typing.Union[ItemPage[_T], typing.List[RawAPIItem]]:
-        unique_items = deduplicate_unhashable(collection)
-        if isinstance(collection, ItemPage):
-            return collection.with_items(typing.cast("typing.List[_T]", unique_items))
-        return typing.cast("typing.List[RawAPIItem]", unique_items)
+        if not isinstance(collection, ItemPage):
+            return deduplicate_unhashable(collection)
+        return collection.with_items(deduplicate_unhashable(collection))
 
     @classmethod
     def _create_unix_timestamp_iterator(
