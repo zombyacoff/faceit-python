@@ -29,7 +29,7 @@
 
 ## Installation
 
-> Requires Python 3.8+
+> Requires **Python 3.8+**.
 
 ```bash
 pip install faceit
@@ -109,9 +109,9 @@ The goal is to provide a solution approaching enterprise-level quality, while re
 
 ### Planned Improvements
 
-- Support for more endpoints and models
-- Webhooks and chat API integration
-- Full documentation and usage guides
+- Support for more endpoints and models.
+- Webhooks and chat API integration.
+- Full documentation and usage guides.
 
 ---
 

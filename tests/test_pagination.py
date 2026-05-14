@@ -186,8 +186,8 @@ def test_extract_unix_timestamp_from_raw_page() -> None:
         "end": 2,
     }
     timestamp = BasePageIterator._extract_unix_timestamp(
-        page,
         TimestampPaginationConfig(key="stats.Match Finished At", attr="finished_at"),
+        page,
     )
     assert timestamp == second_item_timestamp
 
@@ -205,7 +205,7 @@ def test_extract_unix_timestamp_from_model_page() -> None:
         time_to=None,
     )
     timestamp = BasePageIterator._extract_unix_timestamp(
-        page, TimestampPaginationConfig(key="finished_at", attr="finished_at")
+        TimestampPaginationConfig(key="finished_at", attr="finished_at"), page
     )
     assert timestamp == second_item_timestamp
 
@@ -248,13 +248,12 @@ def test_sync_iterator_strips_user_pagination_params_with_warning(
     assert iterator.current_offset == 0
 
 
-def test_sync_gather_pages_with_invalid_unix_config_raises(
+def test_sync_unix_iterator_with_invalid_config_raises(
     dummy_resource: _DummyResource,
 ) -> None:
+    iterator = SyncPageIterator.unix(dummy_resource.raw_method, cfg={"key": "only-key"})
     with pytest.raises(ValueError):
-        SyncPageIterator.gather_pages(
-            dummy_resource.raw_method, unix={"key": "only-key"}
-        )
+        next(iterator)
 
 
 def test_sync_unix_iterator_yields_pages(dummy_resource: _DummyResource) -> None:
@@ -268,15 +267,14 @@ def test_sync_unix_iterator_yields_pages(dummy_resource: _DummyResource) -> None
     assert all("items" in page for page in pages_result)
 
 
-def test_sync_gather_pages_respects_safe_max_items(
+def test_sync_iterator_collect_respects_safe_max_items(
     dummy_resource: _DummyResource,
 ) -> None:
     with patch.object(SyncPageIterator, "SAFE_MAX_PAGES", 1):
-        result = SyncPageIterator.gather_pages(
+        result = SyncPageIterator(
             dummy_resource.raw_method,
             max_items=MaxItems.SAFE,
-            deduplicate=False,
-        )
+        ).collect(deduplicate=False)
     assert len(result) == 2
 
 
@@ -312,10 +310,11 @@ async def test_async_unix_iterator_yields_pages(dummy_resource: _DummyResource) 
     assert all("items" in page for page in pages_result)
 
 
-async def test_async_gather_pages_with_invalid_unix_config_raises(
+async def test_async_unix_iterator_with_invalid_config_raises(
     dummy_resource: _DummyResource,
 ) -> None:
+    iterator = AsyncPageIterator.unix(
+        dummy_resource.async_raw_method, cfg={"attr": "finished_at"}
+    )
     with pytest.raises(ValueError):
-        await AsyncPageIterator.gather_pages(
-            dummy_resource.async_raw_method, unix={"attr": "finished_at"}
-        )
+        await iterator.__anext__()

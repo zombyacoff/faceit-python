@@ -98,7 +98,7 @@ class ItemPage(BaseModel, typing.Generic[_T],
     ) -> typing.Union[_T, _R, None]:
         return next(self._find_items(attr, value), default)
 
-    def find_all(self, attr: str, value: object) -> Self:
+    def find_all(self, attr: str, value: object) -> ItemPage[_T]:
         return self.__class__._construct_without_metadata(self._find_items(attr, value))
 
     @typing.overload
@@ -137,16 +137,16 @@ class ItemPage(BaseModel, typing.Generic[_T],
         return random_choice(self) if self else default  # noqa: S311
 
     def map(self, func: typing.Callable[[_T], _R], /) -> ItemPage[_R]:
-        return self.__class__._construct_without_metadata(map(func, self))  # type: ignore[arg-type, return-value]
+        return self.__class__._construct_without_metadata(map(func, self))
 
-    def filter(self, predicate: typing.Callable[[_T], bool], /) -> Self:
+    def filter(self, predicate: typing.Callable[[_T], bool], /) -> ItemPage[_T]:
         return self.__class__._construct_without_metadata(filter(predicate, self))
 
     def _find_items(self, attr: str, value: object, /) -> typing.Iterator[_T]:
         return (item for item in self if get_nested_property(item, attr) == value)
 
     @classmethod
-    def merge(cls, pages: typing.Iterable[ItemPage[_T]], /) -> ItemPage[_T]:
+    def merge(cls, pages: typing.Iterable[ItemPage[_R]], /) -> ItemPage[_R]:
         return cls._construct_without_metadata(chain.from_iterable(pages))
 
     @classmethod
@@ -155,10 +155,10 @@ class ItemPage(BaseModel, typing.Generic[_T],
 
     @classmethod
     def _construct_without_metadata(
-        cls, items: typing.Optional[typing.Iterable[_T]] = None, /
-    ) -> Self:
+        cls, items: typing.Optional[typing.Iterable[_R]] = None, /
+    ) -> ItemPage[_R]:
         # fmt: off
-        return cls.model_construct(
+        return ItemPage[_R](
             items=tuple(items or ()),
             offset=None, limit=None,
             time_from=None, time_to=None,
@@ -171,7 +171,7 @@ class ItemPage(BaseModel, typing.Generic[_T],
     def __len__(self) -> int:
         return len(self.items)
 
-    def __reversed__(self) -> Self:
+    def __reversed__(self) -> ItemPage[_T]:
         return self.__class__._construct_without_metadata(reversed(self.items))
 
     @typing.overload
@@ -182,7 +182,7 @@ class ItemPage(BaseModel, typing.Generic[_T],
 
     def __getitem__(
         self, index: typing.Union[typing.SupportsIndex, slice]
-    ) -> typing.Union[_T, Self]:
+    ) -> typing.Union[_T, ItemPage[_T]]:
         if isinstance(index, slice):
             return self.__class__._construct_without_metadata(self.items[index])
         try:
@@ -208,12 +208,8 @@ class ItemPage(BaseModel, typing.Generic[_T],
     def _normalize_items(
         cls, items: typing.Any
     ) -> typing.Tuple[typing.Dict[str, typing.Any], ...]:
-        if not isinstance(items, list):
-            msg = f"Expected {RAW_RESPONSE_ITEMS_KEY} to be a list, got {type(items).__name__}"
-            # `ValueError` is raised instead of `TypeError` because Pydantic v2 documents
-            # `ValueError` as the idiomatic exception for field validator failures, ensuring
-            # it is properly wrapped into `ValidationError`. `TRY004` recommends `TypeError`
-            # for `isinstance` checks in regular code, which does not apply here.
+        if not isinstance(items, typing.Iterable):
+            msg = f"Expected {RAW_RESPONSE_ITEMS_KEY} to be an iterable, got {type(items).__name__}"
             raise ValueError(msg)  # noqa: TRY004
 
         def normalize_item(i: int, item: typing.Any) -> typing.Dict[str, typing.Any]:

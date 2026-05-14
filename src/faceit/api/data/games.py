@@ -77,9 +77,8 @@ class SyncGames(BaseGames[SyncClient], typing.Generic[APIResponseFormatT]):
     def all_items(
         self, max_items: MaxItemsType = MaxItems.SAFE
     ) -> typing.Union[typing.List[RawAPIItem], ItemPage[ModelNotImplemented]]:
-        return self.__class__._sync_page_iterator.gather_pages(
-            self.items, max_items=max_items
-        )
+        iterator = self.__class__._sync_page_iterator(self.items, max_items=max_items)
+        return iterator.collect()
 
 
 @typing.final
@@ -131,6 +130,5 @@ class AsyncGames(BaseGames[AsyncClient], typing.Generic[APIResponseFormatT]):
     async def all_items(
         self, max_items: MaxItemsType = MaxItems.SAFE
     ) -> typing.Union[typing.List[RawAPIItem], ItemPage[ModelNotImplemented]]:
-        return await self.__class__._async_page_iterator.gather_pages(
-            self.items, max_items=max_items
-        )
+        iterator = self.__class__._async_page_iterator(self.items, max_items=max_items)
+        return await iterator.collect()

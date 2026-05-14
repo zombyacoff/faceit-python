@@ -63,20 +63,22 @@ def test_sync_get_calls_client_with_expect_item(
 def test_sync_all_matches_stats_delegates_to_pagination_with_unix_cfg(
     sync_players_raw: SyncPlayers, valid_uuid: str
 ) -> None:
+    iterator_cls = sync_players_raw.__class__._sync_page_iterator
     with patch.object(
-        sync_players_raw.__class__._sync_page_iterator,
-        "gather_pages",
-        return_value=[{"id": "m1"}],
-    ) as gather_pages:
+        iterator_cls, "unix", return_value=iter([])
+    ) as mock_unix, patch.object(
+        iterator_cls, "gather_from_iterator", return_value=[{"id": "m1"}]
+    ) as mock_gather:
         result = sync_players_raw.all_matches_stats(valid_uuid, GameID.CS2)
 
     assert result == [{"id": "m1"}]
-    gather_pages.assert_called_once()
-    _, args, kwargs = gather_pages.mock_calls[0]
+    mock_unix.assert_called_once()
+    _, args, kwargs = mock_unix.mock_calls[0]
     assert args[0] == sync_players_raw.matches_stats
     assert args[1] == valid_uuid
     assert args[2] == GameID.CS2
-    assert kwargs["unix"] == sync_players_raw.__class__._matches_stats_timestamp_cfg
+    assert kwargs["cfg"] == sync_players_raw.__class__._matches_stats_timestamp_cfg
+    mock_gather.assert_called_once_with(mock_unix.return_value)
 
 
 async def test_async_get_calls_client_with_expect_item(
@@ -95,17 +97,26 @@ async def test_async_get_calls_client_with_expect_item(
 async def test_async_all_history_delegates_to_pagination_with_unix_cfg(
     async_players_raw: AsyncPlayers, valid_uuid: str
 ) -> None:
+    iterator_cls = async_players_raw.__class__._async_page_iterator
+
+    async def empty_async_iter() -> typing.AsyncIterator[typing.Any]:  # noqa: RUF029
+        if False:
+            yield
+
+    mock_iterator = empty_async_iter()
+
     with patch.object(
-        async_players_raw.__class__._async_page_iterator,
-        "gather_pages",
-        new=AsyncMock(return_value=[{"id": "h1"}]),
-    ) as gather_pages:
+        iterator_cls, "unix", return_value=mock_iterator
+    ) as mock_unix, patch.object(
+        iterator_cls, "gather_from_iterator", new=AsyncMock(return_value=[{"id": "h1"}])
+    ) as mock_gather:
         result = await async_players_raw.all_history(valid_uuid, GameID.CS2)
 
     assert result == [{"id": "h1"}]
-    gather_pages.assert_awaited_once()
-    _, args, kwargs = gather_pages.mock_calls[0]
+    mock_unix.assert_called_once()
+    _, args, kwargs = mock_unix.mock_calls[0]
     assert args[0] == async_players_raw.history
     assert args[1] == valid_uuid
     assert args[2] == GameID.CS2
-    assert kwargs["unix"] == async_players_raw.__class__._history_timestamp_cfg
+    assert kwargs["cfg"] == async_players_raw.__class__._history_timestamp_cfg
+    mock_gather.assert_awaited_once_with(mock_iterator)

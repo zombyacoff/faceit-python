@@ -106,9 +106,10 @@ class SyncRankings(BaseRankings[SyncClient], typing.Generic[APIResponseFormatT])
         country: typing.Optional[CountryCode] = None,
         max_items: MaxItemsType = pages(10),
     ) -> typing.Union[typing.List[RawAPIItem], ItemPage[ModelNotImplemented]]:
-        return self.__class__._sync_page_iterator.gather_pages(
+        iterator = self.__class__._sync_page_iterator(
             self.unbounded, game, region, country, max_items=max_items
         )
+        return iterator.collect()
 
     @typing.overload
     def player(
@@ -229,9 +230,10 @@ class AsyncRankings(BaseRankings[AsyncClient], typing.Generic[APIResponseFormatT
         country: typing.Optional[CountryCode] = None,
         max_items: MaxItemsType = pages(10),
     ) -> typing.Union[typing.List[RawAPIItem], ItemPage[ModelNotImplemented]]:
-        return await self.__class__._async_page_iterator.gather_pages(
+        iterator = self.__class__._async_page_iterator(
             self.unbounded, game, region, country, max_items=max_items
         )
+        return await iterator.collect()
 
     @typing.overload
     async def player(

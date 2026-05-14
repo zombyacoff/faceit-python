@@ -1,4 +1,3 @@
-# mypy: disable-error-code="no-any-return"
 from __future__ import annotations
 
 import inspect
@@ -402,34 +401,6 @@ class BasePageIterator(ABC, typing.Generic[PaginationMethodT, _PageT]):
         return kwargs
 
     @staticmethod
-    def _validate_unix_pagination_parameter(
-        method: PaginationMethodT,
-        # Process `kwargs` to filter pagination parameters and issue warnings
-        # when user-provided values will be ignored
-        kwargs: typing.Dict[str, typing.Any],
-        cfg: TimestampPaginationConfig,
-        /,
-    ) -> None:
-        if not _has_unix_pagination_params(method):
-            msg = (
-                f"Method {method.__name__!r} does not appear to support Unix timestamp pagination. "
-                "Expected 'start' and 'to' parameters."
-            )
-            raise ValueError(msg)
-        if any(
-            not isinstance(value, str) or not value
-            for value in (cfg["key"], cfg["attr"])
-        ):
-            msg = f"Key and attribute parameters must be non-empty strings: {cfg['key']}, {cfg['attr']}."
-            raise ValueError(msg)
-        if any(kwargs.pop(arg, None) for arg in _UNIX_PAGINATION_PARAMS):
-            warnings.warn(
-                "The parameters 'start' and 'to' will be managed automatically with Unix "
-                "timestamp pagination. Your provided values will be ignored.",
-                stacklevel=warn_stacklevel(),
-            )
-
-    @staticmethod
     def _validate_unix_config(
         unix_config: _OptionalTimestampPaginationConfig, /
     ) -> None:
@@ -453,62 +424,76 @@ class BasePageIterator(ABC, typing.Generic[PaginationMethodT, _PageT]):
 
     @staticmethod
     def _extract_unix_timestamp(
-        page: typing.Optional[_PageT], cfg: TimestampPaginationConfig, /
+        cfg: TimestampPaginationConfig, page: typing.Optional[_PageType], /
     ) -> typing.Optional[int]:
         if not page:
             return None
         if isinstance(page, dict):
             items = page.get(RAW_RESPONSE_ITEMS_KEY) or []
             return deep_get(items[-1], cfg["key"]) if items else None
-        assert isinstance(page, ItemPage)  # Type narrowing for mypy on Python < 3.9
         return getattr(page.get_last(), cfg["attr"], None)
 
     @staticmethod
-    def _filter_collection(
-        collection: typing.List[_PageT], expected_type: typing.Type[typing.Any], /
-    ) -> typing.List[typing.Any]:
-        return [item for item in collection if isinstance(item, expected_type)]
-
-    @staticmethod
     def _extract_items_from_raw_pages(
-        pages: typing.List[RawAPIPageResponse], /
+        pages: typing.Iterable[RawAPIPageResponse], /
     ) -> typing.List[RawAPIItem]:
         return list(chain.from_iterable(page[RAW_RESPONSE_ITEMS_KEY] for page in pages))
 
     @classmethod
+    def _validate_unix_pagination_parameter(
+        cls,
+        method: PaginationMethodT,
+        # Process `kwargs` to filter pagination parameters and issue warnings
+        # when user-provided values will be ignored
+        kwargs: typing.Dict[str, typing.Any],
+        cfg: TimestampPaginationConfig,
+        /,
+    ) -> None:
+        cls._validate_unix_config(cfg)
+        if not _has_unix_pagination_params(method):
+            msg = (
+                f"Method {method.__name__!r} does not appear to support Unix timestamp pagination. "
+                "Expected 'start' and 'to' parameters."
+            )
+            raise ValueError(msg)
+        if any(
+            not isinstance(value, str) or not value
+            for value in (cfg["key"], cfg["attr"])
+        ):
+            msg = f"Key and attribute parameters must be non-empty strings: {cfg['key']}, {cfg['attr']}."
+            raise ValueError(msg)
+        if any(kwargs.pop(arg, None) for arg in _UNIX_PAGINATION_PARAMS):
+            warnings.warn(
+                "The parameters 'start' and 'to' will be managed automatically with Unix "
+                "timestamp pagination. Your provided values will be ignored.",
+                stacklevel=warn_stacklevel(),
+            )
+
+    @classmethod
     def _process_collected_pages(
         cls,
-        collection: typing.List[_PageT],
+        collection: typing.List[typing.Union[ItemPage[_T], RawAPIPageResponse]],
         return_format: CollectReturnFormat,
         deduplicate: bool,  # noqa: FBT001
-        /,
-    ) -> typing.Union[ItemPage[typing.Any], typing.List[RawAPIItem]]:
-        is_raw_mode = (
-            cls._COLLECT_RETURN_FORMATS[return_format](
-                typing.cast("_PageList", collection)
+    ) -> typing.Union[ItemPage[_T], typing.List[RawAPIItem]]:
+        if cls._COLLECT_RETURN_FORMATS[return_format](collection) is dict:
+            raw = cls._extract_items_from_raw_pages(
+                p for p in collection if isinstance(p, dict)
             )
-            is dict
-        )
-        filtered = cls._filter_collection(collection, dict if is_raw_mode else ItemPage)
-        processed = (
-            cls._extract_items_from_raw_pages(filtered)
-            if is_raw_mode
-            else ItemPage.merge(filtered)
-        )
-        return cls._deduplicate_collection(processed) if deduplicate else processed
+            return cls._deduplicate_collection(raw) if deduplicate else raw
+        model = ItemPage.merge(p for p in collection if isinstance(p, ItemPage))
+        return cls._deduplicate_collection(model) if deduplicate else model
 
     @classmethod
     def _deduplicate_collection(
         cls,
-        collection: typing.Union[ItemPage[typing.Any], typing.List[RawAPIItem]],
+        collection: typing.Union[ItemPage[_T], typing.List[RawAPIItem]],
         /,
-    ) -> typing.Union[ItemPage[typing.Any], typing.List[RawAPIItem]]:
+    ) -> typing.Union[ItemPage[_T], typing.List[RawAPIItem]]:
         unique_items = deduplicate_unhashable(collection)
-        return (
-            collection.with_items(unique_items)
-            if isinstance(collection, ItemPage)
-            else unique_items
-        )
+        if isinstance(collection, ItemPage):
+            return collection.with_items(typing.cast("typing.List[_T]", unique_items))
+        return typing.cast("typing.List[RawAPIItem]", unique_items)
 
     @classmethod
     def _create_unix_timestamp_iterator(
@@ -586,11 +571,15 @@ class SyncPageIterator(_BaseSyncPageIterator[_PageT]):
     @typing.overload
     def collect(
         self: SyncPageIterator[ItemPage[_T]],
+        *,
+        deduplicate: bool = ...,
     ) -> ItemPage[_T]: ...
 
     @typing.overload
     def collect(
         self: SyncPageIterator[RawAPIPageResponse],
+        *,
+        deduplicate: bool = ...,
     ) -> typing.List[RawAPIItem]: ...
 
     def collect(
@@ -598,8 +587,10 @@ class SyncPageIterator(_BaseSyncPageIterator[_PageT]):
             SyncPageIterator[ItemPage[_T]],
             SyncPageIterator[RawAPIPageResponse],
         ],
+        *,
+        deduplicate: bool = True,
     ) -> typing.Union[ItemPage[_T], typing.List[RawAPIItem]]:
-        return self.__class__.gather_from_iterator(self)
+        return self.__class__.gather_from_iterator(self, deduplicate=deduplicate)
 
     @classmethod
     def unix(
@@ -632,69 +623,12 @@ class SyncPageIterator(_BaseSyncPageIterator[_PageT]):
             if not pages or total_yielded >= iterator.max_items:
                 break
 
-            new_timestamp = cls._extract_unix_timestamp(pages[-1], cfg)
+            new_timestamp = cls._extract_unix_timestamp(cfg, pages[-1])
             if new_timestamp is None or new_timestamp == current_timestamp:
                 break
             current_timestamp = new_timestamp
 
             kwargs["max_items"] = iterator.max_items - total_yielded
-
-    @typing.overload
-    @classmethod
-    def gather_pages(
-        cls,
-        method: SyncResourceMethodProtocol[ItemPage[_T]],
-        /,
-        *args: typing.Any,
-        max_items: MaxItemsType = ...,
-        unix: _OptionalTimestampPaginationConfig = ...,
-        return_format: CollectReturnFormat = ...,
-        deduplicate: bool = ...,
-        **kwargs: typing.Any,
-    ) -> ItemPage[_T]: ...
-
-    @typing.overload
-    @classmethod
-    def gather_pages(
-        cls,
-        method: SyncResourceMethodProtocol[RawAPIPageResponse],
-        /,
-        *args: typing.Any,
-        max_items: MaxItemsType = ...,
-        unix: _OptionalTimestampPaginationConfig = ...,
-        return_format: CollectReturnFormat = ...,
-        deduplicate: bool = ...,
-        **kwargs: typing.Any,
-    ) -> typing.List[RawAPIItem]: ...
-
-    @classmethod
-    def gather_pages(
-        cls,
-        method: typing.Union[
-            SyncResourceMethodProtocol[ItemPage[_T]],
-            SyncResourceMethodProtocol[RawAPIPageResponse],
-        ],
-        /,
-        *args: typing.Any,
-        max_items: MaxItemsType = BasePageIterator.DEFAULT_MAX_ITEMS,
-        unix: _OptionalTimestampPaginationConfig = False,
-        return_format: CollectReturnFormat = CollectReturnFormat.FIRST,
-        deduplicate: bool = True,
-        **kwargs: typing.Any,
-    ) -> typing.Union[ItemPage[_T], typing.List[RawAPIItem]]:
-        cls._validate_unix_config(unix)
-        kwargs["max_items"] = max_items
-        if unix is False:
-            casted_method = typing.cast("SyncResourceMethodProtocol[_PageT]", method)
-            # Type annotation needed as mypy can't infer that
-            # both branches return compatible iterable
-            iterator: typing.Iterator[typing.Any] = cls(casted_method, *args, **kwargs)
-        else:
-            casted_method = typing.cast("SyncResourceMethodProtocol[_PageT]", method)
-            iterator = cls.unix(casted_method, *args, **unix, **kwargs)
-        return cls.gather_from_iterator(
-            iterator, return_format, deduplicate=deduplicate
-        )
 
     @typing.overload
     @classmethod
@@ -727,11 +661,7 @@ class SyncPageIterator(_BaseSyncPageIterator[_PageT]):
         *,
         deduplicate: bool = True,
     ) -> typing.Union[ItemPage[_T], typing.List[RawAPIItem]]:
-        return cls._process_collected_pages(
-            list(typing.cast("typing.Iterator[_PageT]", iterator)),
-            return_format,
-            deduplicate,
-        )
+        return cls._process_collected_pages(list(iterator), return_format, deduplicate)
 
 
 @typing.final
@@ -787,69 +717,12 @@ class AsyncPageIterator(_BaseAsyncPageIterator[_PageT]):
             if not pages or total_yielded >= iterator.max_items:
                 break
 
-            new_timestamp = cls._extract_unix_timestamp(pages[-1], cfg)
+            new_timestamp = cls._extract_unix_timestamp(cfg, pages[-1])
             if new_timestamp is None or new_timestamp == current_timestamp:
                 break
             current_timestamp = new_timestamp
 
             kwargs["max_items"] = iterator.max_items - total_yielded
-
-    @typing.overload
-    @classmethod
-    async def gather_pages(
-        cls,
-        method: AsyncResourceMethodProtocol[ItemPage[_T]],
-        /,
-        *args: typing.Any,
-        max_items: MaxItemsType = ...,
-        unix: _OptionalTimestampPaginationConfig = ...,
-        return_format: CollectReturnFormat = ...,
-        deduplicate: bool = ...,
-        **kwargs: typing.Any,
-    ) -> ItemPage[_T]: ...
-
-    @typing.overload
-    @classmethod
-    async def gather_pages(
-        cls,
-        method: AsyncResourceMethodProtocol[RawAPIPageResponse],
-        /,
-        *args: typing.Any,
-        max_items: MaxItemsType = ...,
-        unix: _OptionalTimestampPaginationConfig = ...,
-        return_format: CollectReturnFormat = ...,
-        deduplicate: bool = ...,
-        **kwargs: typing.Any,
-    ) -> typing.List[RawAPIItem]: ...
-
-    @classmethod
-    async def gather_pages(
-        cls,
-        method: typing.Union[
-            AsyncResourceMethodProtocol[ItemPage[_T]],
-            AsyncResourceMethodProtocol[RawAPIPageResponse],
-        ],
-        /,
-        *args: typing.Any,
-        max_items: MaxItemsType = BasePageIterator.DEFAULT_MAX_ITEMS,
-        unix: _OptionalTimestampPaginationConfig = False,
-        return_format: CollectReturnFormat = CollectReturnFormat.FIRST,
-        deduplicate: bool = True,
-        **kwargs: typing.Any,
-    ) -> typing.Union[ItemPage[_T], typing.List[RawAPIItem]]:
-        cls._validate_unix_config(unix)
-        kwargs["max_items"] = max_items
-        if unix is False:
-            casted_method = typing.cast("AsyncResourceMethodProtocol[_PageT]", method)
-            iterator: typing.AsyncIterator[typing.Any] = cls(
-                casted_method, *args, **kwargs
-            )
-        else:
-            casted_method = typing.cast("AsyncResourceMethodProtocol[_PageT]", method)
-            iterator = cls.unix(casted_method, *args, **unix, **kwargs)
-        return await cls.gather_from_iterator(
-            iterator, return_format, deduplicate=deduplicate
-        )
 
     @typing.overload
     @classmethod
@@ -883,7 +756,5 @@ class AsyncPageIterator(_BaseAsyncPageIterator[_PageT]):
         deduplicate: bool = True,
     ) -> typing.Union[ItemPage[_T], typing.List[RawAPIItem]]:
         return cls._process_collected_pages(
-            typing.cast("typing.List[_PageT]", [page async for page in iterator]),
-            return_format,
-            deduplicate,
+            [page async for page in iterator], return_format, deduplicate
         )

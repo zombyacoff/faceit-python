@@ -124,9 +124,10 @@ class SyncTeams(BaseTeams[SyncClient], typing.Generic[APIResponseFormatT]):
     def all_tournaments(
         self, team_id: _TeamIDValidated, max_items: MaxItemsType = pages(30)
     ) -> typing.Union[typing.List[RawAPIItem], ItemPage[ModelNotImplemented]]:
-        return self.__class__._sync_page_iterator.gather_pages(
+        iterator = self.__class__._sync_page_iterator(
             self.tournaments, team_id, max_items=max_items
         )
+        return iterator.collect()
 
 
 @typing.final
@@ -220,6 +221,7 @@ class AsyncTeams(BaseTeams[AsyncClient], typing.Generic[APIResponseFormatT]):
     async def all_tournaments(
         self, team_id: _TeamIDValidated, max_items: MaxItemsType = pages(30)
     ) -> typing.Union[typing.List[RawAPIItem], ItemPage[ModelNotImplemented]]:
-        return await self.__class__._async_page_iterator.gather_pages(
+        iterator = self.__class__._async_page_iterator(
             self.tournaments, team_id, max_items=max_items
         )
+        return await iterator.collect()
