@@ -611,18 +611,19 @@ class SyncPageIterator(_BaseSyncPageIterator[_PageT]):
             iterator = cls._create_unix_timestamp_iterator(
                 method, *args, timestamp=current_timestamp, **kwargs
             )
-            pages = list(iterator)
 
-            for page in pages:
+            last_page = None
+            for page in iterator:
+                yield page
+                last_page = page
+                total_yielded += iterator._effective_limit
                 if total_yielded >= iterator.max_items:
                     return
-                yield page
-                total_yielded += iterator._effective_limit
 
-            if not pages or total_yielded >= iterator.max_items:
+            if last_page is None:
                 break
 
-            new_timestamp = cls._extract_unix_timestamp(cfg, pages[-1])
+            new_timestamp = cls._extract_unix_timestamp(cfg, last_page)
             if new_timestamp is None or new_timestamp == current_timestamp:
                 break
             current_timestamp = new_timestamp
@@ -705,18 +706,19 @@ class AsyncPageIterator(_BaseAsyncPageIterator[_PageT]):
             iterator = cls._create_unix_timestamp_iterator(
                 method, *args, timestamp=current_timestamp, **kwargs
             )
-            pages = [page async for page in iterator]
 
-            for page in pages:
+            last_page = None
+            async for page in iterator:
+                yield page
+                last_page = page
+                total_yielded += iterator._effective_limit
                 if total_yielded >= iterator.max_items:
                     return
-                yield page
-                total_yielded += iterator._effective_limit
 
-            if not pages or total_yielded >= iterator.max_items:
+            if last_page is None:
                 break
 
-            new_timestamp = cls._extract_unix_timestamp(cfg, pages[-1])
+            new_timestamp = cls._extract_unix_timestamp(cfg, last_page)
             if new_timestamp is None or new_timestamp == current_timestamp:
                 break
             current_timestamp = new_timestamp
