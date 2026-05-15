@@ -1,4 +1,4 @@
-import typing
+from typing import Any, final, overload
 
 from faceit.api.aggregator import (
     AsyncResources,
@@ -49,29 +49,29 @@ __all__ = [
 
 
 class _DataResourceMixin:
-    @typing.overload
+    @overload
     def __init__(self) -> None: ...
 
-    @typing.overload
+    @overload
     def __init__(  # type: ignore[misc]
         self: BaseResources[ClientT],
         *,
         client: ClientT,
     ) -> None: ...
 
-    @typing.overload
+    @overload
     def __init__(
         self,
-        api_key: typing.Union[ValidUUID, BaseAPIClient.env],
-        **client_options: typing.Any,
+        api_key: ValidUUID | BaseAPIClient.env,
+        **client_options: Any,
     ) -> None: ...
 
     def __init__(  # type: ignore[misc]
         self: BaseResources[ClientT],  # pyright: ignore[reportGeneralTypeIssues]
-        api_key: typing.Union[ValidUUID, BaseAPIClient.env, None] = None,
+        api_key: ValidUUID | BaseAPIClient.env | None = None,
         *,
-        client: typing.Optional[ClientT] = None,
-        **client_options: typing.Any,
+        client: ClientT | None = None,
+        **client_options: Any,
     ) -> None:
         self._initialize_client(
             api_key,
@@ -81,7 +81,7 @@ class _DataResourceMixin:
         )
 
 
-@typing.final
+@final
 @resource_aggregator
 class SyncDataResource(SyncResources, _DataResourceMixin):
     championships: SyncChampionships[Model]
@@ -109,7 +109,7 @@ class SyncDataResource(SyncResources, _DataResourceMixin):
     raw_teams: SyncTeams[Raw]
 
 
-@typing.final
+@final
 @resource_aggregator
 class AsyncDataResource(AsyncResources, _DataResourceMixin):
     championships: AsyncChampionships[Model]

@@ -1,6 +1,6 @@
 line-length = 88
 preview = true
-target-version = "py38"
+target-version = "py310"
 
 [lint]
 select = ["ALL"]
@@ -40,7 +40,6 @@ banned-from = [
     "re",
     "reprlib",
     "tenacity",
-    "typing",
     "warnings",
 ]
 
@@ -87,6 +86,3 @@ ignore-names = ["env", "pages"]
 allow-dunder-method-names = [
     "__get_pydantic_core_schema__",
 ]
-
-[lint.pyupgrade]
-keep-runtime-typing = true

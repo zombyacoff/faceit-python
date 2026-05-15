@@ -1,4 +1,5 @@
-import typing
+from contextlib import suppress
+from typing import Any, ClassVar, final
 
 import httpx
 
@@ -7,7 +8,7 @@ class FaceitError(Exception):
     """Base class for all FACEIT exceptions."""
 
 
-@typing.final
+@final
 class DecoupleNotFoundError(FaceitError):
     def __init__(self) -> None:
         super().__init__(
@@ -17,7 +18,7 @@ class DecoupleNotFoundError(FaceitError):
         )
 
 
-@typing.final
+@final
 class MissingAuthTokenError(FaceitError):
     def __init__(self, key: str, /) -> None:
         self.key = key
@@ -28,16 +29,16 @@ class MissingAuthTokenError(FaceitError):
 
 
 class APIError(FaceitError):
-    _DEFAULT_MESSAGE: typing.ClassVar = "API request failed"
-    _EXPECTED_STATUS_CODE: typing.ClassVar = 0
-    _MESSAGE_FORMAT: typing.ClassVar = "[{status_code}] {message}"
-    _STATUS_ERRORS: typing.ClassVar[typing.Dict[int, typing.Type["APIError"]]] = {}
+    _DEFAULT_MESSAGE: ClassVar = "API request failed"
+    _EXPECTED_STATUS_CODE: ClassVar = 0
+    _MESSAGE_FORMAT: ClassVar = "[{status_code}] {message}"
+    _STATUS_ERRORS: ClassVar[dict[int, type["APIError"]]] = {}
 
     def __init_subclass__(
         cls,
         code: httpx.codes,
-        default_message: typing.Optional[str] = None,
-        **kwargs: typing.Any,
+        default_message: str | None = None,
+        **kwargs: Any,
     ) -> None:
         cls._EXPECTED_STATUS_CODE = code.value
         cls._DEFAULT_MESSAGE = default_message or code.get_reason_phrase(code.value)
@@ -46,10 +47,10 @@ class APIError(FaceitError):
 
     def __init__(
         self,
-        response: typing.Optional[httpx.Response] = None,
+        response: httpx.Response | None = None,
         /,
         *,
-        message: typing.Optional[str] = None,
+        message: str | None = None,
     ) -> None:
         self.response = response
         self.status_code = (
@@ -61,8 +62,7 @@ class APIError(FaceitError):
         if message is not None:
             self.message = message
         elif response is not None:
-            # TODO: Implement proper error parsing to extract the message in a sensible form
-            self.message = response.text[:200]
+            self.message = self.__class__._parse_response_message(response)
         else:
             self.message = self.__class__._DEFAULT_MESSAGE
 
@@ -76,20 +76,29 @@ class APIError(FaceitError):
     def from_response(cls, response: httpx.Response, /) -> "APIError":
         return cls._STATUS_ERRORS.get(response.status_code, APIError)(response)
 
+    @staticmethod
+    def _parse_response_message(response: httpx.Response, /) -> str:
+        message = response.text[:200]
+        with suppress(ValueError, IndexError, AttributeError):
+            errors = response.json().get("errors")
+            if errors:
+                message = errors[0].get("message", message)
+        return message
+
 
 # fmt: off
-@typing.final
+@final
 class BadRequestError(APIError, code=httpx.codes.BAD_REQUEST): ...
-@typing.final
+@final
 class UnauthorizedError(APIError, code=httpx.codes.UNAUTHORIZED): ...
-@typing.final
+@final
 class ForbiddenError(APIError, code=httpx.codes.FORBIDDEN): ...
-@typing.final
+@final
 class NotFoundError(APIError, code=httpx.codes.NOT_FOUND): ...
-@typing.final
+@final
 class TooManyRequestsError(APIError, code=httpx.codes.TOO_MANY_REQUESTS): ...
-@typing.final
+@final
 class InternalServerError(APIError, code=httpx.codes.INTERNAL_SERVER_ERROR): ...
-@typing.final
+@final
 class ServiceUnavailableError(APIError, code=httpx.codes.SERVICE_UNAVAILABLE): ...
 # fmt: on

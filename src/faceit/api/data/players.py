@@ -1,12 +1,20 @@
 from __future__ import annotations
 
 import logging
-import typing
 import warnings
 from abc import ABC
+from typing import (
+    Annotated,
+    Any,
+    ClassVar,
+    Generic,
+    Literal,
+    TypeAlias,
+    final,
+    overload,
+)
 
 from pydantic import AfterValidator, Field, validate_call
-from typing_extensions import Annotated, TypeAlias
 
 from faceit.api.base import (
     BaseResource,
@@ -56,7 +64,7 @@ _logger = logging.getLogger(__name__)
 
 PlayerID: TypeAlias = ValidUUID
 PlayerIDValidated: TypeAlias = Annotated[PlayerID, AfterValidator(validate_player_id)]
-_PlayerIdentifier: TypeAlias = typing.Union[str, ValidUUID]
+_PlayerIdentifier: TypeAlias = str | ValidUUID
 _PlayerIdentifierValidated: TypeAlias = Annotated[
     _PlayerIdentifier, AfterValidator(validate_player_id_or_nickname)
 ]
@@ -69,7 +77,7 @@ class BasePlayers(
 ):
     __slots__ = ()
 
-    _matches_stats_validator_cfg: typing.ClassVar = MappedValidatorConfig[
+    _matches_stats_validator_cfg: ClassVar = MappedValidatorConfig[
         GameID, AbstractMatchPlayerStats
     ](
         validator_map={
@@ -78,9 +86,7 @@ class BasePlayers(
         },
         key_name="game",
     )
-    _stats_validator_cfg: typing.ClassVar = MappedValidatorConfig[
-        GameID, AnyPlayerStats
-    ](
+    _stats_validator_cfg: ClassVar = MappedValidatorConfig[GameID, AnyPlayerStats](
         validator_map={
             GameID.CS2: CSPlayerStats,
             GameID.CSGO: CSPlayerStats,
@@ -89,18 +95,18 @@ class BasePlayers(
         default_validator=FallbackPlayerStats,
     )
 
-    _matches_stats_timestamp_cfg: typing.ClassVar = TimestampPaginationConfig(
+    _matches_stats_timestamp_cfg: ClassVar = TimestampPaginationConfig(
         key="stats.Match Finished At", attr="finished_at"
     )
-    _history_timestamp_cfg: typing.ClassVar = TimestampPaginationConfig(
+    _history_timestamp_cfg: ClassVar = TimestampPaginationConfig(
         key="finished_at", attr="finished_at"
     )
 
     def _process_get_request(
         self,
-        player_lookup_key: typing.Any,
-        game: typing.Optional[GameID],
-        game_player_id: typing.Optional[str],
+        player_lookup_key: Any,
+        game: GameID | None,
+        game_player_id: str | None,
     ) -> RequestPayload:
         params = self.__class__._build_params(game=game, game_player_id=game_player_id)
 
@@ -137,26 +143,26 @@ class BasePlayers(
         return RequestPayload(endpoint=self.__class__.PATH, params=params)
 
 
-@typing.final
-class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
+@final
+class SyncPlayers(BasePlayers[SyncClient], Generic[APIResponseFormatT]):
     __slots__ = ()
 
-    @typing.overload
+    @overload
     def get(
         self: SyncPlayers[Raw], player_lookup_key: _PlayerIdentifier
     ) -> RawAPIItem: ...
 
-    @typing.overload
+    @overload
     def get(
         self: SyncPlayers[Raw], *, game: GameID, game_player_id: str
     ) -> RawAPIItem: ...
 
-    @typing.overload
+    @overload
     def get(
         self: SyncPlayers[Model], player_lookup_key: _PlayerIdentifier
     ) -> Player: ...
 
-    @typing.overload
+    @overload
     def get(
         self: SyncPlayers[Model], *, game: GameID, game_player_id: str
     ) -> Player: ...
@@ -164,11 +170,11 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
     @validate_call
     def get(
         self,
-        player_lookup_key: typing.Optional[_PlayerIdentifierValidated] = None,
+        player_lookup_key: _PlayerIdentifierValidated | None = None,
         *,
-        game: typing.Optional[GameID] = None,
-        game_player_id: typing.Optional[str] = None,
-    ) -> typing.Union[RawAPIItem, Player]:
+        game: GameID | None = None,
+        game_player_id: str | None = None,
+    ) -> RawAPIItem | Player:
         return self._validate_response(
             self._client.get(
                 **self._process_get_request(player_lookup_key, game, game_player_id),
@@ -184,7 +190,7 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
 
     # Using `Field(...)` as default value rather than `Annotated[..., Field(...)]`
     # to expose constraints in IDE tooltips and improve developer experience
-    @typing.overload
+    @overload
     def bans(
         self: SyncPlayers[Raw],
         player_id: PlayerID,
@@ -193,7 +199,7 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
         limit: int = Field(20, ge=1, le=100),
     ) -> RawAPIPageResponse: ...
 
-    @typing.overload
+    @overload
     def bans(
         self: SyncPlayers[Model],
         player_id: PlayerID,
@@ -209,7 +215,7 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
-    ) -> typing.Union[RawAPIPageResponse, ItemPage[BanEntry]]:
+    ) -> RawAPIPageResponse | ItemPage[BanEntry]:
         return self._validate_response(
             self._client.get(
                 # `player_id` is validated and normalized;
@@ -221,14 +227,14 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
             ItemPage[BanEntry],
         )
 
-    @typing.overload
+    @overload
     def all_bans(
         self: SyncPlayers[Raw],
         player_id: PlayerID,
         max_items: MaxItemsType = MaxItems.SAFE,
-    ) -> typing.List[RawAPIItem]: ...
+    ) -> list[RawAPIItem]: ...
 
-    @typing.overload
+    @overload
     def all_bans(
         self: SyncPlayers[Model],
         player_id: PlayerID,
@@ -237,11 +243,11 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
 
     def all_bans(
         self, player_id: PlayerID, max_items: MaxItemsType = MaxItems.SAFE
-    ) -> typing.Union[typing.List[RawAPIItem], ItemPage[BanEntry]]:
+    ) -> list[RawAPIItem] | ItemPage[BanEntry]:
         iterator = SyncPageIterator(self.bans, player_id, max_items=max_items)
         return iterator.collect()
 
-    @typing.overload
+    @overload
     def matches_stats(
         self: SyncPlayers[Raw],
         player_id: PlayerID,
@@ -249,26 +255,26 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
         *,
         offset: int = Field(0, ge=0, le=200),
         limit: int = Field(20, ge=1, le=100),
-        start: typing.Optional[NotStrictTimestampMs] = None,
-        to: typing.Optional[NotStrictTimestampMs] = None,
+        start: NotStrictTimestampMs | None = None,
+        to: NotStrictTimestampMs | None = None,
     ) -> RawAPIPageResponse: ...
 
     # TODO: This overload-based approach for specific games feels clunky and doesn't scale well.
     # Need to investigate a more sophisticated way to map `GameID` to specific models,
     # but this is the current best effort.
-    @typing.overload
+    @overload
     def matches_stats(
         self: SyncPlayers[Model],
         player_id: PlayerID,
-        game: typing.Literal[GameID.CS2],
+        game: Literal[GameID.CS2],
         *,
         offset: int = Field(0, ge=0, le=200),
         limit: int = Field(20, ge=1, le=100),
-        start: typing.Optional[NotStrictTimestampMs] = None,
-        to: typing.Optional[NotStrictTimestampMs] = None,
+        start: NotStrictTimestampMs | None = None,
+        to: NotStrictTimestampMs | None = None,
     ) -> ItemPage[CS2MatchPlayerStats]: ...
 
-    @typing.overload
+    @overload
     def matches_stats(  # Fallback
         self: SyncPlayers[Model],
         player_id: PlayerID,
@@ -276,8 +282,8 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
         *,
         offset: int = Field(0, ge=0, le=200),
         limit: int = Field(20, ge=1, le=100),
-        start: typing.Optional[NotStrictTimestampMs] = None,
-        to: typing.Optional[NotStrictTimestampMs] = None,
+        start: NotStrictTimestampMs | None = None,
+        to: NotStrictTimestampMs | None = None,
     ) -> ItemPage[AbstractMatchPlayerStats]: ...
 
     @validate_call
@@ -288,13 +294,13 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
         *,
         offset: int = Field(0, ge=0, le=200),
         limit: int = Field(20, ge=1, le=100),
-        start: typing.Optional[NotStrictTimestampMs] = None,
-        to: typing.Optional[NotStrictTimestampMs] = None,
-    ) -> typing.Union[
-        RawAPIPageResponse,
-        ItemPage[AbstractMatchPlayerStats],
-        ItemPage[CS2MatchPlayerStats],
-    ]:
+        start: NotStrictTimestampMs | None = None,
+        to: NotStrictTimestampMs | None = None,
+    ) -> (
+        RawAPIPageResponse
+        | ItemPage[AbstractMatchPlayerStats]
+        | ItemPage[CS2MatchPlayerStats]
+    ):
         return self._process_page(
             self._client.get(
                 self.__class__.PATH / str(player_id) / "games" / game / "stats",
@@ -307,23 +313,23 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
             self.__class__._matches_stats_validator_cfg,
         )
 
-    @typing.overload
+    @overload
     def all_matches_stats(
         self: SyncPlayers[Raw],
         player_id: PlayerID,
         game: GameID,
         max_items: MaxItemsType = pages(50),
-    ) -> typing.List[RawAPIItem]: ...
+    ) -> list[RawAPIItem]: ...
 
-    @typing.overload
+    @overload
     def all_matches_stats(
         self: SyncPlayers[Model],
         player_id: PlayerID,
-        game: typing.Literal[GameID.CS2],
+        game: Literal[GameID.CS2],
         max_items: MaxItemsType = pages(50),
     ) -> ItemPage[CS2MatchPlayerStats]: ...
 
-    @typing.overload
+    @overload
     def all_matches_stats(
         self: SyncPlayers[Model],
         player_id: PlayerID,
@@ -336,11 +342,11 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
         player_id: PlayerID,
         game: GameID,
         max_items: MaxItemsType = pages(50),
-    ) -> typing.Union[
-        typing.List[RawAPIItem],
-        ItemPage[CS2MatchPlayerStats],
-        ItemPage[AbstractMatchPlayerStats],
-    ]:
+    ) -> (
+        list[RawAPIItem]
+        | ItemPage[CS2MatchPlayerStats]
+        | ItemPage[AbstractMatchPlayerStats]
+    ):
         return SyncPageIterator.gather_from_iterator(
             SyncPageIterator.unix(
                 self.matches_stats,
@@ -351,7 +357,7 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
             )
         )
 
-    @typing.overload
+    @overload
     def history(
         self: SyncPlayers[Raw],
         player_id: PlayerID,
@@ -359,11 +365,11 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
         *,
         offset: int = Field(0, ge=0, le=1000),
         limit: int = Field(20, ge=1, le=100),
-        start: typing.Optional[NotStrictTimestampMs] = None,
-        to: typing.Optional[NotStrictTimestampMs] = None,
+        start: NotStrictTimestampMs | None = None,
+        to: NotStrictTimestampMs | None = None,
     ) -> RawAPIPageResponse: ...
 
-    @typing.overload
+    @overload
     def history(
         self: SyncPlayers[Model],
         player_id: PlayerID,
@@ -371,8 +377,8 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
         *,
         offset: int = Field(0, ge=0, le=1000),
         limit: int = Field(20, ge=1, le=100),
-        start: typing.Optional[NotStrictTimestampMs] = None,
-        to: typing.Optional[NotStrictTimestampMs] = None,
+        start: NotStrictTimestampMs | None = None,
+        to: NotStrictTimestampMs | None = None,
     ) -> ItemPage[Match]: ...
 
     @validate_call
@@ -383,9 +389,9 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
         *,
         offset: int = Field(0, ge=0, le=1000),
         limit: int = Field(20, ge=1, le=100),
-        start: typing.Optional[NotStrictTimestampMs] = None,
-        to: typing.Optional[NotStrictTimestampMs] = None,
-    ) -> typing.Union[RawAPIPageResponse, ItemPage[Match]]:
+        start: NotStrictTimestampMs | None = None,
+        to: NotStrictTimestampMs | None = None,
+    ) -> RawAPIPageResponse | ItemPage[Match]:
         return self._validate_response(
             self._client.get(
                 self.__class__.PATH / str(player_id) / "history",
@@ -397,15 +403,15 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
             ItemPage[Match],
         )
 
-    @typing.overload
+    @overload
     def all_history(
         self: SyncPlayers[Raw],
         player_id: PlayerID,
         game: GameID,
         max_items: MaxItemsType = pages(50),
-    ) -> typing.List[RawAPIItem]: ...
+    ) -> list[RawAPIItem]: ...
 
-    @typing.overload
+    @overload
     def all_history(
         self: SyncPlayers[Model],
         player_id: PlayerID,
@@ -418,7 +424,7 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
         player_id: PlayerID,
         game: GameID,
         max_items: MaxItemsType = pages(50),
-    ) -> typing.Union[typing.List[RawAPIItem], ItemPage[Match]]:
+    ) -> list[RawAPIItem] | ItemPage[Match]:
         return SyncPageIterator.gather_from_iterator(
             SyncPageIterator.unix(
                 self.history,
@@ -429,7 +435,7 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
             )
         )
 
-    @typing.overload
+    @overload
     def hubs(
         self: SyncPlayers[Raw],
         player_id: PlayerID,
@@ -438,7 +444,7 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
         limit: int = Field(50, ge=1, le=50),
     ) -> RawAPIPageResponse: ...
 
-    @typing.overload
+    @overload
     def hubs(
         self: SyncPlayers[Model],
         player_id: PlayerID,
@@ -454,7 +460,7 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
         *,
         offset: int = Field(0, ge=0, le=1000),
         limit: int = Field(50, ge=1, le=50),
-    ) -> typing.Union[RawAPIPageResponse, ItemPage[Hub]]:
+    ) -> RawAPIPageResponse | ItemPage[Hub]:
         return self._validate_response(
             self._client.get(
                 self.__class__.PATH / str(player_id) / "hubs",
@@ -464,14 +470,14 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
             ItemPage[Hub],
         )
 
-    @typing.overload
+    @overload
     def all_hubs(
         self: SyncPlayers[Raw],
         player_id: PlayerID,
         max_items: MaxItemsType = MaxItems.SAFE,
-    ) -> typing.List[RawAPIItem]: ...
+    ) -> list[RawAPIItem]: ...
 
-    @typing.overload
+    @overload
     def all_hubs(
         self: SyncPlayers[Model],
         player_id: PlayerID,
@@ -480,21 +486,21 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
 
     def all_hubs(
         self, player_id: PlayerID, max_items: MaxItemsType = MaxItems.SAFE
-    ) -> typing.Union[typing.List[RawAPIItem], ItemPage[Hub]]:
+    ) -> list[RawAPIItem] | ItemPage[Hub]:
         iterator = SyncPageIterator(self.hubs, player_id, max_items=max_items)
         return iterator.collect()
 
-    @typing.overload
+    @overload
     def stats(
         self: SyncPlayers[Raw], player_id: PlayerID, game: GameID
     ) -> RawAPIItem: ...
 
-    @typing.overload
+    @overload
     def stats(  # type: ignore[overload-overlap]
         self: SyncPlayers[Model], player_id: PlayerID, game: AnyCSID
     ) -> CSPlayerStats: ...
 
-    @typing.overload
+    @overload
     def stats(
         self: SyncPlayers[Model], player_id: PlayerID, game: GameID
     ) -> FallbackPlayerStats: ...
@@ -502,7 +508,7 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
     @validate_call
     def stats(
         self, player_id: PlayerIDValidated, game: GameID
-    ) -> typing.Union[RawAPIItem, AnyPlayerStats]:
+    ) -> RawAPIItem | AnyPlayerStats:
         return self._process_item(
             self._client.get(
                 self.__class__.PATH / str(player_id) / "stats" / game,
@@ -512,7 +518,7 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
             self.__class__._stats_validator_cfg,
         )
 
-    @typing.overload
+    @overload
     def teams(
         self: SyncPlayers[Raw],
         player_id: PlayerID,
@@ -521,7 +527,7 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
         limit: int = Field(20, ge=1, le=100),
     ) -> RawAPIPageResponse: ...
 
-    @typing.overload
+    @overload
     def teams(
         self: SyncPlayers[Model],
         player_id: PlayerID,
@@ -537,7 +543,7 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
-    ) -> typing.Union[RawAPIPageResponse, ItemPage[GeneralTeam]]:
+    ) -> RawAPIPageResponse | ItemPage[GeneralTeam]:
         return self._validate_response(
             self._client.get(
                 self.__class__.PATH / str(player_id) / "teams",
@@ -547,14 +553,14 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
             ItemPage[GeneralTeam],
         )
 
-    @typing.overload
+    @overload
     def all_teams(
         self: SyncPlayers[Raw],
         player_id: PlayerID,
         max_items: MaxItemsType = MaxItems.SAFE,
-    ) -> typing.List[RawAPIItem]: ...
+    ) -> list[RawAPIItem]: ...
 
-    @typing.overload
+    @overload
     def all_teams(
         self: SyncPlayers[Model],
         player_id: PlayerID,
@@ -563,11 +569,11 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
 
     def all_teams(
         self, player_id: PlayerID, max_items: MaxItemsType = MaxItems.SAFE
-    ) -> typing.Union[typing.List[RawAPIItem], ItemPage[GeneralTeam]]:
+    ) -> list[RawAPIItem] | ItemPage[GeneralTeam]:
         iterator = SyncPageIterator(self.teams, player_id, max_items=max_items)
         return iterator.collect()
 
-    @typing.overload
+    @overload
     def tournaments(
         self: SyncPlayers[Raw],
         player_id: PlayerID,
@@ -576,7 +582,7 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
         limit: int = Field(20, ge=1, le=100),
     ) -> RawAPIPageResponse: ...
 
-    @typing.overload
+    @overload
     def tournaments(
         self: SyncPlayers[Model],
         player_id: PlayerID,
@@ -592,7 +598,7 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
-    ) -> typing.Union[RawAPIPageResponse, ItemPage[Tournament]]:
+    ) -> RawAPIPageResponse | ItemPage[Tournament]:
         return self._validate_response(
             self._client.get(
                 self.__class__.PATH / str(player_id) / "tournaments",
@@ -602,14 +608,14 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
             ItemPage[Tournament],
         )
 
-    @typing.overload
+    @overload
     def all_tournaments(
         self: SyncPlayers[Raw],
         player_id: PlayerID,
         max_items: MaxItemsType = MaxItems.SAFE,
-    ) -> typing.List[RawAPIItem]: ...
+    ) -> list[RawAPIItem]: ...
 
-    @typing.overload
+    @overload
     def all_tournaments(
         self: SyncPlayers[Model],
         player_id: PlayerID,
@@ -618,31 +624,31 @@ class SyncPlayers(BasePlayers[SyncClient], typing.Generic[APIResponseFormatT]):
 
     def all_tournaments(
         self, player_id: PlayerID, max_items: MaxItemsType = MaxItems.SAFE
-    ) -> typing.Union[typing.List[RawAPIItem], ItemPage[Tournament]]:
+    ) -> list[RawAPIItem] | ItemPage[Tournament]:
         iterator = SyncPageIterator(self.tournaments, player_id, max_items=max_items)
         return iterator.collect()
 
 
-@typing.final
-class AsyncPlayers(BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT]):
+@final
+class AsyncPlayers(BasePlayers[AsyncClient], Generic[APIResponseFormatT]):
     __slots__ = ()
 
-    @typing.overload
+    @overload
     async def get(
         self: AsyncPlayers[Raw], player_lookup_key: _PlayerIdentifier
     ) -> RawAPIItem: ...
 
-    @typing.overload
+    @overload
     async def get(
         self: AsyncPlayers[Raw], *, game: GameID, game_player_id: str
     ) -> RawAPIItem: ...
 
-    @typing.overload
+    @overload
     async def get(
         self: AsyncPlayers[Model], player_lookup_key: _PlayerIdentifier
     ) -> Player: ...
 
-    @typing.overload
+    @overload
     async def get(
         self: AsyncPlayers[Model], *, game: GameID, game_player_id: str
     ) -> Player: ...
@@ -650,11 +656,11 @@ class AsyncPlayers(BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT])
     @validate_call
     async def get(
         self,
-        player_lookup_key: typing.Optional[_PlayerIdentifierValidated] = None,
+        player_lookup_key: _PlayerIdentifierValidated | None = None,
         *,
-        game: typing.Optional[GameID] = None,
-        game_player_id: typing.Optional[str] = None,
-    ) -> typing.Union[RawAPIItem, Player]:
+        game: GameID | None = None,
+        game_player_id: str | None = None,
+    ) -> RawAPIItem | Player:
         return self._validate_response(
             await self._client.get(
                 **self._process_get_request(player_lookup_key, game, game_player_id),
@@ -665,7 +671,7 @@ class AsyncPlayers(BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT])
 
     __call__ = get
 
-    @typing.overload
+    @overload
     async def bans(
         self: AsyncPlayers[Raw],
         player_id: PlayerID,
@@ -674,7 +680,7 @@ class AsyncPlayers(BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT])
         limit: int = Field(20, ge=1, le=100),
     ) -> RawAPIPageResponse: ...
 
-    @typing.overload
+    @overload
     async def bans(
         self: AsyncPlayers[Model],
         player_id: PlayerID,
@@ -690,7 +696,7 @@ class AsyncPlayers(BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT])
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
-    ) -> typing.Union[RawAPIPageResponse, ItemPage[BanEntry]]:
+    ) -> RawAPIPageResponse | ItemPage[BanEntry]:
         return self._validate_response(
             await self._client.get(
                 self.__class__.PATH / str(player_id) / "bans",
@@ -700,14 +706,14 @@ class AsyncPlayers(BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT])
             ItemPage[BanEntry],
         )
 
-    @typing.overload
+    @overload
     async def all_bans(
         self: AsyncPlayers[Raw],
         player_id: PlayerID,
         max_items: MaxItemsType = MaxItems.SAFE,
-    ) -> typing.List[RawAPIItem]: ...
+    ) -> list[RawAPIItem]: ...
 
-    @typing.overload
+    @overload
     async def all_bans(
         self: AsyncPlayers[Model],
         player_id: PlayerID,
@@ -716,11 +722,11 @@ class AsyncPlayers(BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT])
 
     async def all_bans(
         self, player_id: PlayerID, max_items: MaxItemsType = MaxItems.SAFE
-    ) -> typing.Union[typing.List[RawAPIItem], ItemPage[BanEntry]]:
+    ) -> list[RawAPIItem] | ItemPage[BanEntry]:
         iterator = AsyncPageIterator(self.bans, player_id, max_items=max_items)
         return await iterator.collect()
 
-    @typing.overload
+    @overload
     async def matches_stats(
         self: AsyncPlayers[Raw],
         player_id: PlayerID,
@@ -728,23 +734,23 @@ class AsyncPlayers(BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT])
         *,
         offset: int = Field(0, ge=0, le=200),
         limit: int = Field(20, ge=1, le=100),
-        start: typing.Optional[NotStrictTimestampMs] = None,
-        to: typing.Optional[NotStrictTimestampMs] = None,
+        start: NotStrictTimestampMs | None = None,
+        to: NotStrictTimestampMs | None = None,
     ) -> RawAPIPageResponse: ...
 
-    @typing.overload
+    @overload
     async def matches_stats(
         self: AsyncPlayers[Model],
         player_id: PlayerID,
-        game: typing.Literal[GameID.CS2],
+        game: Literal[GameID.CS2],
         *,
         offset: int = Field(0, ge=0, le=200),
         limit: int = Field(20, ge=1, le=100),
-        start: typing.Optional[NotStrictTimestampMs] = None,
-        to: typing.Optional[NotStrictTimestampMs] = None,
+        start: NotStrictTimestampMs | None = None,
+        to: NotStrictTimestampMs | None = None,
     ) -> ItemPage[CS2MatchPlayerStats]: ...
 
-    @typing.overload
+    @overload
     async def matches_stats(
         self: AsyncPlayers[Model],
         player_id: PlayerID,
@@ -752,8 +758,8 @@ class AsyncPlayers(BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT])
         *,
         offset: int = Field(0, ge=0, le=200),
         limit: int = Field(20, ge=1, le=100),
-        start: typing.Optional[NotStrictTimestampMs] = None,
-        to: typing.Optional[NotStrictTimestampMs] = None,
+        start: NotStrictTimestampMs | None = None,
+        to: NotStrictTimestampMs | None = None,
     ) -> ItemPage[AbstractMatchPlayerStats]: ...
 
     @validate_call
@@ -764,13 +770,13 @@ class AsyncPlayers(BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT])
         *,
         offset: int = Field(0, ge=0, le=200),
         limit: int = Field(20, ge=1, le=100),
-        start: typing.Optional[NotStrictTimestampMs] = None,
-        to: typing.Optional[NotStrictTimestampMs] = None,
-    ) -> typing.Union[
-        RawAPIPageResponse,
-        ItemPage[AbstractMatchPlayerStats],
-        ItemPage[CS2MatchPlayerStats],
-    ]:
+        start: NotStrictTimestampMs | None = None,
+        to: NotStrictTimestampMs | None = None,
+    ) -> (
+        RawAPIPageResponse
+        | ItemPage[AbstractMatchPlayerStats]
+        | ItemPage[CS2MatchPlayerStats]
+    ):
         return self._process_page(
             await self._client.get(
                 self.__class__.PATH / str(player_id) / "games" / game / "stats",
@@ -783,23 +789,23 @@ class AsyncPlayers(BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT])
             self.__class__._matches_stats_validator_cfg,
         )
 
-    @typing.overload
+    @overload
     async def all_matches_stats(
         self: AsyncPlayers[Raw],
         player_id: PlayerID,
         game: GameID,
         max_items: MaxItemsType = pages(50),
-    ) -> typing.List[RawAPIItem]: ...
+    ) -> list[RawAPIItem]: ...
 
-    @typing.overload
+    @overload
     async def all_matches_stats(
         self: AsyncPlayers[Model],
         player_id: PlayerID,
-        game: typing.Literal[GameID.CS2],
+        game: Literal[GameID.CS2],
         max_items: MaxItemsType = pages(50),
     ) -> ItemPage[CS2MatchPlayerStats]: ...
 
-    @typing.overload
+    @overload
     async def all_matches_stats(
         self: AsyncPlayers[Model],
         player_id: PlayerID,
@@ -812,11 +818,11 @@ class AsyncPlayers(BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT])
         player_id: PlayerID,
         game: GameID,
         max_items: MaxItemsType = pages(50),
-    ) -> typing.Union[
-        typing.List[RawAPIItem],
-        ItemPage[AbstractMatchPlayerStats],
-        ItemPage[CS2MatchPlayerStats],
-    ]:
+    ) -> (
+        list[RawAPIItem]
+        | ItemPage[AbstractMatchPlayerStats]
+        | ItemPage[CS2MatchPlayerStats]
+    ):
         return await AsyncPageIterator.gather_from_iterator(
             AsyncPageIterator.unix(
                 self.matches_stats,
@@ -827,7 +833,7 @@ class AsyncPlayers(BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT])
             )
         )
 
-    @typing.overload
+    @overload
     async def history(
         self: AsyncPlayers[Raw],
         player_id: PlayerID,
@@ -835,11 +841,11 @@ class AsyncPlayers(BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT])
         *,
         offset: int = Field(0, ge=0, le=1000),
         limit: int = Field(20, ge=1, le=100),
-        start: typing.Optional[NotStrictTimestampMs] = None,
-        to: typing.Optional[NotStrictTimestampMs] = None,
+        start: NotStrictTimestampMs | None = None,
+        to: NotStrictTimestampMs | None = None,
     ) -> RawAPIPageResponse: ...
 
-    @typing.overload
+    @overload
     async def history(
         self: AsyncPlayers[Model],
         player_id: PlayerID,
@@ -847,8 +853,8 @@ class AsyncPlayers(BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT])
         *,
         offset: int = Field(0, ge=0, le=1000),
         limit: int = Field(20, ge=1, le=100),
-        start: typing.Optional[NotStrictTimestampMs] = None,
-        to: typing.Optional[NotStrictTimestampMs] = None,
+        start: NotStrictTimestampMs | None = None,
+        to: NotStrictTimestampMs | None = None,
     ) -> ItemPage[Match]: ...
 
     @validate_call
@@ -859,9 +865,9 @@ class AsyncPlayers(BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT])
         *,
         offset: int = Field(0, ge=0, le=1000),
         limit: int = Field(20, ge=1, le=100),
-        start: typing.Optional[NotStrictTimestampMs] = None,
-        to: typing.Optional[NotStrictTimestampMs] = None,
-    ) -> typing.Union[RawAPIPageResponse, ItemPage[Match]]:
+        start: NotStrictTimestampMs | None = None,
+        to: NotStrictTimestampMs | None = None,
+    ) -> RawAPIPageResponse | ItemPage[Match]:
         return self._validate_response(
             await self._client.get(
                 self.__class__.PATH / str(player_id) / "history",
@@ -873,15 +879,15 @@ class AsyncPlayers(BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT])
             ItemPage[Match],
         )
 
-    @typing.overload
+    @overload
     async def all_history(
         self: AsyncPlayers[Raw],
         player_id: PlayerID,
         game: GameID,
         max_items: MaxItemsType = pages(50),
-    ) -> typing.List[RawAPIItem]: ...
+    ) -> list[RawAPIItem]: ...
 
-    @typing.overload
+    @overload
     async def all_history(
         self: AsyncPlayers[Model],
         player_id: PlayerID,
@@ -894,7 +900,7 @@ class AsyncPlayers(BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT])
         player_id: PlayerID,
         game: GameID,
         max_items: MaxItemsType = pages(50),
-    ) -> typing.Union[typing.List[RawAPIItem], ItemPage[Match]]:
+    ) -> list[RawAPIItem] | ItemPage[Match]:
         return await AsyncPageIterator.gather_from_iterator(
             AsyncPageIterator.unix(
                 self.history,
@@ -905,7 +911,7 @@ class AsyncPlayers(BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT])
             )
         )
 
-    @typing.overload
+    @overload
     async def hubs(
         self: AsyncPlayers[Raw],
         player_id: PlayerID,
@@ -914,7 +920,7 @@ class AsyncPlayers(BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT])
         limit: int = Field(50, ge=1, le=50),
     ) -> RawAPIPageResponse: ...
 
-    @typing.overload
+    @overload
     async def hubs(
         self: AsyncPlayers[Model],
         player_id: PlayerID,
@@ -930,7 +936,7 @@ class AsyncPlayers(BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT])
         *,
         offset: int = Field(0, ge=0, le=1000),
         limit: int = Field(50, ge=1, le=50),
-    ) -> typing.Union[RawAPIPageResponse, ItemPage[Hub]]:
+    ) -> RawAPIPageResponse | ItemPage[Hub]:
         return self._validate_response(
             await self._client.get(
                 self.__class__.PATH / str(player_id) / "hubs",
@@ -940,14 +946,14 @@ class AsyncPlayers(BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT])
             ItemPage[Hub],
         )
 
-    @typing.overload
+    @overload
     async def all_hubs(
         self: AsyncPlayers[Raw],
         player_id: PlayerID,
         max_items: MaxItemsType = MaxItems.SAFE,
-    ) -> typing.List[RawAPIItem]: ...
+    ) -> list[RawAPIItem]: ...
 
-    @typing.overload
+    @overload
     async def all_hubs(
         self: AsyncPlayers[Model],
         player_id: PlayerID,
@@ -956,21 +962,21 @@ class AsyncPlayers(BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT])
 
     async def all_hubs(
         self, player_id: PlayerID, max_items: MaxItemsType = MaxItems.SAFE
-    ) -> typing.Union[typing.List[RawAPIItem], ItemPage[Hub]]:
+    ) -> list[RawAPIItem] | ItemPage[Hub]:
         iterator = AsyncPageIterator(self.hubs, player_id, max_items=max_items)
         return await iterator.collect()
 
-    @typing.overload
+    @overload
     async def stats(
         self: AsyncPlayers[Raw], player_id: PlayerID, game: GameID
     ) -> RawAPIItem: ...
 
-    @typing.overload
+    @overload
     async def stats(  # type: ignore[overload-overlap]
         self: AsyncPlayers[Model], player_id: PlayerID, game: AnyCSID
     ) -> CSPlayerStats: ...
 
-    @typing.overload
+    @overload
     async def stats(
         self: AsyncPlayers[Model], player_id: PlayerID, game: GameID
     ) -> FallbackPlayerStats: ...
@@ -978,7 +984,7 @@ class AsyncPlayers(BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT])
     @validate_call
     async def stats(
         self, player_id: PlayerIDValidated, game: GameID
-    ) -> typing.Union[RawAPIItem, AnyPlayerStats]:
+    ) -> RawAPIItem | AnyPlayerStats:
         return self._process_item(
             await self._client.get(
                 self.__class__.PATH / str(player_id) / "stats" / game,
@@ -988,7 +994,7 @@ class AsyncPlayers(BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT])
             self.__class__._stats_validator_cfg,
         )
 
-    @typing.overload
+    @overload
     async def teams(
         self: AsyncPlayers[Raw],
         player_id: PlayerID,
@@ -997,7 +1003,7 @@ class AsyncPlayers(BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT])
         limit: int = Field(20, ge=1, le=100),
     ) -> RawAPIPageResponse: ...
 
-    @typing.overload
+    @overload
     async def teams(
         self: AsyncPlayers[Model],
         player_id: PlayerID,
@@ -1013,7 +1019,7 @@ class AsyncPlayers(BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT])
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
-    ) -> typing.Union[RawAPIPageResponse, ItemPage[GeneralTeam]]:
+    ) -> RawAPIPageResponse | ItemPage[GeneralTeam]:
         return self._validate_response(
             await self._client.get(
                 self.__class__.PATH / str(player_id) / "teams",
@@ -1023,14 +1029,14 @@ class AsyncPlayers(BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT])
             ItemPage[GeneralTeam],
         )
 
-    @typing.overload
+    @overload
     async def all_teams(
         self: AsyncPlayers[Raw],
         player_id: PlayerID,
         max_items: MaxItemsType = MaxItems.SAFE,
-    ) -> typing.List[RawAPIItem]: ...
+    ) -> list[RawAPIItem]: ...
 
-    @typing.overload
+    @overload
     async def all_teams(
         self: AsyncPlayers[Model],
         player_id: PlayerID,
@@ -1039,11 +1045,11 @@ class AsyncPlayers(BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT])
 
     async def all_teams(
         self, player_id: PlayerID, max_items: MaxItemsType = MaxItems.SAFE
-    ) -> typing.Union[typing.List[RawAPIItem], ItemPage[GeneralTeam]]:
+    ) -> list[RawAPIItem] | ItemPage[GeneralTeam]:
         iterator = AsyncPageIterator(self.teams, player_id, max_items=max_items)
         return await iterator.collect()
 
-    @typing.overload
+    @overload
     async def tournaments(
         self: AsyncPlayers[Raw],
         player_id: PlayerID,
@@ -1052,7 +1058,7 @@ class AsyncPlayers(BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT])
         limit: int = Field(20, ge=1, le=100),
     ) -> RawAPIPageResponse: ...
 
-    @typing.overload
+    @overload
     async def tournaments(
         self: AsyncPlayers[Model],
         player_id: PlayerID,
@@ -1068,7 +1074,7 @@ class AsyncPlayers(BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT])
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
-    ) -> typing.Union[RawAPIPageResponse, ItemPage[Tournament]]:
+    ) -> RawAPIPageResponse | ItemPage[Tournament]:
         return self._validate_response(
             await self._client.get(
                 self.__class__.PATH / str(player_id) / "tournaments",
@@ -1078,14 +1084,14 @@ class AsyncPlayers(BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT])
             ItemPage[Tournament],
         )
 
-    @typing.overload
+    @overload
     async def all_tournaments(
         self: AsyncPlayers[Raw],
         player_id: PlayerID,
         max_items: MaxItemsType = MaxItems.SAFE,
-    ) -> typing.List[RawAPIItem]: ...
+    ) -> list[RawAPIItem]: ...
 
-    @typing.overload
+    @overload
     async def all_tournaments(
         self: AsyncPlayers[Model],
         player_id: PlayerID,
@@ -1094,6 +1100,6 @@ class AsyncPlayers(BasePlayers[AsyncClient], typing.Generic[APIResponseFormatT])
 
     async def all_tournaments(
         self, player_id: PlayerID, max_items: MaxItemsType = MaxItems.SAFE
-    ) -> typing.Union[typing.List[RawAPIItem], ItemPage[Tournament]]:
+    ) -> list[RawAPIItem] | ItemPage[Tournament]:
         iterator = AsyncPageIterator(self.tournaments, player_id, max_items=max_items)
         return await iterator.collect()

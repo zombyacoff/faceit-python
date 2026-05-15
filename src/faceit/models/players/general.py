@@ -1,9 +1,18 @@
-import typing
 from datetime import datetime
 from enum import IntEnum
+from typing import (
+    Annotated,
+    Any,
+    ClassVar,
+    Final,
+    Generic,
+    TypeAlias,
+    TypeVar,
+    cast,
+    final,
+)
 
 from pydantic import BaseModel, Field, model_validator
-from typing_extensions import Annotated, TypeAlias
 
 from faceit.constants import ELO_THRESHOLDS, GameID, SkillLevel
 from faceit.models.custom_types import (
@@ -14,11 +23,11 @@ from faceit.models.custom_types import (
 from faceit.models.custom_types.common import _INJECTED_KEY
 from faceit.types import AnyCSID, RawAPIItem, RegionIdentifier, UrlOrEmpty
 
-_PlayerStatsT = typing.TypeVar("_PlayerStatsT", bound=GameID)
-_SegmentStatsT = typing.TypeVar("_SegmentStatsT")
-_LifetimeStatsT = typing.TypeVar("_LifetimeStatsT")
+_PlayerStatsT = TypeVar("_PlayerStatsT", bound=GameID)
+_SegmentStatsT = TypeVar("_SegmentStatsT")
+_LifetimeStatsT = TypeVar("_LifetimeStatsT")
 
-_SEGMENT_NAME: typing.Final = "label"
+_SEGMENT_NAME: Final = "label"
 
 
 class MatchResult(IntEnum):
@@ -26,22 +35,22 @@ class MatchResult(IntEnum):
     WIN = 1
 
 
-@typing.final
+@final
 class GameInfo(BaseModel):
-    _SKILL_LVL: typing.ClassVar = "skill_level"
+    _SKILL_LVL: ClassVar = "skill_level"
 
     region: RegionIdentifier
     game_player_id: str
-    level: Annotated[typing.Union[int, SkillLevel], Field(alias=_SKILL_LVL)]
+    level: Annotated[int | SkillLevel, Field(alias=_SKILL_LVL)]
     elo: Annotated[int, Field(alias="faceit_elo")]
     game_player_name: str
     level_label: Annotated[str, Field("", alias="skill_level_label")]  # Maybe outdated
-    regions: ResponseContainer[typing.Any]  # Maybe outdated
+    regions: ResponseContainer[Any]  # Maybe outdated
     game_profile_id: str
 
     @model_validator(mode="before")
     @classmethod
-    def _prepare_skill_level(cls, data: typing.Any) -> typing.Any:
+    def _prepare_skill_level(cls, data: Any) -> Any:
         if not isinstance(data, dict):
             return data
 
@@ -69,35 +78,35 @@ class GameInfo(BaseModel):
         return data
 
 
-@typing.final
+@final
 class PlayerSettings(BaseModel):
     language: str
 
 
-@typing.final
+@final
 class Player(BaseModel):
     id: Annotated[FaceitID, Field(alias="player_id")]
     nickname: str
     avatar: UrlOrEmpty
     country: str
     cover_image: UrlOrEmpty
-    platforms: typing.Optional[ResponseContainer[str]]
+    platforms: ResponseContainer[str] | None
     games: ResponseContainer[GameInfo]
     settings: PlayerSettings
-    friends_ids: typing.List[FaceitID]
+    friends_ids: list[FaceitID]
     new_steam_id: str
     steam_id_64: str
     steam_nickname: str
-    memberships: typing.List[str]
+    memberships: list[str]
     faceit_url: LangFormattedAnyHttpUrl
     membership_type: str
     cover_featured_image: UrlOrEmpty
-    infractions: ResponseContainer[typing.Any]  # Maybe outdated
+    infractions: ResponseContainer[Any]  # Maybe outdated
     verified: bool
     activated_at: datetime
 
 
-@typing.final
+@final
 class BanEntry(BaseModel):
     nickname: str
     type: str
@@ -106,7 +115,7 @@ class BanEntry(BaseModel):
     user_id: FaceitID
 
 
-@typing.final
+@final
 class Hub(BaseModel):
     id: Annotated[FaceitID, Field(alias="hub_id")]
     name: str
@@ -116,22 +125,22 @@ class Hub(BaseModel):
     faceit_url: LangFormattedAnyHttpUrl
 
 
-@typing.final
+@final
 class GeneralTeam(BaseModel):
     id: Annotated[FaceitID, Field(alias="team_id")]
     nickname: str
     name: str
     avatar: UrlOrEmpty = ""
-    cover_image: typing.Optional[str] = None
+    cover_image: str | None = None
     game: GameID
     type: Annotated[str, Field(alias="team_type")]
-    members: typing.Optional[typing.List[str]] = None
+    members: list[str] | None = None
     leader_id: Annotated[FaceitID, Field(alias="leader")]
     chat_room_id: str  # To be honest, I'm not totally sure what the ID is
     faceit_url: LangFormattedAnyHttpUrl
 
 
-@typing.final
+@final
 class Tournament(BaseModel):
     id: Annotated[FaceitID, Field(alias="tournament_id")]
     name: str
@@ -148,7 +157,7 @@ class Tournament(BaseModel):
     max_skill: int
     match_type: str
     organizer_id: str
-    whitelist_countries: typing.List[str]
+    whitelist_countries: list[str]
     membership_type: str
     number_of_players: int
     number_of_players_joined: int
@@ -160,7 +169,7 @@ class Tournament(BaseModel):
     faceit_url: LangFormattedAnyHttpUrl
 
 
-@typing.final
+@final
 class CSLifetimeStats(BaseModel):  # `GameID.CS2` & `GameID.CSGO`
     adr: Annotated[float, Field(0, alias="ADR")]
     average_headshots_percentage: Annotated[int, Field(alias="Average Headshots %")]
@@ -177,7 +186,7 @@ class CSLifetimeStats(BaseModel):  # `GameID.CS2` & `GameID.CSGO`
     longest_win_streak: Annotated[int, Field(alias="Longest Win Streak")]
     matches: Annotated[int, Field(alias="Matches")]
     recent_results: Annotated[
-        typing.List[typing.Optional[MatchResult]],
+        list[MatchResult | None],
         Field(alias="Recent Results", max_length=5),
     ]
     sniper_kill_rate: Annotated[float, Field(0.0, alias="Sniper Kill Rate")]
@@ -222,7 +231,7 @@ class CSLifetimeStats(BaseModel):  # `GameID.CS2` & `GameID.CSGO`
     wins: Annotated[int, Field(alias="Wins")]
 
 
-@typing.final
+@final
 class CSMapStats(BaseModel):  # `GameID.CS2` & `GameID.CSGO`
     # TODO: Преобразование в проценты (*100) таких полей, как "v2_win_rate", "v1_win_rate", ... ?
     adr: Annotated[float, Field(0.0, alias="ADR")]
@@ -298,8 +307,8 @@ class CSMapStats(BaseModel):  # `GameID.CS2` & `GameID.CSGO`
     wins: Annotated[int, Field(alias="Wins")]
 
 
-@typing.final
-class Segment(BaseModel, typing.Generic[_SegmentStatsT]):
+@final
+class Segment(BaseModel, Generic[_SegmentStatsT]):
     stats: _SegmentStatsT
     type: str
     mode: str
@@ -308,10 +317,10 @@ class Segment(BaseModel, typing.Generic[_SegmentStatsT]):
     img_regular: UrlOrEmpty
 
 
-@typing.final
+@final
 class PlayerStats(
     BaseModel,
-    typing.Generic[
+    Generic[
         _PlayerStatsT,
         _LifetimeStatsT,
         _SegmentStatsT,
@@ -326,7 +335,7 @@ class PlayerStats(
 
     @model_validator(mode="before")
     @classmethod
-    def _prepare_segments(cls, data: typing.Any) -> typing.Any:
+    def _prepare_segments(cls, data: Any) -> Any:
         if not isinstance(data, dict):
             return data
 
@@ -336,8 +345,8 @@ class PlayerStats(
                 # NOTE: Anubis --> anubis, Ancient --> ancient, ...
                 # (lowercase and replace spaces with underscores)
                 seg[_SEGMENT_NAME].lower().replace(" ", "_"): seg
-                for seg in typing.cast(
-                    "typing.List[typing.Dict[str, str]]",
+                for seg in cast(
+                    "list[dict[str, str]]",
                     raw_segments,
                 )
                 if _SEGMENT_NAME in seg
@@ -358,7 +367,4 @@ FallbackPlayerStats: TypeAlias = PlayerStats[
     RawAPIItem,
 ]
 
-AnyPlayerStats: TypeAlias = typing.Union[
-    CSPlayerStats,
-    FallbackPlayerStats,
-]
+AnyPlayerStats: TypeAlias = CSPlayerStats | FallbackPlayerStats

@@ -1,24 +1,24 @@
 from __future__ import annotations
 
-import typing
 from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING, Any, ClassVar, TypeAlias, final
 from uuid import UUID
 
 from pydantic_core import core_schema
-from typing_extensions import Self, TypeAlias
+from typing_extensions import Self
 
 from faceit.types import EmptyString
 from faceit.utils import is_valid_uuid, representation
 
-if typing.TYPE_CHECKING:
+if TYPE_CHECKING:
     from pydantic import GetCoreSchemaHandler
 
 
 class _BaseFaceitUUIDValidator(ABC):
     __slots__ = ()
 
-    _PREFIX: typing.ClassVar = ""
-    _SUFFIX: typing.ClassVar = ""
+    _PREFIX: ClassVar = ""
+    _SUFFIX: ClassVar = ""
 
     @classmethod
     @abstractmethod
@@ -26,26 +26,13 @@ class _BaseFaceitUUIDValidator(ABC):
         raise NotImplementedError
 
     @classmethod
-    def _remove_prefix_and_suffix(cls, value: str, /) -> str:
-        if not cls._PREFIX and not cls._SUFFIX:
-            return value
-
-        start = (
-            len(cls._PREFIX) if cls._PREFIX and value.startswith(cls._PREFIX) else None
-        )
-        end = -len(cls._SUFFIX) if cls._SUFFIX and value.endswith(cls._SUFFIX) else None
-
-        if start is None and end is None:
-            return value
-
-        return value[start:end]
-
-    @classmethod
     def __get_pydantic_core_schema__(
-        cls, _: typing.Type[typing.Any], handler: GetCoreSchemaHandler
+        cls, _: type[Any], handler: GetCoreSchemaHandler
     ) -> core_schema.CoreSchema:
         return core_schema.no_info_after_validator_function(
-            lambda v: cls._validate(cls._remove_prefix_and_suffix(v)),
+            lambda v: cls._validate(
+                v.removeprefix(cls._PREFIX).removesuffix(cls._SUFFIX)
+            ),
             handler(str),
             serialization=core_schema.to_string_ser_schema(when_used="json"),
         )
@@ -59,7 +46,7 @@ class BaseFaceitID(_BaseFaceitUUIDValidator):
     _SUFFIX = "gui"
 
 
-@typing.final
+@final
 class FaceitID(UUID, BaseFaceitID):
     __slots__ = ()
 
@@ -71,17 +58,17 @@ class FaceitID(UUID, BaseFaceitID):
         raise ValueError(msg)
 
 
-MaybeFaceitID: TypeAlias = typing.Union[FaceitID, EmptyString]
+MaybeFaceitID: TypeAlias = FaceitID | EmptyString
 
 
 @representation(use_str=True)
 class _FaceitIDWithUniquePrefix(str, BaseFaceitID, ABC):
     __slots__ = ()
 
-    if typing.TYPE_CHECKING:
-        UNIQUE_PREFIX: typing.ClassVar[str]
+    if TYPE_CHECKING:
+        UNIQUE_PREFIX: ClassVar[str]
 
-    def __init_subclass__(cls, prefix: str, **kwargs: typing.Any) -> None:
+    def __init_subclass__(cls, prefix: str, **kwargs: Any) -> None:
         cls.UNIQUE_PREFIX = prefix
         super().__init_subclass__(**kwargs)
 
@@ -90,17 +77,17 @@ class _FaceitIDWithUniquePrefix(str, BaseFaceitID, ABC):
         if not value.startswith(cls.UNIQUE_PREFIX):
             msg = f"Invalid {cls.__name__}: {value!r} must start with {cls.UNIQUE_PREFIX!r}"
             raise ValueError(msg)
-        if not is_valid_uuid(value[len(cls.UNIQUE_PREFIX) :]):
+        if not is_valid_uuid(value.removeprefix(cls.UNIQUE_PREFIX)):
             msg = f"Invalid {cls.__name__}: {value!r} contains invalid UUID part."
             raise ValueError(msg)
         return cls(value)
 
 
-@typing.final
+@final
 class FaceitTeamID(_FaceitIDWithUniquePrefix, prefix="team-"):
     __slots__ = ()
 
 
-@typing.final
+@final
 class FaceitMatchID(_FaceitIDWithUniquePrefix, prefix="1-"):
     __slots__ = ()

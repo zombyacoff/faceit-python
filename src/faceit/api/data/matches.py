@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-import typing
 from abc import ABC
+from typing import Annotated, Generic, TypeAlias, final, overload
 
 from pydantic import AfterValidator, validate_call
-from typing_extensions import Annotated, TypeAlias
 
 from faceit.api.base import BaseResource, ModelPlaceholder
 from faceit.http import AsyncClient, SyncClient
@@ -35,20 +34,18 @@ class BaseMatches(
     __slots__ = ()
 
 
-@typing.final
-class SyncMatches(BaseMatches[SyncClient], typing.Generic[APIResponseFormatT]):
+@final
+class SyncMatches(BaseMatches[SyncClient], Generic[APIResponseFormatT]):
     __slots__ = ()
 
-    @typing.overload
+    @overload
     def get(self: SyncMatches[Raw], match_id: _MatchID) -> RawAPIItem: ...
 
-    @typing.overload
+    @overload
     def get(self: SyncMatches[Model], match_id: _MatchID) -> ModelNotImplemented: ...
 
     @validate_call
-    def get(
-        self, match_id: _MatchIDValidated
-    ) -> typing.Union[RawAPIItem, ModelNotImplemented]:
+    def get(self, match_id: _MatchIDValidated) -> RawAPIItem | ModelNotImplemented:
         return self._validate_response(
             self._client.get(self.__class__.PATH / match_id, expect_item=True),
             ModelPlaceholder,
@@ -56,16 +53,14 @@ class SyncMatches(BaseMatches[SyncClient], typing.Generic[APIResponseFormatT]):
 
     __call__ = get
 
-    @typing.overload
+    @overload
     def stats(self: SyncMatches[Raw], match_id: _MatchID) -> RawAPIItem: ...
 
-    @typing.overload
+    @overload
     def stats(self: SyncMatches[Model], match_id: _MatchID) -> ModelNotImplemented: ...
 
     @validate_call
-    def stats(
-        self, match_id: _MatchIDValidated
-    ) -> typing.Union[RawAPIItem, ModelNotImplemented]:
+    def stats(self, match_id: _MatchIDValidated) -> RawAPIItem | ModelNotImplemented:
         return self._validate_response(
             self._client.get(
                 self.__class__.PATH / match_id / "stats", expect_item=True
@@ -74,14 +69,14 @@ class SyncMatches(BaseMatches[SyncClient], typing.Generic[APIResponseFormatT]):
         )
 
 
-@typing.final
-class AsyncMatches(BaseMatches[AsyncClient], typing.Generic[APIResponseFormatT]):
+@final
+class AsyncMatches(BaseMatches[AsyncClient], Generic[APIResponseFormatT]):
     __slots__ = ()
 
-    @typing.overload
+    @overload
     async def get(self: AsyncMatches[Raw], match_id: _MatchID) -> RawAPIItem: ...
 
-    @typing.overload
+    @overload
     async def get(
         self: AsyncMatches[Model], match_id: _MatchID
     ) -> ModelNotImplemented: ...
@@ -89,7 +84,7 @@ class AsyncMatches(BaseMatches[AsyncClient], typing.Generic[APIResponseFormatT])
     @validate_call
     async def get(
         self, match_id: _MatchIDValidated
-    ) -> typing.Union[RawAPIItem, ModelNotImplemented]:
+    ) -> RawAPIItem | ModelNotImplemented:
         return self._validate_response(
             await self._client.get(self.__class__.PATH / match_id, expect_item=True),
             ModelPlaceholder,
@@ -97,10 +92,10 @@ class AsyncMatches(BaseMatches[AsyncClient], typing.Generic[APIResponseFormatT])
 
     __call__ = get
 
-    @typing.overload
+    @overload
     async def stats(self: AsyncMatches[Raw], match_id: _MatchID) -> RawAPIItem: ...
 
-    @typing.overload
+    @overload
     async def stats(
         self: AsyncMatches[Model], match_id: _MatchID
     ) -> ModelNotImplemented: ...
@@ -108,7 +103,7 @@ class AsyncMatches(BaseMatches[AsyncClient], typing.Generic[APIResponseFormatT])
     @validate_call
     async def stats(
         self, match_id: _MatchIDValidated
-    ) -> typing.Union[RawAPIItem, ModelNotImplemented]:
+    ) -> RawAPIItem | ModelNotImplemented:
         return self._validate_response(
             await self._client.get(
                 self.__class__.PATH / match_id / "stats", expect_item=True

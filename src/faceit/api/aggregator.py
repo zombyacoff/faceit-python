@@ -1,38 +1,38 @@
 from __future__ import annotations
 
-import typing
 import warnings
 from abc import ABC
 from functools import cached_property
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, get_args
 
 from typing_extensions import Never, Self
 
 from faceit.http import AsyncClient, FromEnv, SyncClient
 from faceit.types import ClientT, Raw, ValidUUID
 
-if typing.TYPE_CHECKING:
+if TYPE_CHECKING:
     from faceit.api.base import BaseResource
     from faceit.http.client import BaseAPIClient
 
-    _ResourceT = typing.TypeVar("_ResourceT", bound="BaseResource[typing.Any]")
-    _AggregatorT = typing.TypeVar("_AggregatorT", bound="BaseResources[typing.Any]")
+    _ResourceT = TypeVar("_ResourceT", bound="BaseResource[Any]")
+    _AggregatorT = TypeVar("_AggregatorT", bound="BaseResources[Any]")
 
 
-class BaseResources(ABC, typing.Generic[ClientT]):
+class BaseResources(ABC, Generic[ClientT]):
     __slots__ = ("_client",)
 
-    if typing.TYPE_CHECKING:
+    if TYPE_CHECKING:
         _client: ClientT
-        _client_cls: typing.Type[ClientT]
+        _client_cls: type[ClientT]
 
     def _initialize_client(
         self,
-        auth: typing.Union[ValidUUID, BaseAPIClient.env, None] = None,
-        client: typing.Optional[ClientT] = None,
+        auth: ValidUUID | BaseAPIClient.env | None = None,
+        client: ClientT | None = None,
         /,
         *,
         secret_type: str,
-        **client_options: typing.Any,
+        **client_options: Any,
     ) -> None:
         if auth is not None and client is not None:
             msg = f"Provide either {secret_type!r} or 'client', not both"
@@ -90,21 +90,18 @@ class AsyncResources(BaseResources[AsyncClient]):
         await self._client.__aexit__(*args, **kwargs)
 
 
-def resource_aggregator(cls: typing.Type[_AggregatorT], /) -> typing.Type[_AggregatorT]:
+def resource_aggregator(cls: type[_AggregatorT], /) -> type[_AggregatorT]:
     for name, resource_type in cls.__annotations__.items():
 
         def make_property(
-            resource_type: typing.Type[_ResourceT], *, is_raw: bool
+            resource_type: type[_ResourceT], *, is_raw: bool
         ) -> cached_property[_ResourceT]:
             def factory(self: _AggregatorT) -> _ResourceT:
                 return resource_type(self._client, raw=is_raw)
 
             return cached_property(factory)
 
-        property_ = make_property(
-            resource_type,
-            is_raw=Raw in typing.get_args(resource_type),
-        )
+        property_ = make_property(resource_type, is_raw=Raw in get_args(resource_type))
         setattr(cls, name, property_)
         property_.__set_name__(cls, name)
 

@@ -8,6 +8,7 @@ import pydantic
 from disnake.ext import commands
 
 import faceit
+import faceit.exceptions
 from faceit.models.players import MatchResult
 
 
@@ -26,23 +27,24 @@ class StatsCommand(commands.Cog):
 
         player_name = inter.filled_options.get("player_name", "")
 
-        if isinstance(error, pydantic.ValidationError):
-            await inter.edit_original_response(
-                f"⚠️ We couldn't process the profile for **{player_name}**. "
-                "Please check if the nickname is entered correctly."
-            )
-        elif isinstance(error, faceit.exceptions.NotFoundError):
-            await inter.edit_original_response(
-                f"❌ Player **{player_name}** not found."
-            )
-        elif isinstance(error, faceit.APIError):
-            await inter.edit_original_response(
-                f"⚠️ API Error [{error.status_code}]: {error.message}"
-            )
-        else:
-            await inter.edit_original_response(
-                "💥 An unexpected error occurred. Please try again later."
-            )
+        match error:
+            case pydantic.ValidationError():
+                await inter.edit_original_response(
+                    f"⚠️ We couldn't process the profile for `{player_name}`. "
+                    "Please check if the nickname is entered correctly."
+                )
+            case faceit.exceptions.NotFoundError():
+                await inter.edit_original_response(
+                    f"❌ Player `{player_name}` not found."
+                )
+            case faceit.exceptions.APIError():
+                await inter.edit_original_response(
+                    f"⚠️ API Error [{error.status_code}]: {error.message}"
+                )
+            case _:
+                await inter.edit_original_response(
+                    "💥 An unexpected error occurred. Please try again later."
+                )
 
     @commands.slash_command(
         name="stats",

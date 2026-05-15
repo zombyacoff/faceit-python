@@ -1,9 +1,18 @@
 from __future__ import annotations
 
 import re
-import typing
 from abc import ABC
 from datetime import datetime, timezone
+from typing import (
+    TYPE_CHECKING,
+    Annotated,
+    Any,
+    ClassVar,
+    Final,
+    TypeAlias,
+    final,
+    overload,
+)
 
 from pydantic import (
     AfterValidator,
@@ -13,13 +22,16 @@ from pydantic import (
     model_validator,
 )
 from pydantic_core import core_schema
-from typing_extensions import Annotated, Self, TypeAlias
+from typing_extensions import Self
 
 from faceit.types import _R, _T, UrlOrEmpty
 
-_INJECTED_KEY: typing.Final = "injected_key"
-_LANG_PLACEHOLDER: typing.Final = "{lang}"
-_LANG_PATTERN: typing.Final = re.compile(rf"/?{re.escape(_LANG_PLACEHOLDER)}/?")
+if TYPE_CHECKING:
+    from collections.abc import ItemsView, Iterator, KeysView, ValuesView
+
+_INJECTED_KEY: Final = "injected_key"
+_LANG_PLACEHOLDER: Final = "{lang}"
+_LANG_PATTERN: Final = re.compile(rf"/?{re.escape(_LANG_PLACEHOLDER)}/?")
 
 LangFormattedAnyHttpUrl: TypeAlias = Annotated[
     UrlOrEmpty,
@@ -28,7 +40,7 @@ LangFormattedAnyHttpUrl: TypeAlias = Annotated[
     ),
 ]
 NullableList: TypeAlias = Annotated[
-    typing.List[_T],
+    list[_T],
     BeforeValidator(lambda x: x or []),
 ]
 # NOTE: Type alias for country codes that are always validated and converted to lowercase
@@ -44,10 +56,10 @@ CountryCode: TypeAlias = Annotated[
 class _BaseTimestamp(int, ABC):
     __slots__ = ()
 
-    if typing.TYPE_CHECKING:
-        _UNITS_PER_SEC: typing.ClassVar[int]
+    if TYPE_CHECKING:
+        _UNITS_PER_SEC: ClassVar[int]
 
-    def __init_subclass__(cls, units_per_sec: int, **kwargs: typing.Any) -> None:
+    def __init_subclass__(cls, units_per_sec: int, **kwargs: Any) -> None:
         cls._UNITS_PER_SEC = units_per_sec
         return super().__init_subclass__(**kwargs)
 
@@ -67,52 +79,50 @@ class _BaseTimestamp(int, ABC):
 
     @classmethod
     def __get_pydantic_core_schema__(
-        cls, _: typing.Type[typing.Any], handler: GetCoreSchemaHandler
+        cls, _: type[Any], handler: GetCoreSchemaHandler
     ) -> core_schema.CoreSchema:
         return core_schema.no_info_after_validator_function(cls._validate, handler(int))
 
 
-@typing.final
+@final
 class TimestampMs(_BaseTimestamp, units_per_sec=1000):
     @property
     def as_sec(self) -> TimestampSec:
         return TimestampSec(self // 1000)
 
 
-@typing.final
+@final
 class TimestampSec(_BaseTimestamp, units_per_sec=1):
     @property
     def as_ms(self) -> TimestampMs:
         return TimestampMs(self * 1000)
 
 
-TimestampLike: TypeAlias = typing.Union[TimestampSec, TimestampMs, int]
-NotStrictTimestampMs: TypeAlias = typing.Union[TimestampMs, int]
-NotStrictTimestampSec: TypeAlias = typing.Union[TimestampSec, int]
+TimestampLike: TypeAlias = TimestampSec | TimestampMs | int
+NotStrictTimestampMs: TypeAlias = TimestampMs | int
+NotStrictTimestampSec: TypeAlias = TimestampSec | int
 
 
-@typing.final
-class ResponseContainer(RootModel[typing.Dict[str, _T]]):
+@final
+class ResponseContainer(RootModel[dict[str, _T]]):
     __slots__ = ()
 
-    def items(self) -> typing.ItemsView[str, _T]:
+    def items(self) -> ItemsView[str, _T]:
         return self.root.items()
 
-    def keys(self) -> typing.KeysView[str]:
+    def keys(self) -> KeysView[str]:
         return self.root.keys()
 
-    def values(self) -> typing.ValuesView[_T]:
+    def values(self) -> ValuesView[_T]:
         return self.root.values()
 
-    @typing.overload
-    def get(self, key: str, /) -> typing.Optional[_T]: ...
+    @overload
+    def get(self, key: str, /) -> _T | None: ...
 
-    @typing.overload
-    def get(self, key: str, /, default: _R) -> typing.Union[_T, _R]: ...
+    @overload
+    def get(self, key: str, /, default: _R) -> _T | _R: ...
 
-    def get(
-        self, key: str, /, default: typing.Optional[_R] = None
-    ) -> typing.Union[_T, _R, None]:
+    def get(self, key: str, /, default: _R | None = None) -> _T | _R | None:
         return self.root.get(key, default)
 
     def __getattr__(self, name: str) -> _T:
@@ -121,7 +131,7 @@ class ResponseContainer(RootModel[typing.Dict[str, _T]]):
         msg = f"'{self.__class__.__name__}' object has no attribute '{name}'"
         raise AttributeError(msg)
 
-    def __iter__(self) -> typing.Iterator[str]:  # type: ignore[override]
+    def __iter__(self) -> Iterator[str]:  # type: ignore[override]
         yield from self.root
 
     def __getitem__(self, key: str) -> _T:
@@ -129,7 +139,7 @@ class ResponseContainer(RootModel[typing.Dict[str, _T]]):
 
     @model_validator(mode="before")
     @classmethod
-    def _inject_keys(cls, data: typing.Any) -> typing.Any:
+    def _inject_keys(cls, data: Any) -> Any:
         if not isinstance(data, dict):
             return data
         return {

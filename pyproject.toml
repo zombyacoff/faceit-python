@@ -1,9 +1,9 @@
 [project]
 name = "faceit"
-version = "0.2.3"
+version = "0.3.0"
 description = "The Python wrapper for the FACEIT API"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 license = "Apache-2.0"
 authors = [
     { name = "zombyacoff", email = "zombyacoff@gmail.com" },
@@ -14,8 +14,6 @@ classifiers = [
     "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",

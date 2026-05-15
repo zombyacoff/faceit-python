@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import typing
 from abc import ABC
+from typing import Generic, final, overload
 
 from pydantic import Field, validate_call
 
@@ -38,27 +38,27 @@ class BaseRankings(
     __slots__ = ()
 
 
-@typing.final
-class SyncRankings(BaseRankings[SyncClient], typing.Generic[APIResponseFormatT]):
+@final
+class SyncRankings(BaseRankings[SyncClient], Generic[APIResponseFormatT]):
     __slots__ = ()
 
-    @typing.overload
+    @overload
     def unbounded(
         self: SyncRankings[Raw],
         game: GameID,
         region: RegionIdentifier,
-        country: typing.Optional[CountryCode] = None,
+        country: CountryCode | None = None,
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
     ) -> RawAPIPageResponse: ...
 
-    @typing.overload
+    @overload
     def unbounded(
         self: SyncRankings[Model],
         game: GameID,
         region: RegionIdentifier,
-        country: typing.Optional[CountryCode] = None,
+        country: CountryCode | None = None,
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
@@ -69,11 +69,11 @@ class SyncRankings(BaseRankings[SyncClient], typing.Generic[APIResponseFormatT])
         self,
         game: GameID,
         region: RegionIdentifier,
-        country: typing.Optional[CountryCode] = None,
+        country: CountryCode | None = None,
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
-    ) -> typing.Union[RawAPIPageResponse, ItemPage[ModelNotImplemented]]:
+    ) -> RawAPIPageResponse | ItemPage[ModelNotImplemented]:
         return self._validate_response(
             self._client.get(
                 self.__class__.PATH / "games" / game / "regions" / region,
@@ -85,21 +85,21 @@ class SyncRankings(BaseRankings[SyncClient], typing.Generic[APIResponseFormatT])
             ModelPlaceholder,
         )
 
-    @typing.overload
+    @overload
     def all_unbounded(
         self: SyncRankings[Raw],
         game: GameID,
         region: RegionIdentifier,
-        country: typing.Optional[CountryCode] = None,
+        country: CountryCode | None = None,
         max_items: MaxItemsType = pages(10),
-    ) -> typing.List[RawAPIItem]: ...
+    ) -> list[RawAPIItem]: ...
 
-    @typing.overload
+    @overload
     def all_unbounded(
         self: SyncRankings[Model],
         game: GameID,
         region: RegionIdentifier,
-        country: typing.Optional[CountryCode] = None,
+        country: CountryCode | None = None,
         max_items: MaxItemsType = pages(10),
     ) -> ItemPage[ModelNotImplemented]: ...
 
@@ -108,32 +108,32 @@ class SyncRankings(BaseRankings[SyncClient], typing.Generic[APIResponseFormatT])
         self,
         game: GameID,
         region: RegionIdentifier,
-        country: typing.Optional[CountryCode] = None,
+        country: CountryCode | None = None,
         max_items: MaxItemsType = pages(10),
-    ) -> typing.Union[typing.List[RawAPIItem], ItemPage[ModelNotImplemented]]:
+    ) -> list[RawAPIItem] | ItemPage[ModelNotImplemented]:
         iterator = SyncPageIterator(
             self.unbounded, game, region, country, max_items=max_items
         )
         return iterator.collect()
 
-    @typing.overload
+    @overload
     def player(
         self: SyncRankings[Raw],
         game: GameID,
         region: RegionIdentifier,
         player_id: PlayerID,
-        country: typing.Optional[CountryCode] = None,
+        country: CountryCode | None = None,
         *,
         limit: int = Field(20, ge=1, le=100),
     ) -> RawAPIPageResponse: ...
 
-    @typing.overload
+    @overload
     def player(
         self: SyncRankings[Model],
         game: GameID,
         region: RegionIdentifier,
         player_id: PlayerID,
-        country: typing.Optional[CountryCode] = None,
+        country: CountryCode | None = None,
         *,
         limit: int = Field(20, ge=1, le=100),
     ) -> ModelNotImplemented: ...
@@ -144,10 +144,10 @@ class SyncRankings(BaseRankings[SyncClient], typing.Generic[APIResponseFormatT])
         game: GameID,
         region: RegionIdentifier,
         player_id: PlayerIDValidated,
-        country: typing.Optional[CountryCode] = None,
+        country: CountryCode | None = None,
         *,
         limit: int = Field(20, ge=1, le=100),
-    ) -> typing.Union[RawAPIPageResponse, ModelNotImplemented]:
+    ) -> RawAPIPageResponse | ModelNotImplemented:
         # fmt: off
         return self._validate_response(
             self._client.get(
@@ -162,27 +162,27 @@ class SyncRankings(BaseRankings[SyncClient], typing.Generic[APIResponseFormatT])
         # fmt: on
 
 
-@typing.final
-class AsyncRankings(BaseRankings[AsyncClient], typing.Generic[APIResponseFormatT]):
+@final
+class AsyncRankings(BaseRankings[AsyncClient], Generic[APIResponseFormatT]):
     __slots__ = ()
 
-    @typing.overload
+    @overload
     async def unbounded(
         self: AsyncRankings[Raw],
         game: GameID,
         region: RegionIdentifier,
-        country: typing.Optional[CountryCode] = None,
+        country: CountryCode | None = None,
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
     ) -> RawAPIPageResponse: ...
 
-    @typing.overload
+    @overload
     async def unbounded(
         self: AsyncRankings[Model],
         game: GameID,
         region: RegionIdentifier,
-        country: typing.Optional[CountryCode] = None,
+        country: CountryCode | None = None,
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
@@ -193,11 +193,11 @@ class AsyncRankings(BaseRankings[AsyncClient], typing.Generic[APIResponseFormatT
         self,
         game: GameID,
         region: RegionIdentifier,
-        country: typing.Optional[CountryCode] = None,
+        country: CountryCode | None = None,
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
-    ) -> typing.Union[RawAPIPageResponse, ItemPage[ModelNotImplemented]]:
+    ) -> RawAPIPageResponse | ItemPage[ModelNotImplemented]:
         return self._validate_response(
             await self._client.get(
                 self.__class__.PATH / "games" / game / "regions" / region,
@@ -209,21 +209,21 @@ class AsyncRankings(BaseRankings[AsyncClient], typing.Generic[APIResponseFormatT
             ModelPlaceholder,
         )
 
-    @typing.overload
+    @overload
     async def all_unbounded(
         self: AsyncRankings[Raw],
         game: GameID,
         region: RegionIdentifier,
-        country: typing.Optional[CountryCode] = None,
+        country: CountryCode | None = None,
         max_items: MaxItemsType = pages(10),
-    ) -> typing.List[RawAPIItem]: ...
+    ) -> list[RawAPIItem]: ...
 
-    @typing.overload
+    @overload
     async def all_unbounded(
         self: AsyncRankings[Model],
         game: GameID,
         region: RegionIdentifier,
-        country: typing.Optional[CountryCode] = None,
+        country: CountryCode | None = None,
         max_items: MaxItemsType = pages(10),
     ) -> ItemPage[ModelNotImplemented]: ...
 
@@ -232,32 +232,32 @@ class AsyncRankings(BaseRankings[AsyncClient], typing.Generic[APIResponseFormatT
         self,
         game: GameID,
         region: RegionIdentifier,
-        country: typing.Optional[CountryCode] = None,
+        country: CountryCode | None = None,
         max_items: MaxItemsType = pages(10),
-    ) -> typing.Union[typing.List[RawAPIItem], ItemPage[ModelNotImplemented]]:
+    ) -> list[RawAPIItem] | ItemPage[ModelNotImplemented]:
         iterator = AsyncPageIterator(
             self.unbounded, game, region, country, max_items=max_items
         )
         return await iterator.collect()
 
-    @typing.overload
+    @overload
     async def player(
         self: AsyncRankings[Raw],
         game: GameID,
         region: RegionIdentifier,
         player_id: PlayerID,
-        country: typing.Optional[CountryCode] = None,
+        country: CountryCode | None = None,
         *,
         limit: int = Field(20, ge=1, le=100),
     ) -> RawAPIPageResponse: ...
 
-    @typing.overload
+    @overload
     async def player(
         self: AsyncRankings[Model],
         game: GameID,
         region: RegionIdentifier,
         player_id: PlayerID,
-        country: typing.Optional[CountryCode] = None,
+        country: CountryCode | None = None,
         *,
         limit: int = Field(20, ge=1, le=100),
     ) -> ModelNotImplemented: ...
@@ -268,10 +268,10 @@ class AsyncRankings(BaseRankings[AsyncClient], typing.Generic[APIResponseFormatT
         game: GameID,
         region: RegionIdentifier,
         player_id: PlayerIDValidated,
-        country: typing.Optional[CountryCode] = None,
+        country: CountryCode | None = None,
         *,
         limit: int = Field(20, ge=1, le=100),
-    ) -> typing.Union[RawAPIPageResponse, ModelNotImplemented]:
+    ) -> RawAPIPageResponse | ModelNotImplemented:
         # fmt: off
         return self._validate_response(
             await self._client.get(

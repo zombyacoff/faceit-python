@@ -1,4 +1,4 @@
-import typing
+from typing import Any
 from unittest.mock import AsyncMock, Mock
 from uuid import uuid4
 
@@ -27,10 +27,10 @@ def mock_async_client() -> Mock:
 
 
 @pytest.fixture(scope="module")
-def sync_players_raw(mock_sync_client: Mock) -> SyncPlayers[typing.Any]:
+def sync_players_raw(mock_sync_client: Mock) -> SyncPlayers[Any]:
     return SyncPlayers(client=mock_sync_client, raw=True)
 
 
 @pytest.fixture(scope="module")
-def async_players_raw(mock_async_client: Mock) -> AsyncPlayers[typing.Any]:
+def async_players_raw(mock_async_client: Mock) -> AsyncPlayers[Any]:
     return AsyncPlayers(client=mock_async_client, raw=True)

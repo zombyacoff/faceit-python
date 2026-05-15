@@ -1,4 +1,4 @@
-import typing
+from typing import Any, final
 
 from pydantic import BaseModel
 
@@ -13,31 +13,31 @@ from .custom_types import (
 )
 
 
-@typing.final
+@final
 class JoinChecks(BaseModel):
     min_skill_level: int
     max_skill_level: int
-    whitelist_geo_countries: typing.List[str]
+    whitelist_geo_countries: list[str]
     whitelist_geo_countries_min_players: int
-    blacklist_geo_countries: typing.List[str]
+    blacklist_geo_countries: list[str]
     join_policy: str
     membership_type: str
-    allowed_team_types: typing.List[str]
+    allowed_team_types: list[str]
 
 
-@typing.final
+@final
 class SubstitutionConfiguration(BaseModel):
     max_substitutes: int
     max_substitutions: int
 
 
-@typing.final
+@final
 class Prize(BaseModel):
     rank: int
     faceit_points: int
 
 
-@typing.final
+@final
 class Stream(BaseModel):
     active: bool
     platform: str
@@ -45,18 +45,18 @@ class Stream(BaseModel):
     title: str
 
 
-@typing.final
+@final
 class Screening(BaseModel):
     id: FaceitID
     enabled: bool
 
 
-@typing.final
+@final
 class Championship(BaseModel):
     id: FaceitID
     # `championship_id: FaceitID` unnecessary
     name: str
-    screening: typing.Optional[Screening] = None
+    screening: Screening | None = None
     cover_image: UrlOrEmpty
     background_image: UrlOrEmpty
     avatar: UrlOrEmpty
@@ -81,7 +81,7 @@ class Championship(BaseModel):
     full: bool
     checkin_enabled: bool
     total_rounds: int
-    schedule: ResponseContainer[typing.Any]
+    schedule: ResponseContainer[Any]
     total_groups: int
     subscriptions_locked: bool
     seeding_strategy: str

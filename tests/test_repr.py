@@ -1,23 +1,16 @@
-import typing
 from dataclasses import dataclass
+from typing import Final
 
 import pytest
 
 from faceit.utils import _UNINITIALIZED_MARKER, representation
 
-DEFINE_STR_ERROR_MSG: typing.Final = "must define '__str__' method"
+DEFINE_STR_ERROR_MSG: Final = "must define '__str__' method"
 
 
-@pytest.fixture(scope="module")
-def dataclass_no_repr() -> typing.Callable[..., typing.Any]:
-    return dataclass(repr=False)
-
-
-def test_basic_representation(
-    dataclass_no_repr: typing.Callable[..., typing.Any],
-) -> None:
+def test_basic_representation() -> None:
     @representation("name", "age")
-    @dataclass_no_repr
+    @dataclass(repr=False)
     class Person:
         name: str
         age: int
@@ -27,11 +20,9 @@ def test_basic_representation(
     assert str(person) == "name='John' age=30"
 
 
-def test_representation_with_use_str(
-    dataclass_no_repr: typing.Callable[..., typing.Any],
-) -> None:
+def test_representation_with_use_str() -> None:
     @representation("name", "age", use_str=True)
-    @dataclass_no_repr
+    @dataclass(repr=False)
     class Person:
         name: str
         age: int
@@ -44,11 +35,9 @@ def test_representation_with_use_str(
     assert str(person) == "John (30)"
 
 
-def test_representation_with_missing_fields(
-    dataclass_no_repr: typing.Callable[..., typing.Any],
-) -> None:
+def test_representation_with_missing_fields() -> None:
     @representation("name", "age", "missing_field")
-    @dataclass_no_repr
+    @dataclass(repr=False)
     class Person:
         name: str
         age: int
@@ -62,11 +51,9 @@ def test_representation_with_use_str_but_no_str_method() -> None:
         representation("name", use_str=True)(object)
 
 
-def test_representation_preserves_existing_str(
-    dataclass_no_repr: typing.Callable[..., typing.Any],
-) -> None:
+def test_representation_preserves_existing_str() -> None:
     @representation("name", "age")
-    @dataclass_no_repr
+    @dataclass(repr=False)
     class Person:
         name: str
         age: int

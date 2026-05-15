@@ -1,11 +1,20 @@
 from __future__ import annotations
 
 import logging
-import typing
 import warnings
 from abc import ABC
 from dataclasses import dataclass
 from types import MappingProxyType
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    ClassVar,
+    Generic,
+    TypedDict,
+    TypeVar,
+    cast,
+    final,
+)
 
 from pydantic import ValidationError
 
@@ -21,8 +30,10 @@ from faceit.types import (
 )
 from faceit.utils import warn_stacklevel
 
-if typing.TYPE_CHECKING:
-    _ResponseT = typing.TypeVar("_ResponseT", bound=RawAPIResponse)
+if TYPE_CHECKING:
+    from collections.abc import Mapping
+
+    _ResponseT = TypeVar("_ResponseT", bound=RawAPIResponse)
 
 _logger = logging.getLogger(__name__)
 
@@ -32,34 +43,34 @@ _logger = logging.getLogger(__name__)
 ModelPlaceholder: None = None
 
 
-@typing.final
-class RequestPayload(typing.TypedDict):
+@final
+class RequestPayload(TypedDict):
     endpoint: Endpoint
-    params: typing.Mapping[str, typing.Any]
+    params: Mapping[str, Any]
 
 
-@typing.final
+@final
 @dataclass(eq=False, frozen=True)
-class MappedValidatorConfig(typing.Generic[_T, ModelT]):
-    validator_map: typing.Mapping[_T, typing.Type[ModelT]]
+class MappedValidatorConfig(Generic[_T, ModelT]):
+    validator_map: Mapping[_T, type[ModelT]]
     key_name: str = "key"
-    default_validator: typing.Optional[typing.Type[ModelT]] = None
+    default_validator: type[ModelT] | None = None
 
 
 # TODO: Refactor the base resource class if/when support for resources
 # other than Data is required, since the current implementation is
 # too Data-centric.
-class BaseResource(ABC, typing.Generic[ClientT]):
+class BaseResource(ABC, Generic[ClientT]):
     __slots__ = (
         "_client",
         "_raw",
         "_strict_validation",
     )
 
-    if typing.TYPE_CHECKING:
-        PATH: typing.ClassVar[Endpoint]
+    if TYPE_CHECKING:
+        PATH: ClassVar[Endpoint]
 
-    _PARAM_NAME_MAP: typing.ClassVar[typing.Mapping[str, str]] = MappingProxyType({
+    _PARAM_NAME_MAP: ClassVar[Mapping[str, str]] = MappingProxyType({
         "start": "from",
         "category": "type",
     })
@@ -77,8 +88,8 @@ class BaseResource(ABC, typing.Generic[ClientT]):
 
     def __init_subclass__(
         cls,
-        resource_path: typing.Optional[str] = None,
-        **kwargs: typing.Any,
+        resource_path: str | None = None,
+        **kwargs: Any,
     ) -> None:
         if hasattr(cls, "PATH"):
             return
@@ -104,7 +115,7 @@ class BaseResource(ABC, typing.Generic[ClientT]):
         response: RawAPIItem,
         key: _T,
         config: MappedValidatorConfig[_T, ModelT],
-    ) -> typing.Union[ModelT, RawAPIItem]:
+    ) -> RawAPIItem | ModelT:
         if self._raw:
             return response
         return self._validate_response(
@@ -117,7 +128,7 @@ class BaseResource(ABC, typing.Generic[ClientT]):
         response: RawAPIPageResponse,
         key: _T,
         config: MappedValidatorConfig[_T, ModelT],
-    ) -> typing.Union[ItemPage[ModelT], RawAPIPageResponse]:
+    ) -> RawAPIPageResponse | ItemPage[ModelT]:
         if self._raw:
             return response
 
@@ -125,8 +136,8 @@ class BaseResource(ABC, typing.Generic[ClientT]):
         if validator is None:
             page_validator = None
         else:
-            page_validator = typing.cast(
-                "typing.Type[ItemPage[ModelT]]",
+            page_validator = cast(
+                "type[ItemPage[ModelT]]",
                 # Suppressing type checking warning because we're using a
                 # dynamic runtime subscript `ItemPage` is being subscripted
                 # with a variable (`validator`) which mypy cannot statically verify
@@ -146,11 +157,11 @@ class BaseResource(ABC, typing.Generic[ClientT]):
     def _validate_response(
         self,
         response: _ResponseT,
-        validator: typing.Optional[typing.Type[ModelT]],
+        validator: type[ModelT] | None,
         /,
         *,
-        warn_msg: typing.Optional[str] = None,
-    ) -> typing.Union[_ResponseT, ModelT]:
+        warn_msg: str | None = None,
+    ) -> _ResponseT | ModelT:
         if self._raw:
             return response
         if validator is None:
@@ -177,7 +188,7 @@ class BaseResource(ABC, typing.Generic[ClientT]):
             return response
 
     @classmethod
-    def _build_params(cls, **params: typing.Any) -> typing.Dict[str, typing.Any]:
+    def _build_params(cls, **params: Any) -> dict[str, Any]:
         return {
             cls._PARAM_NAME_MAP.get(key, key): value
             for key, value in params.items()

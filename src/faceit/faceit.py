@@ -1,4 +1,4 @@
-import typing
+from typing import TYPE_CHECKING, Any, Generic, cast, final
 
 from typing_extensions import deprecated
 
@@ -7,14 +7,14 @@ from .http import AsyncClient, SyncClient
 from .types import ClientT, DataResourceT
 
 
-class BaseFaceit(typing.Generic[ClientT, DataResourceT]):
+class BaseFaceit(Generic[ClientT, DataResourceT]):
     __slots__ = ()
 
-    if typing.TYPE_CHECKING:
-        _data_cls: typing.Type[DataResourceT]
+    if TYPE_CHECKING:
+        _data_cls: type[DataResourceT]
 
     @classmethod
-    def data(cls, *args: typing.Any, **kwargs: typing.Any) -> DataResourceT:
+    def data(cls, *args: Any, **kwargs: Any) -> DataResourceT:
         import warnings  # noqa: PLC0415
 
         warnings.warn(
@@ -23,10 +23,10 @@ class BaseFaceit(typing.Generic[ClientT, DataResourceT]):
             DeprecationWarning,
             stacklevel=2,
         )
-        return typing.cast("DataResourceT", cls._data_cls(*args, **kwargs))
+        return cast("DataResourceT", cls._data_cls(*args, **kwargs))
 
 
-@typing.final
+@final
 @deprecated(
     "`Faceit` is deprecated and will be removed in a future release. "
     "Use `SyncDataResource` instead."
@@ -37,7 +37,7 @@ class Faceit(BaseFaceit[SyncClient, SyncDataResource]):
     _data_cls = SyncDataResource
 
 
-@typing.final
+@final
 @deprecated(
     "`AsyncFaceit` is deprecated and will be removed in a future release. "
     "Use `AsyncDataResource` instead."
