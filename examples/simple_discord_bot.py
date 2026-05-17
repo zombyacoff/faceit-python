@@ -100,14 +100,11 @@ class StatsCommand(commands.Cog):
         )
 
         if player_stats.lifetime.recent_results:
-            embed.add_field(
-                "Recent Results",
-                " ".join(
-                    "✅" if result is MatchResult.WIN else "❌"
-                    for result in player_stats.lifetime.recent_results
-                ),
-                inline=False,
+            results = " ".join(
+                "✅" if result is MatchResult.WIN else "❌"
+                for result in player_stats.lifetime.recent_results
             )
+            embed.add_field("Recent Results", results, inline=False)
 
         embed.set_footer(text="Powered by faceit-python")
         return await inter.edit_original_response(embed=embed)

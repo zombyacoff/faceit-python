@@ -1,4 +1,3 @@
-from contextlib import suppress
 from typing import Any, ClassVar, final
 
 import httpx
@@ -62,7 +61,8 @@ class APIError(FaceitError):
         if message is not None:
             self.message = message
         elif response is not None:
-            self.message = self.__class__._parse_response_message(response)
+            # TODO: Implement proper error parsing to extract the message in a sensible form
+            self.message = response.text[:200]
         else:
             self.message = self.__class__._DEFAULT_MESSAGE
 
@@ -75,15 +75,6 @@ class APIError(FaceitError):
     @classmethod
     def from_response(cls, response: httpx.Response, /) -> "APIError":
         return cls._STATUS_ERRORS.get(response.status_code, APIError)(response)
-
-    @staticmethod
-    def _parse_response_message(response: httpx.Response, /) -> str:
-        message = response.text[:200]
-        with suppress(ValueError, IndexError, AttributeError):
-            errors = response.json().get("errors")
-            if errors:
-                message = errors[0].get("message", message)
-        return message
 
 
 # fmt: off

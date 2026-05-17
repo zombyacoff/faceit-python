@@ -4,7 +4,7 @@ import inspect
 import math
 import warnings
 from abc import ABC
-from collections.abc import AsyncIterator, Callable, Iterator, Mapping
+from collections.abc import AsyncIterator, Callable, Iterable, Iterator, Mapping
 from dataclasses import dataclass
 from itertools import chain
 from types import MappingProxyType
@@ -340,7 +340,7 @@ class BasePageIterator(ABC, Generic[PaginationMethodT, _PageT]):
                 )
             return max_pages
 
-        if max_items is MaxItems.SAFE:
+        if max_items == MaxItems.SAFE:
             set_max_pages(self.__class__.SAFE_MAX_PAGES)
             return
 
@@ -471,22 +471,20 @@ class BasePageIterator(ABC, Generic[PaginationMethodT, _PageT]):
         deduplicate: bool,  # noqa: FBT001
     ) -> list[RawAPIItem] | ItemPage[_T]:
         if cls._COLLECT_RETURN_FORMATS[return_format](collection) is dict:
-            raw = list(
-                chain.from_iterable(
-                    p[RAW_RESPONSE_ITEMS_KEY] for p in collection if isinstance(p, dict)
-                )
+            raw = chain.from_iterable(
+                p[RAW_RESPONSE_ITEMS_KEY] for p in collection if isinstance(p, dict)
             )
-            return cls._deduplicate_collection(raw) if deduplicate else raw
+            return cls._deduplicate_collection(raw) if deduplicate else list(raw)
         model = ItemPage.merge(p for p in collection if isinstance(p, ItemPage))
         return cls._deduplicate_collection(model) if deduplicate else model
 
     @classmethod
     def _deduplicate_collection(
-        cls, collection: list[RawAPIItem] | ItemPage[_T], /
+        cls, collection: Iterable[RawAPIItem] | ItemPage[_T], /
     ) -> list[RawAPIItem] | ItemPage[_T]:
         if not isinstance(collection, ItemPage):
             return deduplicate_unhashable(collection)
-        return collection.with_items(deduplicate_unhashable(collection))
+        return collection.with_items(deduplicate_unhashable(collection))  # pyright: ignore[reportArgumentType, reportReturnType]
 
     @classmethod
     def _create_unix_timestamp_iterator(

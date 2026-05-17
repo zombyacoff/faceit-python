@@ -233,7 +233,6 @@ class CSLifetimeStats(BaseModel):  # `GameID.CS2` & `GameID.CSGO`
 
 @final
 class CSMapStats(BaseModel):  # `GameID.CS2` & `GameID.CSGO`
-    # TODO: Преобразование в проценты (*100) таких полей, как "v2_win_rate", "v1_win_rate", ... ?
     adr: Annotated[float, Field(0.0, alias="ADR")]
     assists: Annotated[int, Field(alias="Assists")]
     average_assists: Annotated[float, Field(alias="Average Assists")]
@@ -345,10 +344,7 @@ class PlayerStats(
                 # NOTE: Anubis --> anubis, Ancient --> ancient, ...
                 # (lowercase and replace spaces with underscores)
                 seg[_SEGMENT_NAME].lower().replace(" ", "_"): seg
-                for seg in cast(
-                    "list[dict[str, str]]",
-                    raw_segments,
-                )
+                for seg in cast("list[dict[str, str]]", raw_segments)
                 if _SEGMENT_NAME in seg
             }
 

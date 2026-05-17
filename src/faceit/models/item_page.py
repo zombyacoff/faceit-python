@@ -13,7 +13,7 @@ from pydantic import (
     computed_field,
     field_validator,
 )
-from typing_extensions import Self, deprecated
+from typing_extensions import Self
 
 from faceit.constants import RAW_RESPONSE_ITEMS_KEY
 from faceit.models.custom_types import TimestampMs  # noqa: TC001
@@ -34,13 +34,13 @@ class PaginationMetadata(BaseModel, frozen=True):
     time_range: PaginationTimeRange | None
 
 
-# fmt: off
 @final
-class ItemPage(BaseModel, Generic[_T],
+class ItemPage(
+    BaseModel,
+    Generic[_T],
     frozen=True,
     populate_by_name=True,
 ):
-    # fmt: on
     items: tuple[_T, ...]
 
     offset: Annotated[
@@ -75,18 +75,8 @@ class ItemPage(BaseModel, Generic[_T],
         if self.offset is None or self.limit is None:
             return None
         return PaginationMetadata(
-            offset=self.offset,
-            limit=self.limit,
-            time_range=self.time_range,
+            offset=self.offset, limit=self.limit, time_range=self.time_range
         )
-
-    @computed_field(deprecated=True)  # type: ignore[prop-decorator]
-    @property
-    # This property is redundant because all metadata is reset during page merging
-    # to avoid complex calculations that would likely be inaccurate anyway
-    @deprecated("`page` is deprecated and will be removed in a future version.")
-    def page(self) -> int | None:
-        return None if self.offset is None or self.limit is None else 1
 
     @overload
     def find(self, attr: str, value: object) -> _T | None: ...
@@ -108,9 +98,7 @@ class ItemPage(BaseModel, Generic[_T],
     @overload
     def get_first(self, default: _R, /) -> _T | _R: ...
 
-    def get_first(
-        self, default: _R | None = None
-    ) -> _T | _R | None:
+    def get_first(self, default: _R | None = None) -> _T | _R | None:
         return self[0] if self else default
 
     @overload
@@ -119,9 +107,7 @@ class ItemPage(BaseModel, Generic[_T],
     @overload
     def get_last(self, default: _R, /) -> _T | _R: ...
 
-    def get_last(
-        self, default: _R | None = None
-    ) -> _T | _R | None:
+    def get_last(self, default: _R | None = None) -> _T | _R | None:
         return self[-1] if self else default
 
     @overload
@@ -130,9 +116,7 @@ class ItemPage(BaseModel, Generic[_T],
     @overload
     def get_random(self, default: _R, /) -> _T | _R: ...
 
-    def get_random(
-        self, default: _R | None = None
-    ) -> _T | _R | None:
+    def get_random(self, default: _R | None = None) -> _T | _R | None:
         # Intentionally using non-cryptographic RNG as this is for
         # convenience sampling rather than security-sensitive operations
         return random_choice(self) if self else default  # noqa: S311
@@ -181,9 +165,7 @@ class ItemPage(BaseModel, Generic[_T],
     @overload
     def __getitem__(self, index: slice) -> Self: ...
 
-    def __getitem__(
-        self, index: SupportsIndex | slice
-    ) -> _T | ItemPage[_T]:
+    def __getitem__(self, index: SupportsIndex | slice) -> _T | ItemPage[_T]:
         if isinstance(index, slice):
             return self.__class__._construct_without_metadata(self.items[index])
         try:
@@ -206,9 +188,7 @@ class ItemPage(BaseModel, Generic[_T],
 
     @field_validator(RAW_RESPONSE_ITEMS_KEY, mode="before")
     @classmethod
-    def _normalize_items(
-        cls, items: Any
-    ) -> tuple[dict[str, Any], ...]:
+    def _normalize_items(cls, items: Any) -> tuple[dict[str, Any], ...]:
         if not isinstance(items, Iterable):
             msg = f"Expected {RAW_RESPONSE_ITEMS_KEY} to be an iterable, got {type(items).__name__}"
             raise ValueError(msg)  # noqa: TRY004

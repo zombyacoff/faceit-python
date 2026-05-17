@@ -19,6 +19,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
     "Typing :: Typed",
 ]
 dependencies = [
@@ -48,9 +49,6 @@ examples = [
 [project.urls]
 "Documentation" = "https://docs.faceit.com/docs"
 
-[tool.hatch.build.targets.wheel]
-packages = ["src/faceit"]
-
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["uv_build>=0.11.14,<0.12"]
+build-backend = "uv_build"
