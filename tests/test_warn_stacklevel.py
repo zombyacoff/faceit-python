@@ -18,8 +18,9 @@ class TestGetIgnoredPaths:
         path_str = Path("libs") / "package" / "__init__.py"
         mock_mod.__file__ = str(path_str.resolve())
 
-        with patch.dict("sys.modules", {"test_pkg": mock_mod}), patch(
-            "faceit.utils._IGNORED_MODULES", {"test_pkg"}
+        with (
+            patch.dict("sys.modules", {"test_pkg": mock_mod}),
+            patch("faceit.utils._IGNORED_MODULES", {"test_pkg"}),
         ):
             prefixes, _ = _get_ignored_paths()
 
@@ -32,8 +33,9 @@ class TestGetIgnoredPaths:
         fake_path = Path("external").resolve() / "mod.py"
         mock_mod.__file__ = str(fake_path)
 
-        with patch.dict("sys.modules", {"external_mod": mock_mod}), patch(
-            "faceit.utils._IGNORED_MODULES", {"external_mod"}
+        with (
+            patch.dict("sys.modules", {"external_mod": mock_mod}),
+            patch("faceit.utils._IGNORED_MODULES", {"external_mod"}),
         ):
             _, files = _get_ignored_paths()
 
@@ -53,8 +55,9 @@ class TestWarnStacklevel:
         frame_int.f_code.co_filename = str(ignored_path)
         frame_int.f_back = frame_ext
 
-        with patch("faceit.utils._get_ignored_paths") as mock_paths, patch(
-            "sys._getframe", return_value=frame_int
+        with (
+            patch("faceit.utils._get_ignored_paths") as mock_paths,
+            patch("sys._getframe", return_value=frame_int),
         ):
             mock_paths.return_value = ((), frozenset([ignored_path]))
             assert warn_stacklevel() == 2
