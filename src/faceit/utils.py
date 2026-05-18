@@ -25,12 +25,6 @@ if TYPE_CHECKING:
     _CallableT = TypeVar("_CallableT", bound=Callable[..., Any])
     _ClassT = TypeVar("_ClassT", bound=type)
 
-_IGNORED_MODULES: Final = {
-    "pydantic",
-}
-_UUID_BYTES: Final = 16
-_UNINITIALIZED_MARKER: Final = "uninitialized"
-
 
 # NOTE: Inspired by irgeek/StrEnum:
 # https://github.com/irgeek/StrEnum/blob/master/strenum/__init__.py#L21
@@ -151,6 +145,9 @@ def deduplicate_unhashable(values: Iterable[_T], /) -> list[_T]:
     return list({get_hashable_representation(v): v for v in values}.values())
 
 
+_UUID_BYTES: Final = 16
+
+
 def to_uuid(value: str | bytes, /) -> UUID:
     if isinstance(value, str):
         return UUID(value)
@@ -209,6 +206,11 @@ def validate_positive_int(value: Any, /, param_name: str = "value") -> int:
     return value
 
 
+_IGNORED_MODULES: Final = {
+    "pydantic",
+}
+
+
 @lru_cache(maxsize=1)
 def _get_ignored_paths() -> tuple[
     tuple[Path, ...],
@@ -256,6 +258,9 @@ def warn_stacklevel() -> int:
             level += 1
 
     return 1
+
+
+_UNINITIALIZED_MARKER: Final = "uninitialized"
 
 
 def _format_fields(obj: object, fields: tuple[str, ...], *, joiner: str) -> str:

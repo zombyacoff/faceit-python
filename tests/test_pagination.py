@@ -229,9 +229,13 @@ def test_sync_iterator_strips_user_pagination_params_with_warning(
 def test_sync_unix_iterator_with_invalid_config_raises(
     dummy_resource: _DummyResource,
 ) -> None:
-    iterator = SyncPageIterator.unix(dummy_resource.raw_method, cfg={"key": "only-key"})
     with pytest.raises(ValueError):
-        next(iterator)
+        next(
+            SyncPageIterator.unix(
+                dummy_resource.raw_method,
+                cfg={"key": "only-key"},
+            )
+        )
 
 
 def test_sync_unix_iterator_yields_pages(dummy_resource: _DummyResource) -> None:
@@ -249,10 +253,8 @@ def test_sync_iterator_collect_respects_safe_max_items(
     dummy_resource: _DummyResource,
 ) -> None:
     with patch.object(SyncPageIterator, "SAFE_MAX_PAGES", 1):
-        result = SyncPageIterator(
-            dummy_resource.raw_method,
-            max_items=MaxItems.SAFE,
-        ).collect(deduplicate=False)
+        iterator = SyncPageIterator(dummy_resource.raw_method, max_items=MaxItems.SAFE)
+        result = iterator.collect(deduplicate=False)
     assert len(result) == 2
 
 
@@ -283,8 +285,9 @@ async def test_async_unix_iterator_yields_pages(dummy_resource: _DummyResource) 
 async def test_async_unix_iterator_with_invalid_config_raises(
     dummy_resource: _DummyResource,
 ) -> None:
-    iterator = AsyncPageIterator.unix(
-        dummy_resource.async_raw_method, cfg={"attr": "finished_at"}
-    )
     with pytest.raises(ValueError):
-        await anext(iterator)
+        await anext(
+            AsyncPageIterator.unix(
+                dummy_resource.async_raw_method, cfg={"attr": "finished_at"}
+            )
+        )

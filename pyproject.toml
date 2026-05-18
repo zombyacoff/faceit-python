@@ -41,14 +41,11 @@ dev = [
 ]
 examples = [
     "disnake>=2.0.0,<3.0.0",
-    # Maybe needed later
-    # "pydantic-settings>=2.0.0",
-    # "wireup>=2.0.0,<3.0.0",
 ]
 
 [project.urls]
 "Documentation" = "https://docs.faceit.com/docs"
 
 [build-system]
-requires = ["uv_build>=0.11.14,<0.12"]
+requires = ["uv_build>=0.11.14"]
 build-backend = "uv_build"

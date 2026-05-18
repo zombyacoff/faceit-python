@@ -19,14 +19,13 @@ class StatsCommand(commands.Cog):
 
     async def cog_slash_command_error(  # noqa: PLR6301
         self,
-        inter: disnake.ApplicationCommandInteraction[Any],
+        inter: disnake.CommandInteraction[Any],
         error: Exception,
     ) -> None:
         if isinstance(error, commands.CommandInvokeError):
             error = error.original
 
-        player_name = inter.filled_options.get("player_name", "")
-
+        player_name = inter.filled_options.get("player_name", "<unknown>")
         match error:
             case pydantic.ValidationError():
                 await inter.edit_original_response(
@@ -52,7 +51,7 @@ class StatsCommand(commands.Cog):
     )
     async def stats(
         self,
-        inter: disnake.ApplicationCommandInteraction[Any],
+        inter: disnake.CommandInteraction[Any],
         player_name: str = commands.Param(
             description="FACEIT player nickname",
         ),
@@ -118,11 +117,7 @@ async def main() -> None:
             "DISCORD_BOT_TOKEN"
         ),
     )
-    async with (
-        # NOTE: Ensure the `FACEIT_API_KEY` is set in your environment variables
-        # (Requires `faceit[env]` to be installed)
-        faceit.AsyncDataResource()  # or use faceit.AsyncDataResource("YOUR_FACEIT_API_KEY")
-    ) as data:
+    async with faceit.AsyncDataResource() as data:
         bot.add_cog(StatsCommand(bot, data))
         await bot.start(bot_token)
 
