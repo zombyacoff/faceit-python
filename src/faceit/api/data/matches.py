@@ -18,11 +18,9 @@ from faceit.types import (
 )
 
 _MatchID: TypeAlias = str
-# We use `AfterValidator` with the `_MatchID` type alias instead of `FaceitMatchID` directly
-# to avoid mypy complaints. Mypy cannot fully recognize our custom type as compatible
-# with str, so this approach ensures proper type checking and validation.
 _MatchIDValidated: TypeAlias = Annotated[
-    _MatchID, AfterValidator(FaceitMatchID._validate)
+    _MatchID,
+    AfterValidator(FaceitMatchID),
 ]
 
 

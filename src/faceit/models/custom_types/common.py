@@ -17,7 +17,6 @@ from typing import (
 from pydantic import (
     AfterValidator,
     BeforeValidator,
-    GetCoreSchemaHandler,
     RootModel,
     model_validator,
 )
@@ -29,7 +28,6 @@ from faceit.types import _R, _T, UrlOrEmpty
 if TYPE_CHECKING:
     from collections.abc import ItemsView, Iterator, KeysView, ValuesView
 
-_INJECTED_KEY: Final = "injected_key"
 _LANG_PLACEHOLDER: Final = "{lang}"
 _LANG_PATTERN: Final = re.compile(rf"/?{re.escape(_LANG_PLACEHOLDER)}/?")
 
@@ -71,17 +69,11 @@ class _BaseTimestamp(int, ABC):
         return cls(round(dt.timestamp() * cls._UNITS_PER_SEC))
 
     @classmethod
-    def _validate(cls, value: int, /) -> Self:
-        if value >= 0:
-            return cls(value)
-        msg = f"Value {value} is negative. Timestamp cannot be negative"
-        raise ValueError(msg)
-
-    @classmethod
-    def __get_pydantic_core_schema__(
-        cls, _: type[Any], handler: GetCoreSchemaHandler
-    ) -> core_schema.CoreSchema:
-        return core_schema.no_info_after_validator_function(cls._validate, handler(int))
+    def __get_pydantic_core_schema__(cls, *_: Any, **__: Any) -> core_schema.CoreSchema:
+        return core_schema.chain_schema([
+            core_schema.int_schema(ge=0),
+            core_schema.no_info_after_validator_function(cls, core_schema.any_schema()),
+        ])
 
 
 @final
@@ -101,6 +93,9 @@ class TimestampSec(_BaseTimestamp, units_per_sec=1):
 TimestampLike: TypeAlias = TimestampSec | TimestampMs | int
 NotStrictTimestampMs: TypeAlias = TimestampMs | int
 NotStrictTimestampSec: TypeAlias = TimestampSec | int
+
+
+_INJECTED_KEY: Final = "injected_key"
 
 
 @final
@@ -128,7 +123,7 @@ class ResponseContainer(RootModel[dict[str, _T]]):
     def __getattr__(self, name: str) -> _T:
         if name in self.root:
             return self.root[name]
-        msg = f"'{self.__class__.__name__}' object has no attribute '{name}'"
+        msg = f"{self.__class__.__name__!r} object has no attribute {name!r}"
         raise AttributeError(msg)
 
     def __iter__(self) -> Iterator[str]:  # type: ignore[override]

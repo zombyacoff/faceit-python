@@ -38,7 +38,7 @@ class StatsCommand(commands.Cog):
                 )
             case faceit.exceptions.APIError():
                 await inter.edit_original_response(
-                    f"⚠️ API Error [{error.status_code}]: {error.message}"
+                    f"⚠️ API Error (`{error.status_code}`): {error.message}"
                 )
             case _:
                 await inter.edit_original_response(
@@ -63,8 +63,7 @@ class StatsCommand(commands.Cog):
         cs2_game = player.games.get(faceit.GameID.CS2)
         if cs2_game is None:
             return await inter.edit_original_response(
-                f"🔎 Player **{player.nickname}** found, "
-                "but they don't have CS2 linked."
+                f"🔎 Player `{player.nickname}` found, but they don't have CS2 linked."
             )
 
         player_stats = await self.faceit_data.players.stats(

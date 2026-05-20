@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from faceit.utils import _get_ignored_paths, warn_stacklevel
+from faceit.utils import _get_ignored_paths, find_user_stacklevel
 
 
 @pytest.fixture(autouse=True)
@@ -60,11 +60,11 @@ class TestWarnStacklevel:
             patch("sys._getframe", return_value=frame_int),
         ):
             mock_paths.return_value = ((), frozenset([ignored_path]))
-            assert warn_stacklevel() == 2
+            assert find_user_stacklevel() == 2
 
     def test_warn_stacklevel_fallback(self) -> None:
         with patch("sys._getframe", side_effect=ValueError):
-            assert warn_stacklevel() == 1
+            assert find_user_stacklevel() == 1
 
     def test_warn_stacklevel_skips_internal_python_calls(self) -> None:
         internal_frame = MagicMock(spec=FrameType)
@@ -72,15 +72,15 @@ class TestWarnStacklevel:
         internal_frame.f_back = None
 
         with patch("sys._getframe", return_value=internal_frame):
-            assert warn_stacklevel() == 1
+            assert find_user_stacklevel() == 1
 
 
 def test_integration_stack_navigation() -> None:
     def wrapper() -> int:
-        return warn_stacklevel()
+        return find_user_stacklevel()
 
     current_file = Path(__file__).resolve()
     with patch(
-        "faceit.utils._get_ignored_paths", return_value=((), frozenset([current_file]))
+        "faceit.utils._get_ignored_paths", return_value=((), frozenset((current_file,)))
     ):
         assert wrapper() > 1

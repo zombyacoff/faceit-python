@@ -63,8 +63,8 @@ RawAPIPageResponse = TypedDict(
         "start": int,
         "end": int,
         # Unix timestamps (in milliseconds)
-        "from": NotRequired["TimestampMs"],
-        "to": NotRequired["TimestampMs"],
+        "from": NotRequired[int],
+        "to": NotRequired[int],
     },
 )
 RawAPIResponse: TypeAlias = RawAPIItem | RawAPIPageResponse

@@ -45,20 +45,22 @@ from faceit.utils import (
     deduplicate_unhashable,
     deep_get,
     extends,
+    find_user_stacklevel,
     representation,
     validate_positive_int,
-    warn_stacklevel,
 )
 
-_PageType: TypeAlias = ItemPage[Any] | RawAPIPageResponse
-_PageList: TypeAlias = list[_PageType]
-_PageT = TypeVar("_PageT", bound=_PageType)
+ProcessedPages: TypeAlias = list[RawAPIItem] | ItemPage[_T]
+_PageType: TypeAlias = RawAPIPageResponse | ItemPage[_T]
+_PageList: TypeAlias = list[_PageType[_T]]
+_PageT = TypeVar("_PageT", bound=_PageType[Any])
 
 
 if TYPE_CHECKING:
-    _PageClass: TypeAlias = type[ItemPage[Any] | RawAPIPageResponse]
-    _PageFactory: TypeAlias = Callable[[_PageList], _PageClass]
-    _PageFactoryMap: TypeAlias = Mapping["CollectReturnFormat", _PageFactory]
+    _PageFactoryMap: TypeAlias = Mapping[
+        "CollectReturnFormat",
+        Callable[[_PageList[Any]], type[RawAPIPageResponse | ItemPage[Any]]],
+    ]
     _OptionalTimestampPaginationConfig: TypeAlias = (
         "TimestampPaginationConfig | Literal[False]"
     )
@@ -336,7 +338,7 @@ class BasePageIterator(ABC, Generic[PaginationMethodT, _PageT]):
                     f"The computed number of pages ({max_pages}) exceeds the "
                     f"recommended safe maximum ({self.__class__.SAFE_MAX_PAGES}). "
                     "Proceed at your own risk.",
-                    stacklevel=warn_stacklevel(),
+                    stacklevel=find_user_stacklevel(),
                 )
             return max_pages
 
@@ -396,7 +398,7 @@ class BasePageIterator(ABC, Generic[PaginationMethodT, _PageT]):
                 f"Pagination parameters {_PAGINATION_ARGS} should not be "
                 "provided by users. These parameters are managed internally "
                 "by the pagination system.",
-                stacklevel=warn_stacklevel(),
+                stacklevel=find_user_stacklevel(),
             )
         return kwargs
 
@@ -424,7 +426,7 @@ class BasePageIterator(ABC, Generic[PaginationMethodT, _PageT]):
 
     @staticmethod
     def _extract_unix_timestamp(
-        cfg: TimestampPaginationConfig, page: _PageType | None, /
+        cfg: TimestampPaginationConfig, page: _PageType[Any] | None, /
     ) -> int | None:
         if not page:
             return None
@@ -460,16 +462,16 @@ class BasePageIterator(ABC, Generic[PaginationMethodT, _PageT]):
             warnings.warn(
                 "The parameters 'start' and 'to' will be managed automatically with Unix "
                 "timestamp pagination. Your provided values will be ignored.",
-                stacklevel=warn_stacklevel(),
+                stacklevel=find_user_stacklevel(),
             )
 
     @classmethod
     def _process_collected_pages(
         cls,
-        collection: list[RawAPIPageResponse | ItemPage[_T]],
+        collection: _PageList[_T],
         return_format: CollectReturnFormat,
         deduplicate: bool,  # noqa: FBT001
-    ) -> list[RawAPIItem] | ItemPage[_T]:
+    ) -> ProcessedPages[_T]:
         if cls._COLLECT_RETURN_FORMATS[return_format](collection) is dict:
             raw = chain.from_iterable(
                 p[RAW_RESPONSE_ITEMS_KEY] for p in collection if isinstance(p, dict)
@@ -481,7 +483,7 @@ class BasePageIterator(ABC, Generic[PaginationMethodT, _PageT]):
     @classmethod
     def _deduplicate_collection(
         cls, collection: Iterable[RawAPIItem] | ItemPage[_T], /
-    ) -> list[RawAPIItem] | ItemPage[_T]:
+    ) -> ProcessedPages[_T]:
         if not isinstance(collection, ItemPage):
             return deduplicate_unhashable(collection)
         return collection.with_items(deduplicate_unhashable(collection))  # pyright: ignore[reportArgumentType, reportReturnType]
@@ -577,7 +579,7 @@ class SyncPageIterator(_BaseSyncPageIterator[_PageT]):
         self: SyncPageIterator[RawAPIPageResponse] | SyncPageIterator[ItemPage[_T]],
         *,
         deduplicate: bool = True,
-    ) -> list[RawAPIItem] | ItemPage[_T]:
+    ) -> ProcessedPages[_T]:
         return self.__class__.gather_from_iterator(self, deduplicate=deduplicate)
 
     @classmethod
@@ -649,7 +651,7 @@ class SyncPageIterator(_BaseSyncPageIterator[_PageT]):
         return_format: CollectReturnFormat = CollectReturnFormat.FIRST,
         *,
         deduplicate: bool = True,
-    ) -> list[RawAPIItem] | ItemPage[_T]:
+    ) -> ProcessedPages[_T]:
         return cls._process_collected_pages(list(iterator), return_format, deduplicate)
 
 
@@ -669,7 +671,7 @@ class AsyncPageIterator(_BaseAsyncPageIterator[_PageT]):
 
     async def collect(
         self: AsyncPageIterator[RawAPIPageResponse] | AsyncPageIterator[ItemPage[_T]],
-    ) -> list[RawAPIItem] | ItemPage[_T]:
+    ) -> ProcessedPages[_T]:
         return await self.__class__.gather_from_iterator(self)
 
     @classmethod
@@ -741,7 +743,7 @@ class AsyncPageIterator(_BaseAsyncPageIterator[_PageT]):
         return_format: CollectReturnFormat = CollectReturnFormat.FIRST,
         *,
         deduplicate: bool = True,
-    ) -> list[RawAPIItem] | ItemPage[_T]:
+    ) -> ProcessedPages[_T]:
         return cls._process_collected_pages(
             [page async for page in iterator], return_format, deduplicate
         )

@@ -198,10 +198,10 @@ def validate_positive_int(value: Any, /, param_name: str = "value") -> int:
     impractical or unavailable.
     """
     if not isinstance(value, int):
-        msg = f"'{param_name}' must be int, got {type(value).__name__}"
+        msg = f"{param_name!r} must be int, got {type(value).__name__}"
         raise TypeError(msg)
     if value <= 0:
-        msg = f"'{param_name}' must be a positive integer, got {value}"
+        msg = f"{param_name!r} must be a positive integer, got {value}"
         raise ValueError(msg)
     return value
 
@@ -233,7 +233,7 @@ def _get_ignored_paths() -> tuple[
     return tuple(prefixes), frozenset(files)
 
 
-def warn_stacklevel() -> int:
+def find_user_stacklevel() -> int:
     """
     Determines the appropriate stack level for warnings emitted by the library,
     so that they point to the user's code instead of internal library frames.

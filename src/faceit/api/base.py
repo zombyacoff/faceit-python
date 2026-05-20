@@ -28,7 +28,7 @@ from faceit.types import (
     RawAPIPageResponse,
     RawAPIResponse,
 )
-from faceit.utils import warn_stacklevel
+from faceit.utils import find_user_stacklevel
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -172,7 +172,7 @@ class BaseResource(ABC, Generic[ClientT]):
                 "unprocessed data."
             )
             msg = default_warn_msg if warn_msg is None else warn_msg
-            warnings.warn(msg, stacklevel=warn_stacklevel())
+            warnings.warn(msg, stacklevel=find_user_stacklevel())
             return response
         try:
             return validator.model_validate(response)

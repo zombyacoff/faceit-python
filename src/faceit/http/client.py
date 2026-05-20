@@ -515,7 +515,7 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient, tenacity.AsyncRetrying])
         Async clients should use :meth:`~.aclose` instead.
         """
         msg = (
-            f"Use 'await {cls.__name__}.aclose()' instead of '{cls.__name__}.close().'"
+            f"Use 'await {cls.__name__}.aclose()' instead of '{cls.__name__}.close()'."
         )
         raise RuntimeError(msg)
 
