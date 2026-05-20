@@ -50,16 +50,15 @@ from faceit.utils import (
     validate_positive_int,
 )
 
-ProcessedPages: TypeAlias = list[RawAPIItem] | ItemPage[_T]
-_PageType: TypeAlias = RawAPIPageResponse | ItemPage[_T]
-_PageList: TypeAlias = list[_PageType[_T]]
-_PageT = TypeVar("_PageT", bound=_PageType[Any])
+_PageType: TypeAlias = RawAPIPageResponse | ItemPage[Any]
+_PageList: TypeAlias = list[_PageType]
+_PageT = TypeVar("_PageT", bound=_PageType)
 
 
 if TYPE_CHECKING:
     _PageFactoryMap: TypeAlias = Mapping[
         "CollectReturnFormat",
-        Callable[[_PageList[Any]], type[RawAPIPageResponse | ItemPage[Any]]],
+        Callable[[_PageList], type[RawAPIPageResponse | ItemPage[Any]]],
     ]
     _OptionalTimestampPaginationConfig: TypeAlias = (
         "TimestampPaginationConfig | Literal[False]"
@@ -157,14 +156,12 @@ def _extract_pagination_limits(
     ):
         msg = f"Default for limit/offset in {method_name!r} is not a FieldInfo"
         raise TypeError(msg)
-    limit_constraint = _get_le(limit_param)
-    if limit_constraint is None:
+    if (limit_constraint := _get_le(limit_param)) is None:
         msg = f"In limit metadata of {method_name!r}, no Le constraint found"
         raise ValueError(msg)
-    offset_constraint = _get_le(offset_param)
     offset = (
         None
-        if offset_constraint is None
+        if (offset_constraint := _get_le(offset_param)) is None
         else validate_positive_int(offset_constraint.le)
     )
     return PaginationMaxParams(validate_positive_int(limit_constraint.le), offset)
@@ -426,7 +423,7 @@ class BasePageIterator(ABC, Generic[PaginationMethodT, _PageT]):
 
     @staticmethod
     def _extract_unix_timestamp(
-        cfg: TimestampPaginationConfig, page: _PageType[Any] | None, /
+        cfg: TimestampPaginationConfig, page: _PageType | None, /
     ) -> int | None:
         if not page:
             return None
@@ -468,10 +465,10 @@ class BasePageIterator(ABC, Generic[PaginationMethodT, _PageT]):
     @classmethod
     def _process_collected_pages(
         cls,
-        collection: _PageList[_T],
+        collection: list[RawAPIPageResponse | ItemPage[_T]],
         return_format: CollectReturnFormat,
         deduplicate: bool,  # noqa: FBT001
-    ) -> ProcessedPages[_T]:
+    ) -> list[RawAPIItem] | ItemPage[_T]:
         if cls._COLLECT_RETURN_FORMATS[return_format](collection) is dict:
             raw = chain.from_iterable(
                 p[RAW_RESPONSE_ITEMS_KEY] for p in collection if isinstance(p, dict)
@@ -483,7 +480,7 @@ class BasePageIterator(ABC, Generic[PaginationMethodT, _PageT]):
     @classmethod
     def _deduplicate_collection(
         cls, collection: Iterable[RawAPIItem] | ItemPage[_T], /
-    ) -> ProcessedPages[_T]:
+    ) -> list[RawAPIItem] | ItemPage[_T]:
         if not isinstance(collection, ItemPage):
             return deduplicate_unhashable(collection)
         return collection.with_items(deduplicate_unhashable(collection))  # pyright: ignore[reportArgumentType, reportReturnType]
@@ -579,7 +576,7 @@ class SyncPageIterator(_BaseSyncPageIterator[_PageT]):
         self: SyncPageIterator[RawAPIPageResponse] | SyncPageIterator[ItemPage[_T]],
         *,
         deduplicate: bool = True,
-    ) -> ProcessedPages[_T]:
+    ) -> list[RawAPIItem] | ItemPage[_T]:
         return self.__class__.gather_from_iterator(self, deduplicate=deduplicate)
 
     @classmethod
@@ -651,7 +648,7 @@ class SyncPageIterator(_BaseSyncPageIterator[_PageT]):
         return_format: CollectReturnFormat = CollectReturnFormat.FIRST,
         *,
         deduplicate: bool = True,
-    ) -> ProcessedPages[_T]:
+    ) -> list[RawAPIItem] | ItemPage[_T]:
         return cls._process_collected_pages(list(iterator), return_format, deduplicate)
 
 
@@ -671,7 +668,7 @@ class AsyncPageIterator(_BaseAsyncPageIterator[_PageT]):
 
     async def collect(
         self: AsyncPageIterator[RawAPIPageResponse] | AsyncPageIterator[ItemPage[_T]],
-    ) -> ProcessedPages[_T]:
+    ) -> list[RawAPIItem] | ItemPage[_T]:
         return await self.__class__.gather_from_iterator(self)
 
     @classmethod
@@ -743,7 +740,7 @@ class AsyncPageIterator(_BaseAsyncPageIterator[_PageT]):
         return_format: CollectReturnFormat = CollectReturnFormat.FIRST,
         *,
         deduplicate: bool = True,
-    ) -> ProcessedPages[_T]:
+    ) -> list[RawAPIItem] | ItemPage[_T]:
         return cls._process_collected_pages(
             [page async for page in iterator], return_format, deduplicate
         )
