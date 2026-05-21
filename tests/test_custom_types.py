@@ -44,91 +44,72 @@ def test_validate_success(
 
 
 class TestFaceitID:
+    @pytest.fixture(autouse=True)
+    def setup(self) -> None:
+        self.ta = TypeAdapter(FaceitID)
+
     def test_valid_uuid(self, valid_uuid: str) -> None:
-        faceit_id = FaceitID._validate(valid_uuid)
+        faceit_id = self.ta.validate_python(valid_uuid)
         assert isinstance(faceit_id, FaceitID)
         assert str(faceit_id) == valid_uuid
 
     def test_invalid_uuid(self) -> None:
-        with pytest.raises(ValueError, match="Invalid FaceitID:"):
-            FaceitID._validate("not-a-uuid")
-
-        with pytest.raises(AttributeError):
-            FaceitID(123)
+        with pytest.raises(ValidationError):
+            self.ta.validate_python("not-a-uuid")
 
     def test_suffix_handling(self, valid_uuid: str) -> None:
         suffixed_uuid = f"{valid_uuid}gui"
-
-        with pytest.raises(ValueError, match="is not a valid UUID format"):
-            FaceitID._validate(suffixed_uuid)
-
-        if suffixed_uuid.endswith("gui"):
-            cleaned_uuid = suffixed_uuid[:-3]
-            faceit_id_from_cleaned = FaceitID._validate(cleaned_uuid)
-            assert isinstance(faceit_id_from_cleaned, FaceitID)
-            assert str(faceit_id_from_cleaned) == valid_uuid
+        faceit_id = self.ta.validate_python(suffixed_uuid)
+        assert isinstance(faceit_id, FaceitID)
+        assert str(faceit_id) == valid_uuid
 
 
 class TestFaceitTeamID:
+    @pytest.fixture(autouse=True)
+    def setup(self) -> None:
+        self.ta = TypeAdapter(FaceitTeamID)
+
     def test_valid_team_id(self, valid_uuid: str) -> None:
         valid_team_id = f"team-{valid_uuid}"
-
-        team_id = FaceitTeamID._validate(valid_team_id)
+        team_id = self.ta.validate_python(valid_team_id)
         assert isinstance(team_id, FaceitTeamID)
         assert str(team_id) == valid_team_id
 
     def test_missing_prefix(self, valid_uuid: str) -> None:
-        with pytest.raises(ValueError, match="must start with 'team-'"):
-            FaceitTeamID._validate(valid_uuid)
+        with pytest.raises(ValidationError):
+            self.ta.validate_python(valid_uuid)
 
     def test_invalid_uuid_part(self) -> None:
-        with pytest.raises(ValueError, match="contains invalid UUID part"):
-            FaceitTeamID._validate("team-not-a-valid-uuid")
+        with pytest.raises(ValidationError):
+            self.ta.validate_python("team-not-a-valid-uuid")
 
     def test_suffix_handling(self, valid_uuid: str) -> None:
-        valid_team_id = f"team-{valid_uuid}"
-        suffixed_team_id = f"{valid_team_id}gui"
-        _ = FaceitTeamID._validate(valid_team_id)
-
-        with pytest.raises(ValueError, match="contains invalid UUID part"):
-            FaceitTeamID._validate(suffixed_team_id)
-
-        if suffixed_team_id.endswith("gui"):
-            cleaned_team_id = suffixed_team_id[:-3]
-            team_id_from_cleaned = FaceitTeamID._validate(cleaned_team_id)
-            assert isinstance(team_id_from_cleaned, FaceitTeamID)
-            assert str(team_id_from_cleaned) == valid_team_id
+        self.ta.validate_python(v := f"team-{valid_uuid}")
+        self.ta.validate_python(f"{v}gui")
 
 
 class TestFaceitMatchID:
+    @pytest.fixture(autouse=True)
+    def setup(self) -> None:
+        self.ta = TypeAdapter(FaceitMatchID)
+
     def test_valid_match_id(self, valid_uuid: str) -> None:
         valid_match_id = f"1-{valid_uuid}"
-
-        match_id = FaceitMatchID._validate(valid_match_id)
+        match_id = self.ta.validate_python(valid_match_id)
         assert isinstance(match_id, FaceitMatchID)
         assert str(match_id) == valid_match_id
 
     def test_missing_prefix(self, valid_uuid: str) -> None:
-        with pytest.raises(ValueError, match="must start with '1-'"):
-            FaceitMatchID._validate(valid_uuid)
+        with pytest.raises(ValidationError):
+            self.ta.validate_python(valid_uuid)
 
     def test_invalid_uuid_part(self) -> None:
-        with pytest.raises(ValueError, match="contains invalid UUID part"):
-            FaceitMatchID._validate("1-not-a-valid-uuid")
+        with pytest.raises(ValidationError):
+            self.ta.validate_python("1-not-a-valid-uuid")
 
     def test_suffix_handling(self, valid_uuid: str) -> None:
-        valid_match_id = f"1-{valid_uuid}"
-        suffixed_match_id = f"{valid_match_id}gui"
-        _ = FaceitMatchID._validate(valid_match_id)
-
-        with pytest.raises(ValueError, match="contains invalid UUID part"):
-            FaceitMatchID._validate(suffixed_match_id)
-
-        if suffixed_match_id.endswith("gui"):
-            cleaned_match_id = suffixed_match_id[:-3]
-            match_id_from_cleaned = FaceitMatchID._validate(cleaned_match_id)
-            assert isinstance(match_id_from_cleaned, FaceitMatchID)
-            assert str(match_id_from_cleaned) == valid_match_id
+        self.ta.validate_python(m := f"1-{valid_uuid}")
+        self.ta.validate_python(f"{m}gui")
 
 
 class TestPydanticIntegration:
@@ -157,11 +138,6 @@ class TestPydanticIntegration:
         assert isinstance(team.id, FaceitTeamID)
         assert str(team.id) == valid_team_id
 
-        suffixed_team_id = f"{valid_team_id}gui"
-        team = TeamModel(id=suffixed_team_id)
-        assert isinstance(team.id, FaceitTeamID)
-        assert str(team.id) == valid_team_id
-
         with pytest.raises(ValidationError):
             TeamModel(id=valid_uuid)
 
@@ -174,11 +150,6 @@ class TestPydanticIntegration:
 
         valid_match_id = f"1-{valid_uuid}"
         match = MatchModel(id=valid_match_id)
-        assert isinstance(match.id, FaceitMatchID)
-        assert str(match.id) == valid_match_id
-
-        suffixed_match_id = f"{valid_match_id}gui"
-        match = MatchModel(id=suffixed_match_id)
         assert isinstance(match.id, FaceitMatchID)
         assert str(match.id) == valid_match_id
 

@@ -1,78 +1,86 @@
-import typing
+from collections.abc import Awaitable, Callable
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Literal,
+    NewType,
+    ParamSpec,
+    Protocol,
+    TypeAlias,
+    TypedDict,
+    TypeVar,
+)
 from uuid import UUID
 
 from pydantic import AnyHttpUrl, BaseModel
-from typing_extensions import NotRequired, ParamSpec, TypeAlias
+from typing_extensions import NotRequired
 
 from .constants import GameID, Region
 
-if typing.TYPE_CHECKING:
+if TYPE_CHECKING:
     from .api import AsyncDataResource, SyncDataResource
     from .http import Endpoint
     from .http.client import BaseAPIClient
-    from .models.custom_types import TimestampMs
 
-_T = typing.TypeVar("_T")
-_T_co = typing.TypeVar("_T_co", covariant=True)
-_R = typing.TypeVar("_R")
+_T = TypeVar("_T")
+_T_co = TypeVar("_T_co", covariant=True)
+_R = TypeVar("_R")
 _P = ParamSpec("_P")
 
-ModelT = typing.TypeVar("ModelT", bound="BaseModel")
-ClientT = typing.TypeVar("ClientT", bound="BaseAPIClient[typing.Any, typing.Any]")
-DataResourceT = typing.TypeVar(
-    "DataResourceT", bound=typing.Union["SyncDataResource", "AsyncDataResource"]
+ModelT = TypeVar("ModelT", bound="BaseModel")
+ClientT = TypeVar("ClientT", bound="BaseAPIClient[Any, Any]")
+DataResourceT = TypeVar("DataResourceT", bound="SyncDataResource | AsyncDataResource")
+
+APIResponseFormatT = TypeVar("APIResponseFormatT", "Raw", "Model")
+PaginationMethodT = TypeVar(
+    "PaginationMethodT", bound="BaseResourceMethodProtocol[Any]"
 )
 
-APIResponseFormatT = typing.TypeVar("APIResponseFormatT", "Raw", "Model")
-PaginationMethodT = typing.TypeVar(
-    "PaginationMethodT", bound="BaseResourceMethodProtocol[typing.Any]"
-)
+EmptyString: TypeAlias = Literal[""]
+UrlOrEmpty: TypeAlias = AnyHttpUrl | EmptyString
+UUIDOrEmpty: TypeAlias = UUID | EmptyString
+EndpointParam: TypeAlias = "str | Endpoint"
+ValidUUID: TypeAlias = UUID | str | bytes
 
-EmptyString: TypeAlias = typing.Literal[""]
-UrlOrEmpty: TypeAlias = typing.Union[AnyHttpUrl, EmptyString]
-UUIDOrEmpty: TypeAlias = typing.Union[UUID, EmptyString]
-EndpointParam: TypeAlias = typing.Union[str, "Endpoint"]
-ValidUUID: TypeAlias = typing.Union[UUID, str, bytes]
+AnyCSID: TypeAlias = Literal[GameID.CS2, GameID.CSGO]
 
-AnyCSID: TypeAlias = typing.Literal[GameID.CS2, GameID.CSGO]
-
-Raw = typing.NewType("Raw", bool)
-Model = typing.NewType("Model", bool)
+Raw = NewType("Raw", bool)
+Model = NewType("Model", bool)
 
 # Placeholder type that signals developers to implement a proper model
 # for a resource method. Acts as a temporary stub during development.
 ModelNotImplemented: TypeAlias = BaseModel
 
-RegionIdentifier: TypeAlias = typing.Union[Region, str]
+RegionIdentifier: TypeAlias = Region | str
 
-RawAPIItem: TypeAlias = typing.Dict[str, typing.Any]
-RawAPIPageResponse = typing.TypedDict(
+RawAPIItem: TypeAlias = dict[str, Any]
+RawAPIPageResponse = TypedDict(
     "RawAPIPageResponse",
     {
-        "items": typing.List[RawAPIItem],
+        "items": list[RawAPIItem],
         # Required pagination parameters (cursor based)
         "start": int,
         "end": int,
         # Unix timestamps (in milliseconds)
-        "from": NotRequired["TimestampMs"],
-        "to": NotRequired["TimestampMs"],
+        "from": NotRequired[int],
+        "to": NotRequired[int],
     },
 )
-RawAPIResponse: TypeAlias = typing.Union[RawAPIItem, RawAPIPageResponse]
+RawAPIResponse: TypeAlias = RawAPIItem | RawAPIPageResponse
 
 
-class BaseResourceMethodProtocol(typing.Protocol[_T]):
+class BaseResourceMethodProtocol(Protocol[_T]):
     __name__: str
-    __call__: typing.Callable[..., _T]
+    __call__: Callable[..., _T]
 
 
 class SyncResourceMethodProtocol(
     BaseResourceMethodProtocol[_T],
-    typing.Protocol,
+    Protocol,
 ): ...
 
 
 class AsyncResourceMethodProtocol(
-    BaseResourceMethodProtocol[typing.Awaitable[_T]],
-    typing.Protocol,
+    BaseResourceMethodProtocol[Awaitable[_T]],
+    Protocol,
 ): ...

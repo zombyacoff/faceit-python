@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import typing
 from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any
 from unittest.mock import patch
 
 import pytest
@@ -21,17 +21,19 @@ from faceit.api.pagination import (
 from faceit.models import ItemPage
 from faceit.models.custom_types import TimestampMs
 
-if typing.TYPE_CHECKING:
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
     from faceit.types import RawAPIPageResponse
 
 
 class _DummyResource(
-    BaseResource[typing.Any],
+    BaseResource[Any],
     resource_path="players",
 ):
     __slots__ = ("_items",)
 
-    def __init__(self, items: typing.List[typing.Dict[str, typing.Any]]) -> None:
+    def __init__(self, items: list[dict[str, Any]]) -> None:
         super().__init__(client=None, raw=False)
         self._items = items
 
@@ -57,8 +59,8 @@ class _DummyResource(
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(2, ge=1, le=2),
-        start: typing.Optional[int] = None,  # noqa: ARG002
-        to: typing.Optional[int] = None,
+        start: int | None = None,  # noqa: ARG002
+        to: int | None = None,
     ) -> RawAPIPageResponse:
         filtered = (
             self._items
@@ -73,8 +75,8 @@ class _DummyResource(
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(2, ge=1, le=2),
-        start: typing.Optional[int] = None,
-        to: typing.Optional[int] = None,
+        start: int | None = None,
+        to: int | None = None,
     ) -> RawAPIPageResponse:
         return self.raw_method_with_unix(offset=offset, limit=limit, start=start, to=to)
 
@@ -86,7 +88,7 @@ class _ModelItem:
 
 
 @pytest.fixture
-def raw_items() -> typing.List[typing.Dict[str, typing.Any]]:
+def raw_items() -> list[dict[str, Any]]:
     return [
         {"id": "a", "finished_at": 300},
         {"id": "b", "finished_at": 200},
@@ -96,13 +98,13 @@ def raw_items() -> typing.List[typing.Dict[str, typing.Any]]:
 
 @pytest.fixture
 def dummy_resource(
-    raw_items: typing.List[typing.Dict[str, typing.Any]],
+    raw_items: list[dict[str, Any]],
 ) -> _DummyResource:
     return _DummyResource(raw_items)
 
 
 @pytest.fixture
-def raw_pages() -> typing.Tuple[RawAPIPageResponse, RawAPIPageResponse]:
+def raw_pages() -> tuple[RawAPIPageResponse, RawAPIPageResponse]:
     return (
         {"items": [{"id": "a"}, {"id": "b"}], "start": 0, "end": 2},
         {"items": [{"id": "b"}, {"id": "c"}], "start": 2, "end": 4},
@@ -110,16 +112,14 @@ def raw_pages() -> typing.Tuple[RawAPIPageResponse, RawAPIPageResponse]:
 
 
 @pytest.fixture
-def model_pages() -> typing.Tuple[
-    ItemPage[typing.Dict[str, int]], ItemPage[typing.Dict[str, int]]
-]:
+def model_pages() -> tuple[ItemPage[dict[str, int]], ItemPage[dict[str, int]]]:
     return (
-        ItemPage[typing.Dict[str, int]].model_validate({
+        ItemPage[dict[str, int]].model_validate({
             "items": [{"id": 1}, {"id": 2}],
             "start": 0,
             "end": 2,
         }),
-        ItemPage[typing.Dict[str, int]].model_validate({
+        ItemPage[dict[str, int]].model_validate({
             "items": [{"id": 2}, {"id": 3}],
             "start": 2,
             "end": 4,
@@ -191,7 +191,7 @@ def test_extract_unix_timestamp_from_model_page() -> None:
 
 
 def test_sync_gather_from_iterator_raw_deduplicates(
-    raw_pages: typing.Tuple[RawAPIPageResponse, RawAPIPageResponse],
+    raw_pages: tuple[RawAPIPageResponse, RawAPIPageResponse],
 ) -> None:
     result = SyncPageIterator.gather_from_iterator(
         iter(raw_pages), CollectReturnFormat.FIRST, deduplicate=True
@@ -200,9 +200,7 @@ def test_sync_gather_from_iterator_raw_deduplicates(
 
 
 def test_sync_gather_from_iterator_model_merges_pages(
-    model_pages: typing.Tuple[
-        ItemPage[typing.Dict[str, int]], ItemPage[typing.Dict[str, int]]
-    ],
+    model_pages: tuple[ItemPage[dict[str, int]], ItemPage[dict[str, int]]],
 ) -> None:
     result = SyncPageIterator.gather_from_iterator(
         iter(model_pages), CollectReturnFormat.MODEL, deduplicate=True
@@ -231,9 +229,13 @@ def test_sync_iterator_strips_user_pagination_params_with_warning(
 def test_sync_unix_iterator_with_invalid_config_raises(
     dummy_resource: _DummyResource,
 ) -> None:
-    iterator = SyncPageIterator.unix(dummy_resource.raw_method, cfg={"key": "only-key"})
     with pytest.raises(ValueError):
-        next(iterator)
+        next(
+            SyncPageIterator.unix(
+                dummy_resource.raw_method,
+                cfg={"key": "only-key"},
+            )
+        )
 
 
 def test_sync_unix_iterator_yields_pages(dummy_resource: _DummyResource) -> None:
@@ -251,15 +253,13 @@ def test_sync_iterator_collect_respects_safe_max_items(
     dummy_resource: _DummyResource,
 ) -> None:
     with patch.object(SyncPageIterator, "SAFE_MAX_PAGES", 1):
-        result = SyncPageIterator(
-            dummy_resource.raw_method,
-            max_items=MaxItems.SAFE,
-        ).collect(deduplicate=False)
+        iterator = SyncPageIterator(dummy_resource.raw_method, max_items=MaxItems.SAFE)
+        result = iterator.collect(deduplicate=False)
     assert len(result) == 2
 
 
 async def test_async_gather_from_iterator_raw() -> None:
-    async def source() -> typing.AsyncIterator[RawAPIPageResponse]:  # noqa: RUF029
+    async def source() -> AsyncIterator[RawAPIPageResponse]:  # noqa: RUF029
         yield {"items": [{"id": 1}], "start": 0, "end": 1}
         yield {"items": [{"id": 2}], "start": 1, "end": 2}
 
@@ -285,8 +285,9 @@ async def test_async_unix_iterator_yields_pages(dummy_resource: _DummyResource) 
 async def test_async_unix_iterator_with_invalid_config_raises(
     dummy_resource: _DummyResource,
 ) -> None:
-    iterator = AsyncPageIterator.unix(
-        dummy_resource.async_raw_method, cfg={"attr": "finished_at"}
-    )
     with pytest.raises(ValueError):
-        await iterator.__anext__()
+        await anext(
+            AsyncPageIterator.unix(
+                dummy_resource.async_raw_method, cfg={"attr": "finished_at"}
+            )
+        )

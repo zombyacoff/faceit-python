@@ -1,9 +1,8 @@
-import typing
 from abc import ABC
 from datetime import datetime
+from typing import Annotated, Any, Final, Literal, final
 
 from pydantic import BaseModel, Field, field_validator
-from typing_extensions import Annotated
 
 from faceit.constants import GameID
 from faceit.models.custom_types import (
@@ -16,9 +15,9 @@ from faceit.models.custom_types import (
 from faceit.types import RegionIdentifier, UrlOrEmpty
 from faceit.utils import StrEnum
 
-_F1: typing.Final = "faction1"
-_F2: typing.Final = "faction2"
-_RESULT_MAP: typing.Final = {
+_F1: Final = "faction1"
+_F2: Final = "faction2"
+_RESULT_MAP: Final = {
     _F1: "first",
     _F2: "second",
 }
@@ -28,7 +27,7 @@ class Opponent(StrEnum):
     ABSENT = "bye"
 
 
-@typing.final
+@final
 class PlayerSummary(BaseModel):
     id: Annotated[FaceitID, Field(alias="player_id")]
     nickname: str
@@ -39,45 +38,45 @@ class PlayerSummary(BaseModel):
     faceit_url: LangFormattedAnyHttpUrl
 
 
-@typing.final
+@final
 class Team(BaseModel):
     id: Annotated[
-        typing.Union[FaceitID, Opponent],
+        FaceitID | Opponent,
         Field(alias="team_id"),
     ]
     name: Annotated[str, Field(alias="nickname")]
     avatar: UrlOrEmpty
     type: str
-    players: typing.List[PlayerSummary]
+    players: list[PlayerSummary]
 
 
-@typing.final
+@final
 class Teams(BaseModel):
     first: Annotated[Team, Field(alias=_F1)]
     second: Annotated[Team, Field(alias=_F2)]
 
 
-@typing.final
+@final
 class Score(BaseModel):
     first: Annotated[int, Field(alias=_F1)]
     second: Annotated[int, Field(alias=_F2)]
 
 
-@typing.final
+@final
 class Results(BaseModel):
-    winner: typing.Literal["first", "second"]
+    winner: Literal["first", "second"]
     score: Score
 
     @field_validator("winner", mode="before")
     @classmethod
-    def convert_winner(cls, value: typing.Any) -> str:
+    def convert_winner(cls, value: Any) -> str:
         if value in _RESULT_MAP:
             return _RESULT_MAP[value]
         msg = f"Invalid winner value: {value}"
         raise ValueError(msg)
 
 
-@typing.final
+@final
 class Match(BaseModel):
     id: Annotated[str, Field(alias="match_id")]
     game_id: GameID
@@ -87,7 +86,7 @@ class Match(BaseModel):
     max_players: int
     teams_size: int
     teams: Teams
-    playing_players: typing.List[FaceitID]
+    playing_players: list[FaceitID]
     competition_id: FaceitID
     competition_name: str
     competition_type: str
@@ -112,7 +111,7 @@ class AbstractMatchPlayerStats(BaseModel, ABC):
     game: Annotated[GameID, Field(alias="Game")]
 
 
-@typing.final
+@final
 # Doesn't work for players who last played around Aug 2024
 # (when extended stats were added to the API)
 # TODO: Need to add default values for all fields that may be missing
@@ -121,7 +120,7 @@ class CS2MatchPlayerStats(AbstractMatchPlayerStats):
     game_mode: Annotated[str, Field(alias="Game Mode")]
     region: Annotated[RegionIdentifier, Field(alias="Region")]
     kd_ratio: Annotated[float, Field(alias="K/D Ratio")]
-    winner: Annotated[typing.Optional[FaceitID], Field(None, alias="Winner")]
+    winner: Annotated[FaceitID | None, Field(None, alias="Winner")]
     player_id: Annotated[FaceitID, Field(alias="Player Id")]
     first_half_score: Annotated[int, Field(alias="First Half Score")]
     triple_kills: Annotated[int, Field(alias="Triple Kills")]

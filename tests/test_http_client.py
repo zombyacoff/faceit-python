@@ -1,7 +1,8 @@
 import asyncio
 import ssl
-import typing
+from collections.abc import Callable, Iterator
 from time import time
+from typing import Any
 from unittest.mock import AsyncMock, Mock, patch
 
 import httpx
@@ -21,9 +22,9 @@ from faceit.http.client import (
 
 def _create_response_mock(
     status_code: int = 200,
-    json_data: typing.Optional[typing.Dict[str, typing.Any]] = None,
+    json_data: dict[str, Any] | None = None,
     text: str = "",
-    raise_for_status: typing.Optional[Exception] = None,
+    raise_for_status: Exception | None = None,
 ) -> Mock:
     if json_data is None:
         json_data = {"data": "test_data"}
@@ -86,10 +87,8 @@ def invalid_json_response() -> Mock:
 
 
 @pytest.fixture
-def async_client_factory(
-    valid_uuid: str,
-) -> typing.Iterator[typing.Callable[[], AsyncClient]]:
-    clients: typing.List[AsyncClient] = []
+def async_client_factory(valid_uuid: str) -> Iterator[Callable[[], AsyncClient]]:
+    clients: list[AsyncClient] = []
 
     def _create_client() -> AsyncClient:
         with patch("httpx.AsyncClient") as mock_client:
@@ -244,7 +243,7 @@ class TestSyncClient:
         valid_uuid: str,
         client_method: str,
         endpoint: str,
-        call_kwargs: typing.Dict[str, typing.Any],
+        call_kwargs: dict[str, Any],
         expected_supported_method: SupportedMethod,
     ) -> None:
         with patch("httpx.Client") as mock_client:
@@ -257,9 +256,7 @@ class TestSyncClient:
 
             assert call_kwargs == {} or "json" in call_kwargs
             mock_request.assert_called_with(
-                expected_supported_method,
-                endpoint,
-                **call_kwargs,
+                expected_supported_method, endpoint, **call_kwargs
             )
             client.close()
 
@@ -296,15 +293,13 @@ class TestSyncClient:
 
 
 class TestAsyncClient:
-    async def test_init(
-        self, async_client_factory: typing.Callable[[], AsyncClient]
-    ) -> None:
+    async def test_init(self, async_client_factory: Callable[[], AsyncClient]) -> None:
         client = async_client_factory()
         assert isinstance(client, AsyncClient)
         await client.aclose()
 
     async def test_aclose(
-        self, async_client_factory: typing.Callable[[], AsyncClient]
+        self, async_client_factory: Callable[[], AsyncClient]
     ) -> None:
         client = async_client_factory()
         await client.aclose()
@@ -321,10 +316,10 @@ class TestAsyncClient:
     async def test_get_post_methods(
         self,
         mock_request: Mock,
-        async_client_factory: typing.Callable[[], AsyncClient],
+        async_client_factory: Callable[[], AsyncClient],
         client_method: str,
         endpoint: str,
-        call_kwargs: typing.Dict[str, typing.Any],
+        call_kwargs: dict[str, Any],
         expected_supported_method: SupportedMethod,
     ) -> None:
         client = async_client_factory()
@@ -332,9 +327,7 @@ class TestAsyncClient:
         await getattr(client, client_method)(endpoint, **call_kwargs)
 
         mock_request.assert_called_with(
-            expected_supported_method,
-            endpoint,
-            **call_kwargs,
+            expected_supported_method, endpoint, **call_kwargs
         )
         await client.aclose()
 
@@ -415,7 +408,7 @@ class TestAsyncClient:
                 asyncio.run(client.aclose())
 
     async def test_update_rate_limit(
-        self, async_client_factory: typing.Callable[[], AsyncClient]
+        self, async_client_factory: Callable[[], AsyncClient]
     ) -> None:
         client = async_client_factory()
         try:
@@ -438,7 +431,7 @@ class TestAsyncClient:
             await client.aclose()
 
     async def test_configure_adaptive_limits(
-        self, async_client_factory: typing.Callable[[], AsyncClient]
+        self, async_client_factory: Callable[[], AsyncClient]
     ) -> None:
         client = async_client_factory()
         try:
@@ -586,9 +579,11 @@ class TestRetryLogic:
         assert not retry_predicate(ValueError("Random error"))
 
     async def test_ssl_before_sleep(self, valid_uuid: str) -> None:
-        with patch("httpx.AsyncClient") as mock_client, patch(
-            "faceit.http.client._logger"
-        ) as mock_logger, patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+        with (
+            patch("httpx.AsyncClient") as mock_client,
+            patch("faceit.http.client._logger") as mock_logger,
+            patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep,
+        ):
             mock_instance = Mock()
             mock_instance.is_closed = False
             mock_instance.aclose = AsyncMock()
@@ -617,6 +612,5 @@ class TestRetryLogic:
                 mock_sleep.assert_called_once_with(0.5)
 
                 mock_logger.warning.assert_called_with(
-                    "SSL connection error to %s",
-                    "https://test.com/api",
+                    "SSL connection error to %s", "https://test.com/api"
                 )

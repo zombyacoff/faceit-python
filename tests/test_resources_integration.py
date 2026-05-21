@@ -1,4 +1,4 @@
-import typing
+from collections.abc import AsyncGenerator, Generator
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -7,7 +7,7 @@ from faceit.api import AsyncDataResource, SyncDataResource
 
 
 @pytest.fixture
-def mock_sync_data(valid_uuid: str) -> typing.Generator[SyncDataResource, None, None]:
+def mock_sync_data(valid_uuid: str) -> Generator[SyncDataResource, None, None]:
     with patch("httpx.Client") as mock_httpx:
         mock_instance = mock_httpx.return_value
         mock_instance.is_closed = False
@@ -21,8 +21,8 @@ def mock_sync_data(valid_uuid: str) -> typing.Generator[SyncDataResource, None, 
 
 
 @pytest.fixture
-def mock_async_data(valid_uuid: str) -> typing.AsyncGenerator[AsyncDataResource, None]:
-    async def _mock_async() -> typing.AsyncGenerator[AsyncDataResource, None]:  # noqa: RUF029
+def mock_async_data(valid_uuid: str) -> AsyncGenerator[AsyncDataResource, None]:
+    async def _mock_async() -> AsyncGenerator[AsyncDataResource, None]:  # noqa: RUF029
         with patch("httpx.AsyncClient") as mock_httpx:
             mock_instance = mock_httpx.return_value
             mock_instance.is_closed = False
@@ -76,7 +76,7 @@ def test_teams_get(mock_sync_data: SyncDataResource, valid_uuid: str) -> None:
 
 
 async def test_async_games_items(
-    mock_async_data: typing.AsyncGenerator[AsyncDataResource, None],
+    mock_async_data: AsyncGenerator[AsyncDataResource, None],
 ) -> None:
     async for data in mock_async_data:
         await data.raw_games.items(offset=5)

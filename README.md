@@ -2,7 +2,7 @@
 
 # FACEIT Python API Library
 
-[![Python](https://img.shields.io/badge/Python-3.8%2B-FAD6C5?style=flat-square)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/Python-3.10%2B-FAD6C5?style=flat-square)](https://www.python.org/)
 [![PyPI](https://img.shields.io/pypi/v/faceit?label=PyPI&style=flat-square&color=FAD6C5)](https://pypi.org/project/faceit/)
 [![License](https://img.shields.io/badge/License-Apache_2.0-FAD6C5?style=flat-square)](https://opensource.org/licenses/Apache-2.0)
 [![Downloads](https://img.shields.io/pypi/dm/faceit?label=Downloads&style=flat-square&color=FAD6C5)](https://pypi.org/project/faceit/)
@@ -29,7 +29,7 @@
 
 ## Installation
 
-> Requires **Python 3.8+**.
+> Requires **Python 3.10+**.
 
 ```bash
 pip install faceit

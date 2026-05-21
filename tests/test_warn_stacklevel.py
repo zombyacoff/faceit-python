@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from faceit.utils import _get_ignored_paths, warn_stacklevel
+from faceit.utils import _get_ignored_paths, find_user_stacklevel
 
 
 @pytest.fixture(autouse=True)
@@ -18,8 +18,9 @@ class TestGetIgnoredPaths:
         path_str = Path("libs") / "package" / "__init__.py"
         mock_mod.__file__ = str(path_str.resolve())
 
-        with patch.dict("sys.modules", {"test_pkg": mock_mod}), patch(
-            "faceit.utils._IGNORED_MODULES", {"test_pkg"}
+        with (
+            patch.dict("sys.modules", {"test_pkg": mock_mod}),
+            patch("faceit.utils._IGNORED_MODULES", {"test_pkg"}),
         ):
             prefixes, _ = _get_ignored_paths()
 
@@ -32,8 +33,9 @@ class TestGetIgnoredPaths:
         fake_path = Path("external").resolve() / "mod.py"
         mock_mod.__file__ = str(fake_path)
 
-        with patch.dict("sys.modules", {"external_mod": mock_mod}), patch(
-            "faceit.utils._IGNORED_MODULES", {"external_mod"}
+        with (
+            patch.dict("sys.modules", {"external_mod": mock_mod}),
+            patch("faceit.utils._IGNORED_MODULES", {"external_mod"}),
         ):
             _, files = _get_ignored_paths()
 
@@ -53,15 +55,16 @@ class TestWarnStacklevel:
         frame_int.f_code.co_filename = str(ignored_path)
         frame_int.f_back = frame_ext
 
-        with patch("faceit.utils._get_ignored_paths") as mock_paths, patch(
-            "sys._getframe", return_value=frame_int
+        with (
+            patch("faceit.utils._get_ignored_paths") as mock_paths,
+            patch("sys._getframe", return_value=frame_int),
         ):
             mock_paths.return_value = ((), frozenset([ignored_path]))
-            assert warn_stacklevel() == 2
+            assert find_user_stacklevel() == 2
 
     def test_warn_stacklevel_fallback(self) -> None:
         with patch("sys._getframe", side_effect=ValueError):
-            assert warn_stacklevel() == 1
+            assert find_user_stacklevel() == 1
 
     def test_warn_stacklevel_skips_internal_python_calls(self) -> None:
         internal_frame = MagicMock(spec=FrameType)
@@ -69,15 +72,15 @@ class TestWarnStacklevel:
         internal_frame.f_back = None
 
         with patch("sys._getframe", return_value=internal_frame):
-            assert warn_stacklevel() == 1
+            assert find_user_stacklevel() == 1
 
 
 def test_integration_stack_navigation() -> None:
     def wrapper() -> int:
-        return warn_stacklevel()
+        return find_user_stacklevel()
 
     current_file = Path(__file__).resolve()
     with patch(
-        "faceit.utils._get_ignored_paths", return_value=((), frozenset([current_file]))
+        "faceit.utils._get_ignored_paths", return_value=((), frozenset((current_file,)))
     ):
         assert wrapper() > 1

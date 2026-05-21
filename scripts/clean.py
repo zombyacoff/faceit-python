@@ -1,6 +1,6 @@
 import shutil
 from pathlib import Path
-from typing import Final  # noqa: ICN003
+from typing import Final
 
 PYCACHE: Final = "__pycache__"
 DIRS: Final = {

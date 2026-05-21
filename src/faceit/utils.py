@@ -4,39 +4,26 @@ import inspect
 import json
 import reprlib
 import sys
-import typing
 from contextlib import suppress
 from enum import Enum, auto
 from functools import lru_cache, reduce, wraps
 from hashlib import sha256
 from pathlib import Path
+from typing import TYPE_CHECKING, Any, Final, TypeVar, cast, overload
 from uuid import UUID
 
-from typing_extensions import Self, TypeIs, deprecated
+from typing_extensions import Self, TypeIs
 
-if typing.TYPE_CHECKING:
+if TYPE_CHECKING:
     from asyncio import Lock as AsyncLock  # noqa: ICN003
+    from collections.abc import Awaitable, Callable, Iterable, Mapping
     from threading import Lock as SyncLock
     from types import FrameType
 
     from .types import _P, _T, ValidUUID
 
-    _CallableT = typing.TypeVar("_CallableT", bound=typing.Callable[..., typing.Any])
-    _ClassT = typing.TypeVar("_ClassT", bound=type)
-
-_IGNORED_MODULES: typing.Final = {
-    "pydantic",
-}
-_UUID_BYTES: typing.Final = 16
-_UNINITIALIZED_MARKER: typing.Final = "uninitialized"
-
-
-@deprecated(
-    "`UnsetValue` is deprecated and will be removed in a future release. "
-    "Please use `None` instead of `UnsetValue.UNSET`.",
-)
-class UnsetValue:
-    UNSET: typing.ClassVar[None] = None
+    _CallableT = TypeVar("_CallableT", bound=Callable[..., Any])
+    _ClassT = TypeVar("_ClassT", bound=type)
 
 
 # NOTE: Inspired by irgeek/StrEnum:
@@ -46,10 +33,8 @@ class UnsetValue:
 class StrEnum(str, Enum):
     _value_: str
 
-    def __new__(
-        cls, value: typing.Union[str, auto], *args: object, **kwargs: object
-    ) -> Self:
-        if isinstance(value, (str, auto)):
+    def __new__(cls, value: str | auto, *args: object, **kwargs: object) -> Self:
+        if isinstance(value, str | auto):
             return super().__new__(cls, value, *args, **kwargs)
         msg = f"StrEnum values must be of type 'str', but got {type(value).__name__}: {value!r}"  # type: ignore[unreachable]
         raise TypeError(msg)
@@ -64,26 +49,26 @@ class StrEnum(str, Enum):
 
 class StrEnumWithAll(StrEnum):
     @classmethod
-    def get_all_values(cls) -> typing.Tuple[Self, ...]:
+    def get_all_values(cls) -> tuple[Self, ...]:
         return tuple(cls)
 
 
 def locked(
-    lock: typing.Union[SyncLock, AsyncLock], /
-) -> typing.Callable[[typing.Callable[_P, _T]], typing.Callable[_P, _T]]:
-    def decorator(func: typing.Callable[_P, _T], /) -> typing.Callable[_P, _T]:
+    lock: SyncLock | AsyncLock, /
+) -> Callable[[Callable[_P, _T]], Callable[_P, _T]]:
+    def decorator(func: Callable[_P, _T], /) -> Callable[_P, _T]:
         if inspect.iscoroutinefunction(func):
 
             @wraps(func)
             async def async_wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _T:
-                async with typing.cast("AsyncLock", lock):  # Developer's responsibility
-                    return typing.cast("_T", await func(*args, **kwargs))
+                async with cast("AsyncLock", lock):  # Developer's responsibility
+                    return cast("_T", await func(*args, **kwargs))
 
-            return typing.cast("typing.Callable[_P, _T]", async_wrapper)
+            return cast("Callable[_P, _T]", async_wrapper)
 
         @wraps(func)
         def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _T:
-            with typing.cast("SyncLock", lock):
+            with cast("SyncLock", lock):
                 return func(*args, **kwargs)
 
         return wrapper
@@ -91,22 +76,20 @@ def locked(
     return decorator
 
 
-def extends(
-    _: _CallableT, /
-) -> typing.Callable[[typing.Callable[..., object]], _CallableT]:
+def extends(_: _CallableT, /) -> Callable[[Callable[..., object]], _CallableT]:
     """
     Decorator that assigns the type signature of the given function to the
     decorated function. Type checking is enforced only at the function boundary
     (when calling the function), not within the function body.
     """
-    return lambda x: typing.cast("_CallableT", x)
+    return lambda x: cast("_CallableT", x)
 
 
 async def invoke_callable(
-    func: typing.Callable[..., typing.Union[_T, typing.Awaitable[_T]]],
+    func: Callable[..., _T | Awaitable[_T]],
     /,
-    *args: typing.Any,
-    **kwargs: typing.Any,
+    *args: Any,
+    **kwargs: Any,
 ) -> _T:
     if not callable(func):
         msg = (  # type: ignore[unreachable]
@@ -117,15 +100,15 @@ async def invoke_callable(
     result = func(*args, **kwargs)
     if inspect.isawaitable(result):
         result = await result
-    return typing.cast("_T", result)
+    return cast("_T", result)
 
 
 def deep_get(
-    dictionary: typing.Mapping[str, typing.Any],
+    dictionary: Mapping[str, Any],
     keys: str,
     /,
-    default: typing.Optional[_T] = None,
-) -> typing.Union[_T, typing.Any, None]:
+    default: _T | None = None,
+) -> _T | Any | None:
     current = dictionary
     try:
         for key in keys.split("."):
@@ -136,8 +119,8 @@ def deep_get(
 
 
 def get_nested_property(
-    obj: typing.Any, path: str, /, default: typing.Optional[_T] = None
-) -> typing.Union[_T, typing.Any, None]:
+    obj: Any, path: str, /, default: _T | None = None
+) -> _T | Any | None:
     if obj is None or not path:
         return default
     try:
@@ -148,7 +131,7 @@ def get_nested_property(
         return default
 
 
-def get_hashable_representation(obj: typing.Any, /) -> int:
+def get_hashable_representation(obj: Any, /) -> int:
     with suppress(TypeError):
         return hash(obj)
     try:
@@ -158,11 +141,14 @@ def get_hashable_representation(obj: typing.Any, /) -> int:
     return int.from_bytes(sha256(obj_str.encode()).digest()[:8], "big", signed=True)
 
 
-def deduplicate_unhashable(values: typing.Iterable[_T], /) -> typing.List[_T]:
+def deduplicate_unhashable(values: Iterable[_T], /) -> list[_T]:
     return list({get_hashable_representation(v): v for v in values}.values())
 
 
-def to_uuid(value: typing.Union[str, bytes], /) -> UUID:
+_UUID_BYTES: Final = 16
+
+
+def to_uuid(value: str | bytes, /) -> UUID:
     if isinstance(value, str):
         return UUID(value)
     if not isinstance(value, bytes):
@@ -177,10 +163,10 @@ def to_uuid(value: typing.Union[str, bytes], /) -> UUID:
         raise ValueError(msg) from e
 
 
-def is_valid_uuid(value: typing.Any, /) -> TypeIs[ValidUUID]:
+def is_valid_uuid(value: Any, /) -> TypeIs[ValidUUID]:
     if isinstance(value, UUID):
         return True
-    if not isinstance(value, (str, bytes)):
+    if not isinstance(value, str | bytes):
         return False
     try:
         to_uuid(value)
@@ -192,41 +178,46 @@ def is_valid_uuid(value: typing.Any, /) -> TypeIs[ValidUUID]:
 def create_uuid_validator(
     *,
     arg_name: str = "value",
-    error_message: typing.Optional[str] = None,
-) -> typing.Callable[[typing.Any], str]:
+    error_message: str | None = None,
+) -> Callable[[Any], str]:
     if error_message is None:
         error_message = "Invalid {arg_name}: {value}. Expected a valid UUID."
 
-    def validator(value: typing.Any, /) -> str:
+    def validator(value: Any, /) -> str:
         if is_valid_uuid(value):
-            return str(value if isinstance(value, (UUID, str)) else to_uuid(value))
+            return str(value if isinstance(value, UUID | str) else to_uuid(value))
         raise ValueError(error_message.format(arg_name=arg_name, value=value))
 
     return validator
 
 
-def validate_positive_int(value: typing.Any, /, param_name: str = "value") -> int:
+def validate_positive_int(value: Any, /, param_name: str = "value") -> int:
     """
     Utility for validating that a value is a positive integer.
     Use this when :class:`pydantic.PositiveInt` type or validation is
     impractical or unavailable.
     """
     if not isinstance(value, int):
-        msg = f"'{param_name}' must be int, got {type(value).__name__}"
+        msg = f"{param_name!r} must be int, got {type(value).__name__}"
         raise TypeError(msg)
     if value <= 0:
-        msg = f"'{param_name}' must be a positive integer, got {value}"
+        msg = f"{param_name!r} must be a positive integer, got {value}"
         raise ValueError(msg)
     return value
 
 
+_IGNORED_MODULES: Final = {
+    "pydantic",
+}
+
+
 @lru_cache(maxsize=1)
-def _get_ignored_paths() -> typing.Tuple[
-    typing.Tuple[Path, ...],
-    typing.FrozenSet[Path],
+def _get_ignored_paths() -> tuple[
+    tuple[Path, ...],
+    frozenset[Path],
 ]:
-    prefixes: typing.List[Path] = []
-    files: typing.Set[Path] = set()
+    prefixes: list[Path] = []
+    files: set[Path] = set()
 
     for mod_name in (__name__.split(".")[0], *_IGNORED_MODULES):
         mod = sys.modules.get(mod_name)
@@ -242,14 +233,14 @@ def _get_ignored_paths() -> typing.Tuple[
     return tuple(prefixes), frozenset(files)
 
 
-def warn_stacklevel() -> int:
+def find_user_stacklevel() -> int:
     """
     Determines the appropriate stack level for warnings emitted by the library,
     so that they point to the user's code instead of internal library frames.
     """
     with suppress(ValueError, AttributeError):
         ignored_prefixes, ignored_files = _get_ignored_paths()
-        frame: typing.Optional[FrameType] = sys._getframe(1)
+        frame: FrameType | None = sys._getframe(1)
         level = 1
 
         while frame:
@@ -269,7 +260,10 @@ def warn_stacklevel() -> int:
     return 1
 
 
-def _format_fields(obj: object, fields: typing.Tuple[str, ...], *, joiner: str) -> str:
+_UNINITIALIZED_MARKER: Final = "uninitialized"
+
+
+def _format_fields(obj: object, fields: tuple[str, ...], *, joiner: str) -> str:
     return (
         joiner.join(f"{field}={reprlib.repr(getattr(obj, field))}" for field in fields)
         if all(hasattr(obj, field) for field in fields)
@@ -279,7 +273,7 @@ def _format_fields(obj: object, fields: typing.Tuple[str, ...], *, joiner: str) 
 
 def _apply_representation(
     cls: _ClassT,
-    fields: typing.Tuple[str, ...],
+    fields: tuple[str, ...],
     use_str: bool,  # noqa: FBT001
 ) -> _ClassT:
     has_str = getattr(cls, "__str__", object.__str__) is not object.__str__
@@ -302,22 +296,22 @@ def _apply_representation(
     return cls
 
 
-@typing.overload
+@overload
 def representation(
     cls: _ClassT,
     /,
     *fields: str,
     use_str: bool = ...,
 ) -> _ClassT: ...
-@typing.overload
+@overload
 def representation(
     *fields: str,
     use_str: bool = ...,
-) -> typing.Callable[[_ClassT], _ClassT]: ...
+) -> Callable[[_ClassT], _ClassT]: ...
 def representation(
-    *fields: typing.Any,
+    *fields: Any,
     use_str: bool = False,
-) -> typing.Union[_ClassT, typing.Callable[[_ClassT], _ClassT]]:
+) -> _ClassT | Callable[[_ClassT], _ClassT]:
     return (
         _apply_representation(fields[0], fields[1:], use_str)
         if fields and inspect.isclass(fields[0])

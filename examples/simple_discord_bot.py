@@ -1,4 +1,3 @@
-from contextlib import suppress
 from dataclasses import dataclass
 from typing import Any, cast
 
@@ -8,6 +7,7 @@ import pydantic
 from disnake.ext import commands
 
 import faceit
+import faceit.exceptions
 from faceit.models.players import MatchResult
 
 
@@ -18,31 +18,31 @@ class StatsCommand(commands.Cog):
 
     async def cog_slash_command_error(  # noqa: PLR6301
         self,
-        inter: disnake.ApplicationCommandInteraction[Any],
+        inter: disnake.CommandInteraction[Any],
         error: Exception,
     ) -> None:
         if isinstance(error, commands.CommandInvokeError):
             error = error.original
 
-        player_name = inter.filled_options.get("player_name", "")
-
-        if isinstance(error, pydantic.ValidationError):
-            await inter.edit_original_response(
-                f"⚠️ We couldn't process the profile for **{player_name}**. "
-                "Please check if the nickname is entered correctly."
-            )
-        elif isinstance(error, faceit.exceptions.NotFoundError):
-            await inter.edit_original_response(
-                f"❌ Player **{player_name}** not found."
-            )
-        elif isinstance(error, faceit.APIError):
-            await inter.edit_original_response(
-                f"⚠️ API Error [{error.status_code}]: {error.message}"
-            )
-        else:
-            await inter.edit_original_response(
-                "💥 An unexpected error occurred. Please try again later."
-            )
+        player_name = inter.filled_options.get("player_name", "<unknown>")
+        match error:
+            case pydantic.ValidationError():
+                await inter.edit_original_response(
+                    f"⚠️ We couldn't process the profile for `{player_name}`. "
+                    "Please check if the nickname is entered correctly."
+                )
+            case faceit.exceptions.NotFoundError():
+                await inter.edit_original_response(
+                    f"❌ Player `{player_name}` not found."
+                )
+            case faceit.exceptions.APIError():
+                await inter.edit_original_response(
+                    f"⚠️ API Error (`{error.status_code}`): {error.message}"
+                )
+            case _:
+                await inter.edit_original_response(
+                    "💥 An unexpected error occurred. Please try again later."
+                )
 
     @commands.slash_command(
         name="stats",
@@ -50,7 +50,7 @@ class StatsCommand(commands.Cog):
     )
     async def stats(
         self,
-        inter: disnake.ApplicationCommandInteraction[Any],
+        inter: disnake.CommandInteraction[Any],
         player_name: str = commands.Param(
             description="FACEIT player nickname",
         ),
@@ -59,11 +59,10 @@ class StatsCommand(commands.Cog):
 
         player = await self.faceit_data.players.get(player_name)
 
-        cs2_game = player.games.get(faceit.GameID.CS2)
-        if cs2_game is None:
+        cs2_stats = player.games.get(faceit.GameID.CS2)
+        if cs2_stats is None:
             return await inter.edit_original_response(
-                f"🔎 Player **{player.nickname}** found, "
-                "but they don't have CS2 linked."
+                f"🔎 Player `{player.nickname}` found, but they don't have CS2 linked."
             )
 
         player_stats = await self.faceit_data.players.stats(
@@ -79,8 +78,8 @@ class StatsCommand(commands.Cog):
         if player.avatar:
             embed.set_thumbnail(url=player.avatar)
 
-        embed.add_field("🎮 Level", f"**{int(cs2_game.level)} LVL**", inline=True)
-        embed.add_field("📈 ELO", f"**{cs2_game.elo}**", inline=True)
+        embed.add_field("🎮 Level", f"**{int(cs2_stats.level)} LVL**", inline=True)
+        embed.add_field("📈 ELO", f"**{cs2_stats.elo}**", inline=True)
         embed.add_field(
             "📊 K/D",
             f"**{player_stats.lifetime.average_kd_ratio}**",
@@ -98,14 +97,11 @@ class StatsCommand(commands.Cog):
         )
 
         if player_stats.lifetime.recent_results:
-            embed.add_field(
-                "Recent Results",
-                " ".join(
-                    "✅" if result is MatchResult.WIN else "❌"
-                    for result in player_stats.lifetime.recent_results
-                ),
-                inline=False,
+            results = " ".join(
+                "✅" if result is MatchResult.WIN else "❌"
+                for result in player_stats.lifetime.recent_results
             )
+            embed.add_field("Recent Results", results, inline=False)
 
         embed.set_footer(text="Powered by faceit-python")
         return await inter.edit_original_response(embed=embed)
@@ -119,17 +115,14 @@ async def main() -> None:
             "DISCORD_BOT_TOKEN"
         ),
     )
-    async with (
-        # NOTE: Ensure the `FACEIT_API_KEY` is set in your environment variables
-        # (Requires `faceit[env]` to be installed)
-        faceit.AsyncDataResource()  # or use faceit.AsyncDataResource("YOUR_FACEIT_API_KEY")
-    ) as data:
+    async with faceit.AsyncDataResource() as data:
         bot.add_cog(StatsCommand(bot, data))
         await bot.start(bot_token)
 
 
 if __name__ == "__main__":
     import asyncio
+    from contextlib import suppress
 
     with suppress(KeyboardInterrupt, asyncio.CancelledError):  # CTRL+C
         asyncio.run(main())

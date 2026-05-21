@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import typing
 from abc import ABC
+from collections.abc import Sequence  # noqa: TC003
+from typing import Annotated, Generic, TypeAlias, final, overload
 
 from pydantic import AfterValidator, Field, validate_call
-from typing_extensions import Annotated, TypeAlias
 
 from faceit.api.base import BaseResource, ModelPlaceholder
 from faceit.api.pagination import (
@@ -43,13 +43,11 @@ class BaseChampionships(
     __slots__ = ()
 
 
-@typing.final
-class SyncChampionships(
-    BaseChampionships[SyncClient], typing.Generic[APIResponseFormatT]
-):
+@final
+class SyncChampionships(BaseChampionships[SyncClient], Generic[APIResponseFormatT]):
     __slots__ = ()
 
-    @typing.overload
+    @overload
     def items(
         self: SyncChampionships[Raw],
         game: GameID,
@@ -59,7 +57,7 @@ class SyncChampionships(
         limit: int = Field(10, ge=1, le=10),
     ) -> RawAPIPageResponse: ...
 
-    @typing.overload
+    @overload
     def items(
         self: SyncChampionships[Model],
         game: GameID,
@@ -77,7 +75,7 @@ class SyncChampionships(
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(10, ge=1, le=10),
-    ) -> typing.Union[RawAPIPageResponse, ItemPage[Championship]]:
+    ) -> RawAPIPageResponse | ItemPage[Championship]:
         return self._validate_response(
             self._client.get(
                 self.__class__.PATH,
@@ -89,15 +87,15 @@ class SyncChampionships(
             ItemPage[Championship],
         )
 
-    @typing.overload
+    @overload
     def all_items(
         self: SyncChampionships[Raw],
         game: GameID,
         category: EventCategory = EventCategory.ALL,
         max_items: MaxItemsType = pages(30),
-    ) -> typing.List[RawAPIItem]: ...
+    ) -> list[RawAPIItem]: ...
 
-    @typing.overload
+    @overload
     def all_items(
         self: SyncChampionships[Model],
         game: GameID,
@@ -110,36 +108,30 @@ class SyncChampionships(
         game: GameID,
         category: EventCategory = EventCategory.ALL,
         max_items: MaxItemsType = pages(30),
-    ) -> typing.Union[typing.List[RawAPIItem], ItemPage[Championship]]:
+    ) -> list[RawAPIItem] | ItemPage[Championship]:
         iterator = SyncPageIterator(self.items, game, category, max_items=max_items)
         return iterator.collect()
 
-    @typing.overload
+    @overload
     def get(
         self: SyncChampionships[Raw],
         championship_id: _ChampionshipID,
-        expanded: typing.Optional[
-            typing.Union[ExpandedField, typing.Sequence[ExpandedField]]
-        ] = None,
+        expanded: ExpandedField | Sequence[ExpandedField] | None = None,
     ) -> RawAPIItem: ...
 
-    @typing.overload
+    @overload
     def get(
         self: SyncChampionships[Model],
         championship_id: _ChampionshipID,
-        expanded: typing.Optional[
-            typing.Union[ExpandedField, typing.Sequence[ExpandedField]]
-        ] = None,
+        expanded: ExpandedField | Sequence[ExpandedField] | None = None,
     ) -> ModelNotImplemented: ...
 
     @validate_call
     def get(
         self,
         championship_id: _ChampionshipIDValidated,
-        expanded: typing.Optional[
-            typing.Union[ExpandedField, typing.Sequence[ExpandedField]]
-        ] = None,
-    ) -> typing.Union[RawAPIItem, ModelNotImplemented]:
+        expanded: ExpandedField | Sequence[ExpandedField] | None = None,
+    ) -> RawAPIItem | ModelNotImplemented:
         return self._validate_response(
             self._client.get(
                 self.__class__.PATH / str(championship_id),
@@ -151,7 +143,7 @@ class SyncChampionships(
 
     __call__ = get
 
-    @typing.overload
+    @overload
     def matches(
         self: SyncChampionships[Raw],
         championship_id: _ChampionshipID,
@@ -161,7 +153,7 @@ class SyncChampionships(
         limit: int = Field(20, ge=1, le=100),
     ) -> RawAPIPageResponse: ...
 
-    @typing.overload
+    @overload
     def matches(
         self: SyncChampionships[Model],
         championship_id: _ChampionshipID,
@@ -179,7 +171,7 @@ class SyncChampionships(
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
-    ) -> typing.Union[RawAPIPageResponse, ModelNotImplemented]:
+    ) -> RawAPIPageResponse | ModelNotImplemented:
         return self._validate_response(
             self._client.get(
                 self.__class__.PATH / str(championship_id) / "matches",
@@ -191,7 +183,7 @@ class SyncChampionships(
             ModelPlaceholder,
         )
 
-    @typing.overload
+    @overload
     def results(
         self: SyncChampionships[Raw],
         championship_id: _ChampionshipID,
@@ -200,7 +192,7 @@ class SyncChampionships(
         limit: int = Field(20, ge=1, le=100),
     ) -> RawAPIPageResponse: ...
 
-    @typing.overload
+    @overload
     def results(
         self: SyncChampionships[Model],
         championship_id: _ChampionshipID,
@@ -216,7 +208,7 @@ class SyncChampionships(
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
-    ) -> typing.Union[RawAPIPageResponse, ModelNotImplemented]:
+    ) -> RawAPIPageResponse | ModelNotImplemented:
         return self._validate_response(
             self._client.get(
                 self.__class__.PATH / str(championship_id) / "results",
@@ -226,7 +218,7 @@ class SyncChampionships(
             ModelPlaceholder,
         )
 
-    @typing.overload
+    @overload
     def subscriptions(
         self: SyncChampionships[Raw],
         championship_id: _ChampionshipID,
@@ -235,7 +227,7 @@ class SyncChampionships(
         limit: int = Field(10, ge=1, le=10),
     ) -> RawAPIPageResponse: ...
 
-    @typing.overload
+    @overload
     def subscriptions(
         self: SyncChampionships[Model],
         championship_id: _ChampionshipID,
@@ -251,7 +243,7 @@ class SyncChampionships(
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(10, ge=1, le=10),
-    ) -> typing.Union[RawAPIPageResponse, ModelNotImplemented]:
+    ) -> RawAPIPageResponse | ModelNotImplemented:
         return self._validate_response(
             self._client.get(
                 self.__class__.PATH / str(championship_id) / "subscriptions",
@@ -262,13 +254,11 @@ class SyncChampionships(
         )
 
 
-@typing.final
-class AsyncChampionships(
-    BaseChampionships[AsyncClient], typing.Generic[APIResponseFormatT]
-):
+@final
+class AsyncChampionships(BaseChampionships[AsyncClient], Generic[APIResponseFormatT]):
     __slots__ = ()
 
-    @typing.overload
+    @overload
     async def items(
         self: AsyncChampionships[Raw],
         game: GameID,
@@ -278,7 +268,7 @@ class AsyncChampionships(
         limit: int = Field(10, ge=1, le=10),
     ) -> RawAPIPageResponse: ...
 
-    @typing.overload
+    @overload
     async def items(
         self: AsyncChampionships[Model],
         game: GameID,
@@ -296,7 +286,7 @@ class AsyncChampionships(
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(10, ge=1, le=10),
-    ) -> typing.Union[RawAPIPageResponse, ItemPage[Championship]]:
+    ) -> RawAPIPageResponse | ItemPage[Championship]:
         return self._validate_response(
             await self._client.get(
                 self.__class__.PATH,
@@ -308,15 +298,15 @@ class AsyncChampionships(
             ItemPage[Championship],
         )
 
-    @typing.overload
+    @overload
     async def all_items(
         self: AsyncChampionships[Raw],
         game: GameID,
         category: EventCategory = EventCategory.ALL,
         max_items: MaxItemsType = pages(30),
-    ) -> typing.List[RawAPIItem]: ...
+    ) -> list[RawAPIItem]: ...
 
-    @typing.overload
+    @overload
     async def all_items(
         self: AsyncChampionships[Model],
         game: GameID,
@@ -329,36 +319,30 @@ class AsyncChampionships(
         game: GameID,
         category: EventCategory = EventCategory.ALL,
         max_items: MaxItemsType = pages(30),
-    ) -> typing.Union[typing.List[RawAPIItem], ItemPage[Championship]]:
+    ) -> list[RawAPIItem] | ItemPage[Championship]:
         iterator = AsyncPageIterator(self.items, game, category, max_items=max_items)
         return await iterator.collect()
 
-    @typing.overload
+    @overload
     async def get(
         self: AsyncChampionships[Raw],
         championship_id: _ChampionshipID,
-        expanded: typing.Optional[
-            typing.Union[ExpandedField, typing.Sequence[ExpandedField]]
-        ] = None,
+        expanded: ExpandedField | Sequence[ExpandedField] | None = None,
     ) -> RawAPIItem: ...
 
-    @typing.overload
+    @overload
     async def get(
         self: AsyncChampionships[Model],
         championship_id: _ChampionshipID,
-        expanded: typing.Optional[
-            typing.Union[ExpandedField, typing.Sequence[ExpandedField]]
-        ] = None,
+        expanded: ExpandedField | Sequence[ExpandedField] | None = None,
     ) -> ModelNotImplemented: ...
 
     @validate_call
     async def get(
         self,
         championship_id: _ChampionshipIDValidated,
-        expanded: typing.Optional[
-            typing.Union[ExpandedField, typing.Sequence[ExpandedField]]
-        ] = None,
-    ) -> typing.Union[RawAPIItem, ModelNotImplemented]:
+        expanded: ExpandedField | Sequence[ExpandedField] | None = None,
+    ) -> RawAPIItem | ModelNotImplemented:
         return self._validate_response(
             await self._client.get(
                 self.__class__.PATH / str(championship_id),
@@ -370,7 +354,7 @@ class AsyncChampionships(
 
     __call__ = get
 
-    @typing.overload
+    @overload
     async def matches(
         self: AsyncChampionships[Raw],
         championship_id: _ChampionshipID,
@@ -380,7 +364,7 @@ class AsyncChampionships(
         limit: int = Field(20, ge=1, le=100),
     ) -> RawAPIPageResponse: ...
 
-    @typing.overload
+    @overload
     async def matches(
         self: AsyncChampionships[Model],
         championship_id: _ChampionshipID,
@@ -398,7 +382,7 @@ class AsyncChampionships(
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
-    ) -> typing.Union[RawAPIPageResponse, ModelNotImplemented]:
+    ) -> RawAPIPageResponse | ModelNotImplemented:
         return self._validate_response(
             await self._client.get(
                 self.__class__.PATH / str(championship_id) / "matches",
@@ -410,7 +394,7 @@ class AsyncChampionships(
             ModelPlaceholder,
         )
 
-    @typing.overload
+    @overload
     async def results(
         self: AsyncChampionships[Raw],
         championship_id: _ChampionshipID,
@@ -419,7 +403,7 @@ class AsyncChampionships(
         limit: int = Field(20, ge=1, le=100),
     ) -> RawAPIPageResponse: ...
 
-    @typing.overload
+    @overload
     async def results(
         self: AsyncChampionships[Model],
         championship_id: _ChampionshipID,
@@ -435,7 +419,7 @@ class AsyncChampionships(
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
-    ) -> typing.Union[RawAPIPageResponse, ModelNotImplemented]:
+    ) -> RawAPIPageResponse | ModelNotImplemented:
         return self._validate_response(
             await self._client.get(
                 self.__class__.PATH / str(championship_id) / "results",
@@ -445,7 +429,7 @@ class AsyncChampionships(
             ModelPlaceholder,
         )
 
-    @typing.overload
+    @overload
     async def subscriptions(
         self: AsyncChampionships[Raw],
         championship_id: _ChampionshipID,
@@ -454,7 +438,7 @@ class AsyncChampionships(
         limit: int = Field(10, ge=1, le=10),
     ) -> RawAPIPageResponse: ...
 
-    @typing.overload
+    @overload
     async def subscriptions(
         self: AsyncChampionships[Model],
         championship_id: _ChampionshipID,
@@ -470,7 +454,7 @@ class AsyncChampionships(
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(10, ge=1, le=10),
-    ) -> typing.Union[RawAPIPageResponse, ModelNotImplemented]:
+    ) -> RawAPIPageResponse | ModelNotImplemented:
         return self._validate_response(
             await self._client.get(
                 self.__class__.PATH / str(championship_id) / "subscriptions",

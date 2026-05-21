@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import typing
 from abc import ABC
+from typing import Generic, final, overload
 
 from pydantic import Field, validate_call
 
@@ -33,11 +33,11 @@ class BaseGames(
     __slots__ = ()
 
 
-@typing.final
-class SyncGames(BaseGames[SyncClient], typing.Generic[APIResponseFormatT]):
+@final
+class SyncGames(BaseGames[SyncClient], Generic[APIResponseFormatT]):
     __slots__ = ()
 
-    @typing.overload
+    @overload
     def items(
         self: SyncGames[Raw],
         *,
@@ -45,7 +45,7 @@ class SyncGames(BaseGames[SyncClient], typing.Generic[APIResponseFormatT]):
         limit: int = Field(20, ge=1, le=100),
     ) -> RawAPIPageResponse: ...
 
-    @typing.overload
+    @overload
     def items(
         self: SyncGames[Model],
         *,
@@ -59,7 +59,7 @@ class SyncGames(BaseGames[SyncClient], typing.Generic[APIResponseFormatT]):
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
-    ) -> typing.Union[RawAPIPageResponse, ItemPage[ModelNotImplemented]]:
+    ) -> RawAPIPageResponse | ItemPage[ModelNotImplemented]:
         return self._validate_response(
             self._client.get(
                 self.__class__.PATH,
@@ -69,28 +69,28 @@ class SyncGames(BaseGames[SyncClient], typing.Generic[APIResponseFormatT]):
             ModelPlaceholder,
         )
 
-    @typing.overload
+    @overload
     def all_items(
         self: SyncGames[Raw], max_items: MaxItemsType = MaxItems.SAFE
-    ) -> typing.List[RawAPIItem]: ...
+    ) -> list[RawAPIItem]: ...
 
-    @typing.overload
+    @overload
     def all_items(
         self: SyncGames[Model], max_items: MaxItemsType = MaxItems.SAFE
     ) -> ItemPage[ModelNotImplemented]: ...
 
     def all_items(
         self, max_items: MaxItemsType = MaxItems.SAFE
-    ) -> typing.Union[typing.List[RawAPIItem], ItemPage[ModelNotImplemented]]:
+    ) -> list[RawAPIItem] | ItemPage[ModelNotImplemented]:
         iterator = SyncPageIterator(self.items, max_items=max_items)
         return iterator.collect()
 
 
-@typing.final
-class AsyncGames(BaseGames[AsyncClient], typing.Generic[APIResponseFormatT]):
+@final
+class AsyncGames(BaseGames[AsyncClient], Generic[APIResponseFormatT]):
     __slots__ = ()
 
-    @typing.overload
+    @overload
     async def items(
         self: AsyncGames[Raw],
         *,
@@ -98,7 +98,7 @@ class AsyncGames(BaseGames[AsyncClient], typing.Generic[APIResponseFormatT]):
         limit: int = Field(20, ge=1, le=100),
     ) -> RawAPIPageResponse: ...
 
-    @typing.overload
+    @overload
     async def items(
         self: AsyncGames[Model],
         *,
@@ -112,7 +112,7 @@ class AsyncGames(BaseGames[AsyncClient], typing.Generic[APIResponseFormatT]):
         *,
         offset: int = Field(0, ge=0),
         limit: int = Field(20, ge=1, le=100),
-    ) -> typing.Union[RawAPIPageResponse, ItemPage[ModelNotImplemented]]:
+    ) -> RawAPIPageResponse | ItemPage[ModelNotImplemented]:
         return self._validate_response(
             await self._client.get(
                 self.__class__.PATH,
@@ -122,18 +122,18 @@ class AsyncGames(BaseGames[AsyncClient], typing.Generic[APIResponseFormatT]):
             ModelPlaceholder,
         )
 
-    @typing.overload
+    @overload
     async def all_items(
         self: AsyncGames[Raw], max_items: MaxItemsType = MaxItems.SAFE
-    ) -> typing.List[RawAPIItem]: ...
+    ) -> list[RawAPIItem]: ...
 
-    @typing.overload
+    @overload
     async def all_items(
         self: AsyncGames[Model], max_items: MaxItemsType = MaxItems.SAFE
     ) -> ItemPage[ModelNotImplemented]: ...
 
     async def all_items(
         self, max_items: MaxItemsType = MaxItems.SAFE
-    ) -> typing.Union[typing.List[RawAPIItem], ItemPage[ModelNotImplemented]]:
+    ) -> list[RawAPIItem] | ItemPage[ModelNotImplemented]:
         iterator = AsyncPageIterator(self.items, max_items=max_items)
         return await iterator.collect()

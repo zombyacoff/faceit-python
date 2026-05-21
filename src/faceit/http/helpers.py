@@ -1,56 +1,51 @@
 from __future__ import annotations
 
-import typing
 from ssl import SSLError
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Protocol,
+    TypeAlias,
+    TypedDict,
+    final,
+    runtime_checkable,
+)
 
 import httpx
-from typing_extensions import Self, TypeAlias
+from typing_extensions import Self
 
 from faceit.utils import StrEnum, representation
 
-if typing.TYPE_CHECKING:
+if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
+
     import tenacity
 
     from faceit.types import EndpointParam
 
-    _RetryHook: TypeAlias = typing.Callable[
-        [tenacity.RetryCallState], typing.Union[typing.Awaitable[None], None]
-    ]
+    _RetryHook: TypeAlias = Callable[[tenacity.RetryCallState], Awaitable[None] | None]
 
 
-@typing.final
-class RetryArgs(typing.TypedDict, total=False):
-    sleep: typing.Callable[
-        [typing.Union[int, float]], typing.Union[typing.Awaitable[None], None]
-    ]
-    stop: typing.Union[
-        tenacity.stop.stop_base, typing.Callable[[tenacity.RetryCallState], bool]
-    ]
-    wait: typing.Union[
-        tenacity.wait.wait_base,
-        typing.Callable[[tenacity.RetryCallState], typing.Union[float, int]],
-    ]
-    retry: typing.Union[
-        tenacity.retry_base,
-        typing.Callable[
-            [tenacity.RetryCallState], typing.Union[typing.Awaitable[bool], bool]
-        ],
-    ]
+@final
+class RetryArgs(TypedDict, total=False):
+    sleep: Callable[[int | float], Awaitable[None] | None]
+    stop: tenacity.stop.stop_base | Callable[[tenacity.RetryCallState], bool]
+    wait: tenacity.wait.wait_base | Callable[[tenacity.RetryCallState], float | int]
+    retry: (
+        tenacity.retry_base
+        | Callable[[tenacity.RetryCallState], Awaitable[bool] | bool]
+    )
     before: _RetryHook
     after: _RetryHook
-    before_sleep: typing.Optional[_RetryHook]
+    before_sleep: _RetryHook | None
     reraise: bool
-    retry_error_cls: typing.Type[tenacity.RetryError]
-    retry_error_callback: typing.Optional[
-        typing.Callable[[tenacity.RetryCallState], typing.Any]
-    ]
+    retry_error_cls: type[tenacity.RetryError]
+    retry_error_callback: Callable[[tenacity.RetryCallState], Any] | None
 
 
-@typing.runtime_checkable
-class SupportsExceptionPredicate(typing.Protocol):
-    predicate: typing.Callable[
-        [BaseException], typing.Union[typing.Awaitable[bool], bool]
-    ]
+@runtime_checkable
+class SupportsExceptionPredicate(Protocol):
+    predicate: Callable[[BaseException], Awaitable[bool] | bool]
 
 
 class SupportedMethod(StrEnum):
@@ -58,12 +53,12 @@ class SupportedMethod(StrEnum):
     POST = "POST"
 
 
-@typing.final
+@final
 @representation(use_str=True)
 class Endpoint:
     __slots__ = ("base", "path_parts")
 
-    def __init__(self, *path_parts: str, base: typing.Optional[str] = None) -> None:
+    def __init__(self, *path_parts: str, base: str | None = None) -> None:
         self.path_parts = list(filter(None, path_parts))
         self.base = base
 

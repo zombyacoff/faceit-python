@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import typing
+from typing import TYPE_CHECKING, Final
 
 try:
     import decouple
@@ -14,7 +14,9 @@ from faceit.models import CS2MatchPlayerStats, ItemPage
 from faceit.models.custom_types import TimestampSec
 from faceit.models.custom_types.faceit_uuid import FaceitMatchID
 
-if typing.TYPE_CHECKING:
+if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator
+
     from faceit.api import AsyncDataResource, SyncDataResource
 
 pytestmark = [
@@ -25,7 +27,7 @@ pytestmark = [
     ),
 ]
 
-DEFAULT_PLAYER: typing.Final = "zombyacoff"
+DEFAULT_PLAYER: Final = "zombyacoff"
 
 
 @pytest.fixture(scope="module")
@@ -39,7 +41,7 @@ def data() -> SyncDataResource:
 
 
 @pytest.fixture
-async def async_data() -> typing.AsyncGenerator[AsyncDataResource, None]:
+async def async_data() -> AsyncGenerator[AsyncDataResource, None]:
     async with faceit.AsyncDataResource() as client:
         yield client
 
