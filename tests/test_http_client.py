@@ -87,9 +87,7 @@ def invalid_json_response() -> Mock:
 
 
 @pytest.fixture
-def async_client_factory(
-    valid_uuid: str,
-) -> Iterator[Callable[[], AsyncClient]]:
+def async_client_factory(valid_uuid: str) -> Iterator[Callable[[], AsyncClient]]:
     clients: list[AsyncClient] = []
 
     def _create_client() -> AsyncClient:
@@ -258,9 +256,7 @@ class TestSyncClient:
 
             assert call_kwargs == {} or "json" in call_kwargs
             mock_request.assert_called_with(
-                expected_supported_method,
-                endpoint,
-                **call_kwargs,
+                expected_supported_method, endpoint, **call_kwargs
             )
             client.close()
 
@@ -331,9 +327,7 @@ class TestAsyncClient:
         await getattr(client, client_method)(endpoint, **call_kwargs)
 
         mock_request.assert_called_with(
-            expected_supported_method,
-            endpoint,
-            **call_kwargs,
+            expected_supported_method, endpoint, **call_kwargs
         )
         await client.aclose()
 
@@ -618,6 +612,5 @@ class TestRetryLogic:
                 mock_sleep.assert_called_once_with(0.5)
 
                 mock_logger.warning.assert_called_with(
-                    "SSL connection error to %s",
-                    "https://test.com/api",
+                    "SSL connection error to %s", "https://test.com/api"
                 )

@@ -1,4 +1,3 @@
-from contextlib import suppress
 from dataclasses import dataclass
 from typing import Any, cast
 
@@ -60,8 +59,8 @@ class StatsCommand(commands.Cog):
 
         player = await self.faceit_data.players.get(player_name)
 
-        cs2_game = player.games.get(faceit.GameID.CS2)
-        if cs2_game is None:
+        cs2_stats = player.games.get(faceit.GameID.CS2)
+        if cs2_stats is None:
             return await inter.edit_original_response(
                 f"🔎 Player `{player.nickname}` found, but they don't have CS2 linked."
             )
@@ -79,8 +78,8 @@ class StatsCommand(commands.Cog):
         if player.avatar:
             embed.set_thumbnail(url=player.avatar)
 
-        embed.add_field("🎮 Level", f"**{int(cs2_game.level)} LVL**", inline=True)
-        embed.add_field("📈 ELO", f"**{cs2_game.elo}**", inline=True)
+        embed.add_field("🎮 Level", f"**{int(cs2_stats.level)} LVL**", inline=True)
+        embed.add_field("📈 ELO", f"**{cs2_stats.elo}**", inline=True)
         embed.add_field(
             "📊 K/D",
             f"**{player_stats.lifetime.average_kd_ratio}**",
@@ -123,6 +122,7 @@ async def main() -> None:
 
 if __name__ == "__main__":
     import asyncio
+    from contextlib import suppress
 
     with suppress(KeyboardInterrupt, asyncio.CancelledError):  # CTRL+C
         asyncio.run(main())

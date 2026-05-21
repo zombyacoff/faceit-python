@@ -21,7 +21,6 @@ if TYPE_CHECKING:
     from .api import AsyncDataResource, SyncDataResource
     from .http import Endpoint
     from .http.client import BaseAPIClient
-    from .models.custom_types import TimestampMs
 
 _T = TypeVar("_T")
 _T_co = TypeVar("_T_co", covariant=True)
