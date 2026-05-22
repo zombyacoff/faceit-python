@@ -31,6 +31,8 @@ jobs:
 
       - name: Pytest
         run: uv run pytest -q
+        env:
+          FACEIT_API_KEY: ${{ secrets.FACEIT_API_KEY }}
 
       - name: Mypy
         run: uv run mypy src --pretty
