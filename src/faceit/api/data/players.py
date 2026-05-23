@@ -185,11 +185,11 @@ class SyncPlayers(BasePlayers[SyncClient], Generic[APIResponseFormatT]):
 
     # This creates an alias allowing instances to be called directly like `resource(...)`
     # instead of `resource.get(...)`. While both forms are valid, using the explicit `.get()`
-    # method is generally preferred for clarity. NOTE: The alias is maintained for convenience
+    # method is generally preferred for clarity. NOTE: The alias is maintained for convenience.
     __call__ = get
 
     # Using `Field(...)` as default value rather than `Annotated[..., Field(...)]`
-    # to expose constraints in IDE tooltips and improve developer experience
+    # to expose constraints in IDE tooltips and improve developer experience.
     @overload
     def bans(
         self: SyncPlayers[Raw],
@@ -298,8 +298,8 @@ class SyncPlayers(BasePlayers[SyncClient], Generic[APIResponseFormatT]):
         to: NotStrictTimestampMs | None = None,
     ) -> (
         RawAPIPageResponse
-        | ItemPage[AbstractMatchPlayerStats]
         | ItemPage[CS2MatchPlayerStats]
+        | ItemPage[AbstractMatchPlayerStats]
     ):
         return self._process_page(
             self._client.get(
@@ -774,8 +774,8 @@ class AsyncPlayers(BasePlayers[AsyncClient], Generic[APIResponseFormatT]):
         to: NotStrictTimestampMs | None = None,
     ) -> (
         RawAPIPageResponse
-        | ItemPage[AbstractMatchPlayerStats]
         | ItemPage[CS2MatchPlayerStats]
+        | ItemPage[AbstractMatchPlayerStats]
     ):
         return self._process_page(
             await self._client.get(
@@ -820,8 +820,8 @@ class AsyncPlayers(BasePlayers[AsyncClient], Generic[APIResponseFormatT]):
         max_items: MaxItemsType = pages(50),
     ) -> (
         list[RawAPIItem]
-        | ItemPage[AbstractMatchPlayerStats]
         | ItemPage[CS2MatchPlayerStats]
+        | ItemPage[AbstractMatchPlayerStats]
     ):
         return await AsyncPageIterator.gather_from_iterator(
             AsyncPageIterator.unix(

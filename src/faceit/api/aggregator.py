@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import warnings
 from abc import ABC
 from functools import cached_property
 from typing import TYPE_CHECKING, Any, Generic, TypeVar, get_args
@@ -32,27 +31,17 @@ class BaseResources(ABC, Generic[ClientT]):
         /,
         *,
         secret_type: str,
-        **client_options: Any,
     ) -> None:
         if auth is not None and client is not None:
             msg = f"Provide either {secret_type!r} or 'client', not both"
             raise ValueError(msg)
-
-        if client is None:
-            key = FromEnv(f"FACEIT_{secret_type.upper()}") if auth is None else auth
-            self._client = self._client_cls(key, **client_options)
-            return
-
-        if client_options:
-            warnings.warn(
-                "'client_options' are ignored when an existing client "
-                "instance is provided. Configure your client before "
-                "passing it to this constructor.",
-                stacklevel=3,
+        self._client = (
+            self._client_cls(
+                FromEnv(f"FACEIT_{secret_type.upper()}") if auth is None else auth
             )
-
-        self._client = client
-        return
+            if client is None
+            else client
+        )
 
     @property
     def client(self) -> ClientT:

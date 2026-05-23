@@ -84,10 +84,10 @@ class _FaceitIDWithUniquePrefix(str, BaseFaceitID, ABC):
 
 
 @final
-class FaceitTeamID(_FaceitIDWithUniquePrefix, prefix="team-"):
+class FaceitMatchID(_FaceitIDWithUniquePrefix, prefix="1-"):
     __slots__ = ()
 
 
 @final
-class FaceitMatchID(_FaceitIDWithUniquePrefix, prefix="1-"):
+class FaceitTeamID(_FaceitIDWithUniquePrefix, prefix="team-"):
     __slots__ = ()

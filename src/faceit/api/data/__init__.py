@@ -1,4 +1,4 @@
-from typing import Any, final, overload
+from typing import final, overload
 
 from faceit.api.aggregator import (
     AsyncResources,
@@ -9,43 +9,46 @@ from faceit.api.aggregator import (
 from faceit.http.client import BaseAPIClient
 from faceit.types import ClientT, Model, Raw, ValidUUID
 
-from .championships import AsyncChampionships, BaseChampionships, SyncChampionships
-from .games import AsyncGames, BaseGames, SyncGames
-from .leagues import AsyncLeagues, BaseLeagues, SyncLeagues
-from .matches import AsyncMatches, BaseMatches, SyncMatches
-from .matchmakings import AsyncMatchmakings, BaseMatchmakings, SyncMatchmakings
-from .players import AsyncPlayers, BasePlayers, SyncPlayers
-from .rankings import AsyncRankings, BaseRankings, SyncRankings
-from .teams import AsyncTeams, BaseTeams, SyncTeams
-
-__all__ = [
-    "AsyncChampionships",
-    "AsyncDataResource",
-    "AsyncGames",
-    "AsyncLeagues",
-    "AsyncMatches",
-    "AsyncMatchmakings",
-    "AsyncPlayers",
-    "AsyncRankings",
-    "AsyncTeams",
-    "BaseChampionships",
-    "BaseGames",
-    "BaseLeagues",
-    "BaseMatches",
-    "BaseMatchmakings",
-    "BasePlayers",
-    "BaseRankings",
-    "BaseTeams",
-    "SyncChampionships",
-    "SyncDataResource",
-    "SyncGames",
-    "SyncLeagues",
-    "SyncMatches",
-    "SyncMatchmakings",
-    "SyncPlayers",
-    "SyncRankings",
-    "SyncTeams",
-]
+from .championships import (
+    AsyncChampionships as AsyncChampionships,
+    BaseChampionships as BaseChampionships,
+    SyncChampionships as SyncChampionships,
+)
+from .games import (
+    AsyncGames as AsyncGames,
+    BaseGames as BaseGames,
+    SyncGames as SyncGames,
+)
+from .leagues import (
+    AsyncLeagues as AsyncLeagues,
+    BaseLeagues as BaseLeagues,
+    SyncLeagues as SyncLeagues,
+)
+from .matches import (
+    AsyncMatches as AsyncMatches,
+    BaseMatches as BaseMatches,
+    SyncMatches as SyncMatches,
+)
+from .matchmakings import (
+    AsyncMatchmakings as AsyncMatchmakings,
+    BaseMatchmakings as BaseMatchmakings,
+    SyncMatchmakings as SyncMatchmakings,
+)
+from .players import (
+    AsyncPlayers as AsyncPlayers,
+    BasePlayers as BasePlayers,
+    SyncPlayers as SyncPlayers,
+)
+from .rankings import (
+    AsyncRankings as AsyncRankings,
+    BaseRankings as BaseRankings,
+    SyncRankings as SyncRankings,
+)
+from .teams import (
+    AsyncTeams as AsyncTeams,
+    BaseTeams as BaseTeams,
+    SyncTeams as SyncTeams,
+)
 
 
 class _DataResourceMixin:
@@ -53,32 +56,18 @@ class _DataResourceMixin:
     def __init__(self) -> None: ...
 
     @overload
-    def __init__(  # type: ignore[misc]
-        self: BaseResources[ClientT],
-        *,
-        client: ClientT,
-    ) -> None: ...
+    def __init__(self: BaseResources[ClientT], *, client: ClientT) -> None: ...  # type: ignore[misc]
 
     @overload
-    def __init__(
-        self,
-        api_key: ValidUUID | BaseAPIClient.env,
-        **client_options: Any,
-    ) -> None: ...
+    def __init__(self, api_key: ValidUUID | BaseAPIClient.env) -> None: ...
 
     def __init__(  # type: ignore[misc]
         self: BaseResources[ClientT],  # pyright: ignore[reportGeneralTypeIssues]
         api_key: ValidUUID | BaseAPIClient.env | None = None,
         *,
         client: ClientT | None = None,
-        **client_options: Any,
     ) -> None:
-        self._initialize_client(
-            api_key,
-            client,
-            secret_type="api_key",  # noqa: S106
-            **client_options,
-        )
+        self._initialize_client(api_key, client, secret_type="api_key")  # noqa: S106
 
 
 @final

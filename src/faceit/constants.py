@@ -241,7 +241,7 @@ def _create_default_elo_tiers() -> _EloThreshold:
 
     for level in range(2, 10):
         # `cast("int", ...)` tells the type checker that we know `upper` is
-        # definitely an `int` for levels 1-9, not the full `int | HighTierLevel` type
+        # definitely an `int` for levels 1-9, not the full `int | HighTierLevel` type.
         lower_bound = cast("int", tier_ranges[level - 1].upper) + 1
         tier_ranges[level] = EloRange(lower_bound, lower_bound + 149)
 
@@ -262,8 +262,8 @@ def _append_elite_tier(
 
 
 CHALLENGER_CAPPED_ELO_RANGES: Final = _append_elite_tier(HighTierLevel.CHALLENGER)
-# Pre-generating this range configuration for future implementation needs
-# Exposed as a constant for both internal use and potential library consumers
+# Pre-generating this range configuration for future implementation needs.
+# Exposed as a constant for both internal use and potential library consumers.
 OPEN_ENDED_ELO_RANGES: Final = _append_elite_tier(HighTierLevel.ABSENT)
 del _append_elite_tier
 
@@ -289,7 +289,7 @@ ELO_THRESHOLDS: Final[
     # standard across most games with few exceptions. CS2 demonstrates one such
     # exception where FACEIT adjusted boundaries following the transition from
     # CSGO. This implementation accounts for both standard patterns and known
-    # variations in the platform's ranking system
+    # variations in the platform's ranking system.
     GameID.CSGO: CHALLENGER_CAPPED_ELO_RANGES,
     # TODO: Add more games (e.g. Dota 2)
 })

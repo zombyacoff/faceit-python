@@ -54,6 +54,9 @@ ModelNotImplemented: TypeAlias = BaseModel
 RegionIdentifier: TypeAlias = Region | str
 
 RawAPIItem: TypeAlias = dict[str, Any]
+# We use the `TypedDict` functional syntax (class constructor) here
+# because `from` is a reserved keyword in Python and cannot be used
+# as a standard attribute name in the class-based syntax.
 RawAPIPageResponse = TypedDict(
     "RawAPIPageResponse",
     {
@@ -67,6 +70,17 @@ RawAPIPageResponse = TypedDict(
     },
 )
 RawAPIResponse: TypeAlias = RawAPIItem | RawAPIPageResponse
+
+
+class RawAPIErrorDetail(TypedDict):
+    message: str
+    code: str
+    http_status: int
+    parameters: list[Any]
+
+
+class RawAPIErrorResponse(TypedDict):
+    errors: list[RawAPIErrorDetail]
 
 
 class BaseResourceMethodProtocol(Protocol[_T]):

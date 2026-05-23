@@ -151,7 +151,7 @@ class BaseAPIClient(ABC, Generic[_HttpxClientT, _RetryerT]):
 
     # Provide read-only access to the underlying client for
     # exceptional cases where direct interaction might be necessary,
-    # while keeping the interface immutable
+    # while keeping the interface immutable.
     @property
     def raw_client(self) -> _HttpxClientT:
         return self._client
@@ -279,7 +279,7 @@ class _BaseSyncClient(BaseAPIClient[httpx.Client, tenacity.Retrying]):
 
 # NOTE: Logic on eliminating SSL errors was added because during tests
 # it was found that such errors often pop up even with a small
-# number of concurrent requests, probably problems on the FACEIT API side
+# number of concurrent requests, probably problems on the FACEIT API side.
 class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient, tenacity.AsyncRetrying]):
     __slots__ = ("__weakref__", "_client", "_retryer")
 
@@ -294,7 +294,7 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient, tenacity.AsyncRetrying])
     _recovery_check_time: ClassVar = 0.0
 
     # Current limit value is based on empirical testing,
-    # but requires further investigation for optimal setting
+    # but requires further investigation for optimal setting.
     MAX_CONCURRENT_REQUESTS_ABSOLUTE: ClassVar = 100
 
     DEFAULT_MAX_CONCURRENT_REQUESTS: ClassVar = 30
@@ -609,7 +609,7 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient, tenacity.AsyncRetrying])
 # directly, but the public classes (`SyncClient`, `AsyncClient`) provide
 # additional convenience methods that align with FACEIT API's expected HTTP
 # methods. This separation allows for a cleaner interface while maintaining
-# the core implementation details in the base classes
+# the core implementation details in the base classes.
 
 
 def _clean_type_hints(kwargs: dict[str, Any], /) -> dict[str, Any]:

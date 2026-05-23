@@ -21,6 +21,9 @@ ignore = [
     "TD",      # flake8-todos violations
 ]
 
+[lint.isort]
+combine-as-imports = true
+
 [lint.flake8-bugbear]
 extend-immutable-calls = [
     "faceit.http.client.env",

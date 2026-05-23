@@ -51,9 +51,12 @@ coverage.xml
 .pytest_cache/
 cover/
 
-# Empirical testing
+# Local
 ___*.py
 /assets
+justfile
+pyrightconfig.json
+ty.toml
 
 # Translations
 *.mo
@@ -114,13 +117,11 @@ venv.bak/
 dmypy.json
 .pyre/
 .pytype/
-ty.toml
 
 # Linting and formatting
 .ruff_cache/
 .flake8
 .pylintrc
-pyrightconfig.json
 
 # IDE settings
 .idea/

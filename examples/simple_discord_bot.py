@@ -124,5 +124,5 @@ if __name__ == "__main__":
     import asyncio
     from contextlib import suppress
 
-    with suppress(KeyboardInterrupt, asyncio.CancelledError):  # CTRL+C
+    with suppress(KeyboardInterrupt, asyncio.CancelledError):
         asyncio.run(main())

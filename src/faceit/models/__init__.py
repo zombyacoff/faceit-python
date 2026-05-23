@@ -1,27 +1,13 @@
-from .championships import Championship
-from .item_page import ItemPage
+from .championships import Championship as Championship
+from .item_page import ItemPage as ItemPage
 from .players import (
-    BanEntry,
-    CS2MatchPlayerStats,
-    CSPlayerStats,
-    FallbackPlayerStats,
-    GeneralTeam,
-    Hub,
-    Match,
-    Player,
-    Tournament,
+    BanEntry as BanEntry,
+    CS2MatchPlayerStats as CS2MatchPlayerStats,
+    CSPlayerStats as CSPlayerStats,
+    FallbackPlayerStats as FallbackPlayerStats,
+    GeneralTeam as GeneralTeam,
+    Hub as Hub,
+    Match as Match,
+    Player as Player,
+    Tournament as Tournament,
 )
-
-__all__ = [
-    "BanEntry",
-    "CS2MatchPlayerStats",
-    "CSPlayerStats",
-    "Championship",
-    "FallbackPlayerStats",
-    "GeneralTeam",
-    "Hub",
-    "ItemPage",
-    "Match",
-    "Player",
-    "Tournament",
-]
