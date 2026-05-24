@@ -8,7 +8,6 @@ from pydantic import Field, validate_call
 from faceit.api.base import BaseResource, ModelPlaceholder
 from faceit.api.pagination import (
     AsyncPageIterator,
-    MaxItems,
     MaxItemsType,
     SyncPageIterator,
 )
@@ -71,16 +70,16 @@ class SyncGames(BaseGames[SyncClient], Generic[APIResponseFormatT]):
 
     @overload
     def all_items(
-        self: SyncGames[Raw], max_items: MaxItemsType = MaxItems.SAFE
+        self: SyncGames[Raw], max_items: MaxItemsType = "safe"
     ) -> list[RawAPIItem]: ...
 
     @overload
     def all_items(
-        self: SyncGames[Model], max_items: MaxItemsType = MaxItems.SAFE
+        self: SyncGames[Model], max_items: MaxItemsType = "safe"
     ) -> ItemPage[ModelNotImplemented]: ...
 
     def all_items(
-        self, max_items: MaxItemsType = MaxItems.SAFE
+        self, max_items: MaxItemsType = "safe"
     ) -> list[RawAPIItem] | ItemPage[ModelNotImplemented]:
         iterator = SyncPageIterator(self.items, max_items=max_items)
         return iterator.collect()
@@ -124,16 +123,16 @@ class AsyncGames(BaseGames[AsyncClient], Generic[APIResponseFormatT]):
 
     @overload
     async def all_items(
-        self: AsyncGames[Raw], max_items: MaxItemsType = MaxItems.SAFE
+        self: AsyncGames[Raw], max_items: MaxItemsType = "safe"
     ) -> list[RawAPIItem]: ...
 
     @overload
     async def all_items(
-        self: AsyncGames[Model], max_items: MaxItemsType = MaxItems.SAFE
+        self: AsyncGames[Model], max_items: MaxItemsType = "safe"
     ) -> ItemPage[ModelNotImplemented]: ...
 
     async def all_items(
-        self, max_items: MaxItemsType = MaxItems.SAFE
+        self, max_items: MaxItemsType = "safe"
     ) -> list[RawAPIItem] | ItemPage[ModelNotImplemented]:
         iterator = AsyncPageIterator(self.items, max_items=max_items)
         return await iterator.collect()

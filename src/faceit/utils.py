@@ -178,11 +178,8 @@ def is_valid_uuid(value: Any, /) -> TypeIs[ValidUUID]:
 def create_uuid_validator(
     *,
     arg_name: str = "value",
-    error_message: str | None = None,
+    error_message: str = "Invalid {arg_name}: {value}. Expected a valid UUID.",
 ) -> Callable[[Any], str]:
-    if error_message is None:
-        error_message = "Invalid {arg_name}: {value}. Expected a valid UUID."
-
     def validator(value: Any, /) -> str:
         if is_valid_uuid(value):
             return str(value if isinstance(value, UUID | str) else to_uuid(value))

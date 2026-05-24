@@ -31,7 +31,6 @@ from typing_extensions import Never, Self
 from faceit.constants import BASE_WIKI_URL
 from faceit.exceptions import APIError, DecoupleNotFoundError, MissingAuthTokenError
 from faceit.utils import (
-    StrEnum,
     create_uuid_validator,
     invoke_callable,
     locked,
@@ -41,7 +40,6 @@ from faceit.utils import (
 from .helpers import (
     Endpoint,
     RetryArgs,
-    SupportedMethod,
     SupportsExceptionPredicate,
     is_retryable_status,
     is_ssl_error,
@@ -51,7 +49,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
 
     from faceit.types import (
-        EndpointParam,
+        EndpointLike,
         RawAPIItem,
         RawAPIPageResponse,
         RawAPIResponse,
@@ -62,10 +60,6 @@ _logger = logging.getLogger(__name__)
 
 _HttpxClientT = TypeVar("_HttpxClientT", httpx.Client, httpx.AsyncClient)
 _RetryerT = TypeVar("_RetryerT", tenacity.Retrying, tenacity.AsyncRetrying)
-
-
-class MaxConcurrentRequests(StrEnum):
-    ABSOLUTE = "max"
 
 
 # TODO: The HTTP client is currently designed exclusively for API key authentication,
@@ -183,7 +177,7 @@ class BaseAPIClient(ABC, Generic[_HttpxClientT, _RetryerT]):
             raise TypeError(msg)
         self._retry_args = self.__class__.DEFAULT_RETRY_ARGS | retry_args
 
-    def _build_endpoint_unwrapped(self, endpoint: EndpointParam, /) -> str:
+    def _build_endpoint_unwrapped(self, endpoint: EndpointLike, /) -> str:
         return str(
             endpoint.with_base(self.base_url)
             if isinstance(endpoint, Endpoint)
@@ -192,7 +186,7 @@ class BaseAPIClient(ABC, Generic[_HttpxClientT, _RetryerT]):
 
     def _prepare_request(
         self,
-        endpoint: EndpointParam,
+        endpoint: EndpointLike,
         headers: httpx._types.HeaderTypes | None = None,
     ) -> tuple[str, httpx.Headers]:
         combined_headers = httpx.Headers(self._base_headers)
@@ -261,7 +255,7 @@ class _BaseSyncClient(BaseAPIClient[httpx.Client, tenacity.Retrying]):
             _logger.debug("%s closed", self.__class__.__name__)
 
     def request(
-        self, method: str, endpoint: EndpointParam, **kwargs: Any
+        self, method: str, endpoint: EndpointLike, **kwargs: Any
     ) -> RawAPIResponse:
         url, headers = self._prepare_request(endpoint, kwargs.pop("headers", None))
         return self._retryer(
@@ -317,8 +311,7 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient, tenacity.AsyncRetrying])
         base_url: str = BaseAPIClient.DEFAULT_BASE_URL,
         timeout: float = BaseAPIClient.DEFAULT_TIMEOUT,
         retry_args: RetryArgs | None = None,
-        max_concurrent_requests: MaxConcurrentRequests
-        | int = DEFAULT_MAX_CONCURRENT_REQUESTS,
+        max_concurrent_requests: Literal["max"] | int = DEFAULT_MAX_CONCURRENT_REQUESTS,
         ssl_error_threshold: int = DEFAULT_SSL_ERROR_THRESHOLD,
         min_connections: int = DEFAULT_MIN_CONNECTIONS,
         recovery_interval: int = DEFAULT_RECOVERY_INTERVAL,
@@ -405,7 +398,7 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient, tenacity.AsyncRetrying])
             _logger.debug("%s closed", self.__class__.__name__)
 
     async def request(
-        self, method: str, endpoint: EndpointParam, **kwargs: Any
+        self, method: str, endpoint: EndpointLike, **kwargs: Any
     ) -> RawAPIResponse:
         url, headers = self._prepare_request(endpoint, kwargs.pop("headers", None))
         await self.__class__._check_connection_recovery()
@@ -494,14 +487,11 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient, tenacity.AsyncRetrying])
     @locked(_lock)
     @validate_call
     def _update_initial_max_requests(
-        cls, value: MaxConcurrentRequests | PositiveInt, /
+        cls, value: Literal["max"] | PositiveInt, /
     ) -> int:
         max_concurrent_requests = (
-            cls.MAX_CONCURRENT_REQUESTS_ABSOLUTE
-            if value == MaxConcurrentRequests.ABSOLUTE
-            else value
+            cls.MAX_CONCURRENT_REQUESTS_ABSOLUTE if value == "max" else value
         )
-        assert isinstance(max_concurrent_requests, int)
         if max_concurrent_requests > cls._initial_max_requests:
             cls._initial_max_requests = max_concurrent_requests
             _logger.debug("Updated initial max requests to %d", max_concurrent_requests)
@@ -623,7 +613,7 @@ class SyncClient(_BaseSyncClient):
     @overload
     def get(
         self,
-        endpoint: EndpointParam,
+        endpoint: EndpointLike,
         *,
         expect_item: Literal[True],
         **kwargs: Any,
@@ -632,22 +622,22 @@ class SyncClient(_BaseSyncClient):
     @overload
     def get(
         self,
-        endpoint: EndpointParam,
+        endpoint: EndpointLike,
         *,
         expect_page: Literal[True],
         **kwargs: Any,
     ) -> RawAPIPageResponse: ...
 
     @overload
-    def get(self, endpoint: EndpointParam, **kwargs: Any) -> RawAPIResponse: ...
+    def get(self, endpoint: EndpointLike, **kwargs: Any) -> RawAPIResponse: ...
 
-    def get(self, endpoint: EndpointParam, **kwargs: Any) -> RawAPIResponse:
-        return self.request(SupportedMethod.GET, endpoint, **_clean_type_hints(kwargs))
+    def get(self, endpoint: EndpointLike, **kwargs: Any) -> RawAPIResponse:
+        return self.request("get", endpoint, **_clean_type_hints(kwargs))
 
     @overload
     def post(
         self,
-        endpoint: EndpointParam,
+        endpoint: EndpointLike,
         *,
         expect_item: Literal[True],
         **kwargs: Any,
@@ -656,17 +646,17 @@ class SyncClient(_BaseSyncClient):
     @overload
     def post(
         self,
-        endpoint: EndpointParam,
+        endpoint: EndpointLike,
         *,
         expect_page: Literal[True],
         **kwargs: Any,
     ) -> RawAPIPageResponse: ...
 
     @overload
-    def post(self, endpoint: EndpointParam, **kwargs: Any) -> RawAPIResponse: ...
+    def post(self, endpoint: EndpointLike, **kwargs: Any) -> RawAPIResponse: ...
 
-    def post(self, endpoint: EndpointParam, **kwargs: Any) -> RawAPIResponse:
-        return self.request(SupportedMethod.POST, endpoint, **_clean_type_hints(kwargs))
+    def post(self, endpoint: EndpointLike, **kwargs: Any) -> RawAPIResponse:
+        return self.request("post", endpoint, **_clean_type_hints(kwargs))
 
 
 @final
@@ -676,7 +666,7 @@ class AsyncClient(_BaseAsyncClient):
     @overload
     async def get(
         self,
-        endpoint: EndpointParam,
+        endpoint: EndpointLike,
         *,
         expect_item: Literal[True],
         **kwargs: Any,
@@ -685,24 +675,22 @@ class AsyncClient(_BaseAsyncClient):
     @overload
     async def get(
         self,
-        endpoint: EndpointParam,
+        endpoint: EndpointLike,
         *,
         expect_page: Literal[True],
         **kwargs: Any,
     ) -> RawAPIPageResponse: ...
 
     @overload
-    async def get(self, endpoint: EndpointParam, **kwargs: Any) -> RawAPIResponse: ...
+    async def get(self, endpoint: EndpointLike, **kwargs: Any) -> RawAPIResponse: ...
 
-    async def get(self, endpoint: EndpointParam, **kwargs: Any) -> RawAPIResponse:
-        return await self.request(
-            SupportedMethod.GET, endpoint, **_clean_type_hints(kwargs)
-        )
+    async def get(self, endpoint: EndpointLike, **kwargs: Any) -> RawAPIResponse:
+        return await self.request("get", endpoint, **_clean_type_hints(kwargs))
 
     @overload
     async def post(
         self,
-        endpoint: EndpointParam,
+        endpoint: EndpointLike,
         *,
         expect_item: Literal[True],
         **kwargs: Any,
@@ -711,16 +699,14 @@ class AsyncClient(_BaseAsyncClient):
     @overload
     async def post(
         self,
-        endpoint: EndpointParam,
+        endpoint: EndpointLike,
         *,
         expect_page: Literal[True],
         **kwargs: Any,
     ) -> RawAPIPageResponse: ...
 
     @overload
-    async def post(self, endpoint: EndpointParam, **kwargs: Any) -> RawAPIResponse: ...
+    async def post(self, endpoint: EndpointLike, **kwargs: Any) -> RawAPIResponse: ...
 
-    async def post(self, endpoint: EndpointParam, **kwargs: Any) -> RawAPIResponse:
-        return await self.request(
-            SupportedMethod.POST, endpoint, **_clean_type_hints(kwargs)
-        )
+    async def post(self, endpoint: EndpointLike, **kwargs: Any) -> RawAPIResponse:
+        return await self.request("post", endpoint, **_clean_type_hints(kwargs))

@@ -11,7 +11,7 @@ import tenacity
 
 from faceit.constants import BASE_WIKI_URL
 from faceit.exceptions import APIError, BadRequestError
-from faceit.http import AsyncClient, Endpoint, SupportedMethod, SyncClient
+from faceit.http import AsyncClient, Endpoint, SyncClient
 from faceit.http.client import (
     BaseAPIClient,
     _BaseAsyncClient,
@@ -233,8 +233,8 @@ class TestSyncClient:
     @pytest.mark.parametrize(
         ("client_method", "endpoint", "call_kwargs", "expected_supported_method"),
         [
-            ("get", "users/123", {}, SupportedMethod.GET),
-            ("post", "users", {"json": {"name": "test"}}, SupportedMethod.POST),
+            ("get", "users/123", {}, "get"),
+            ("post", "users", {"json": {"name": "test"}}, "post"),
         ],
     )
     def test_get_post_methods(
@@ -244,7 +244,7 @@ class TestSyncClient:
         client_method: str,
         endpoint: str,
         call_kwargs: dict[str, Any],
-        expected_supported_method: SupportedMethod,
+        expected_supported_method: str,
     ) -> None:
         with patch("httpx.Client") as mock_client:
             mock_instance = Mock()
@@ -272,7 +272,7 @@ class TestSyncClient:
         client = SyncClient(
             valid_uuid, retry_args={"stop": tenacity.stop_after_attempt(1)}
         )
-        result = client.request(SupportedMethod.GET, "users/123")
+        result = client.request("get", "users/123")
         assert result == {"data": "test_data"}
         mock_instance.request.assert_called_once()
         client.close()
@@ -288,7 +288,7 @@ class TestSyncClient:
             valid_uuid, retry_args={"stop": tenacity.stop_after_attempt(1)}
         )
         with pytest.raises(httpx.TimeoutException):
-            client.request(SupportedMethod.GET, "users/123")
+            client.request("get", "users/123")
         client.close()
 
 
@@ -309,8 +309,8 @@ class TestAsyncClient:
     @pytest.mark.parametrize(
         ("client_method", "endpoint", "call_kwargs", "expected_supported_method"),
         [
-            ("get", "users/123", {}, SupportedMethod.GET),
-            ("post", "users", {"json": {"name": "test"}}, SupportedMethod.POST),
+            ("get", "users/123", {}, "get"),
+            ("post", "users", {"json": {"name": "test"}}, "post"),
         ],
     )
     async def test_get_post_methods(
@@ -320,7 +320,7 @@ class TestAsyncClient:
         client_method: str,
         endpoint: str,
         call_kwargs: dict[str, Any],
-        expected_supported_method: SupportedMethod,
+        expected_supported_method: str,
     ) -> None:
         client = async_client_factory()
         mock_request.return_value = {"data": "test_data"}
@@ -355,7 +355,7 @@ class TestAsyncClient:
         async with AsyncClient(
             valid_uuid, retry_args={"stop": tenacity.stop_after_attempt(1)}
         ) as client:
-            result = await client.request(SupportedMethod.GET, "users/123")
+            result = await client.request("get", "users/123")
             assert result == {"data": "test_data"}
             mock_instance.request.assert_called_once()
 
@@ -373,7 +373,7 @@ class TestAsyncClient:
             valid_uuid, retry_args={"stop": tenacity.stop_after_attempt(1)}
         ) as client:
             with pytest.raises(httpx.TimeoutException):
-                await client.request(SupportedMethod.GET, "users/123")
+                await client.request("get", "users/123")
 
     @patch("httpx.AsyncClient")
     async def test_close_all(self, mock_client: Mock, valid_uuid: str) -> None:

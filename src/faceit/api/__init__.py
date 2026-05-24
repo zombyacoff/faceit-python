@@ -4,7 +4,6 @@ from .data import (
 )
 from .pagination import (
     AsyncPageIterator as AsyncPageIterator,
-    MaxItems as MaxItems,
     SyncPageIterator as SyncPageIterator,
     TimestampPaginationConfig as TimestampPaginationConfig,
     pages as pages,

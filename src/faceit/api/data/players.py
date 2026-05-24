@@ -23,7 +23,6 @@ from faceit.api.base import (
 )
 from faceit.api.pagination import (
     AsyncPageIterator,
-    MaxItems,
     MaxItemsType,
     SyncPageIterator,
     TimestampPaginationConfig,
@@ -231,18 +230,18 @@ class SyncPlayers(BasePlayers[SyncClient], Generic[APIResponseFormatT]):
     def all_bans(
         self: SyncPlayers[Raw],
         player_id: PlayerID,
-        max_items: MaxItemsType = MaxItems.SAFE,
+        max_items: MaxItemsType = "safe",
     ) -> list[RawAPIItem]: ...
 
     @overload
     def all_bans(
         self: SyncPlayers[Model],
         player_id: PlayerID,
-        max_items: MaxItemsType = MaxItems.SAFE,
+        max_items: MaxItemsType = "safe",
     ) -> ItemPage[BanEntry]: ...
 
     def all_bans(
-        self, player_id: PlayerID, max_items: MaxItemsType = MaxItems.SAFE
+        self, player_id: PlayerID, max_items: MaxItemsType = "safe"
     ) -> list[RawAPIItem] | ItemPage[BanEntry]:
         iterator = SyncPageIterator(self.bans, player_id, max_items=max_items)
         return iterator.collect()
@@ -474,18 +473,18 @@ class SyncPlayers(BasePlayers[SyncClient], Generic[APIResponseFormatT]):
     def all_hubs(
         self: SyncPlayers[Raw],
         player_id: PlayerID,
-        max_items: MaxItemsType = MaxItems.SAFE,
+        max_items: MaxItemsType = "safe",
     ) -> list[RawAPIItem]: ...
 
     @overload
     def all_hubs(
         self: SyncPlayers[Model],
         player_id: PlayerID,
-        max_items: MaxItemsType = MaxItems.SAFE,
+        max_items: MaxItemsType = "safe",
     ) -> ItemPage[Hub]: ...
 
     def all_hubs(
-        self, player_id: PlayerID, max_items: MaxItemsType = MaxItems.SAFE
+        self, player_id: PlayerID, max_items: MaxItemsType = "safe"
     ) -> list[RawAPIItem] | ItemPage[Hub]:
         iterator = SyncPageIterator(self.hubs, player_id, max_items=max_items)
         return iterator.collect()
@@ -557,18 +556,18 @@ class SyncPlayers(BasePlayers[SyncClient], Generic[APIResponseFormatT]):
     def all_teams(
         self: SyncPlayers[Raw],
         player_id: PlayerID,
-        max_items: MaxItemsType = MaxItems.SAFE,
+        max_items: MaxItemsType = "safe",
     ) -> list[RawAPIItem]: ...
 
     @overload
     def all_teams(
         self: SyncPlayers[Model],
         player_id: PlayerID,
-        max_items: MaxItemsType = MaxItems.SAFE,
+        max_items: MaxItemsType = "safe",
     ) -> ItemPage[GeneralTeam]: ...
 
     def all_teams(
-        self, player_id: PlayerID, max_items: MaxItemsType = MaxItems.SAFE
+        self, player_id: PlayerID, max_items: MaxItemsType = "safe"
     ) -> list[RawAPIItem] | ItemPage[GeneralTeam]:
         iterator = SyncPageIterator(self.teams, player_id, max_items=max_items)
         return iterator.collect()
@@ -612,18 +611,18 @@ class SyncPlayers(BasePlayers[SyncClient], Generic[APIResponseFormatT]):
     def all_tournaments(
         self: SyncPlayers[Raw],
         player_id: PlayerID,
-        max_items: MaxItemsType = MaxItems.SAFE,
+        max_items: MaxItemsType = "safe",
     ) -> list[RawAPIItem]: ...
 
     @overload
     def all_tournaments(
         self: SyncPlayers[Model],
         player_id: PlayerID,
-        max_items: MaxItemsType = MaxItems.SAFE,
+        max_items: MaxItemsType = "safe",
     ) -> ItemPage[Tournament]: ...
 
     def all_tournaments(
-        self, player_id: PlayerID, max_items: MaxItemsType = MaxItems.SAFE
+        self, player_id: PlayerID, max_items: MaxItemsType = "safe"
     ) -> list[RawAPIItem] | ItemPage[Tournament]:
         iterator = SyncPageIterator(self.tournaments, player_id, max_items=max_items)
         return iterator.collect()
@@ -710,18 +709,18 @@ class AsyncPlayers(BasePlayers[AsyncClient], Generic[APIResponseFormatT]):
     async def all_bans(
         self: AsyncPlayers[Raw],
         player_id: PlayerID,
-        max_items: MaxItemsType = MaxItems.SAFE,
+        max_items: MaxItemsType = "safe",
     ) -> list[RawAPIItem]: ...
 
     @overload
     async def all_bans(
         self: AsyncPlayers[Model],
         player_id: PlayerID,
-        max_items: MaxItemsType = MaxItems.SAFE,
+        max_items: MaxItemsType = "safe",
     ) -> ItemPage[BanEntry]: ...
 
     async def all_bans(
-        self, player_id: PlayerID, max_items: MaxItemsType = MaxItems.SAFE
+        self, player_id: PlayerID, max_items: MaxItemsType = "safe"
     ) -> list[RawAPIItem] | ItemPage[BanEntry]:
         iterator = AsyncPageIterator(self.bans, player_id, max_items=max_items)
         return await iterator.collect()
@@ -950,18 +949,18 @@ class AsyncPlayers(BasePlayers[AsyncClient], Generic[APIResponseFormatT]):
     async def all_hubs(
         self: AsyncPlayers[Raw],
         player_id: PlayerID,
-        max_items: MaxItemsType = MaxItems.SAFE,
+        max_items: MaxItemsType = "safe",
     ) -> list[RawAPIItem]: ...
 
     @overload
     async def all_hubs(
         self: AsyncPlayers[Model],
         player_id: PlayerID,
-        max_items: MaxItemsType = MaxItems.SAFE,
+        max_items: MaxItemsType = "safe",
     ) -> ItemPage[Hub]: ...
 
     async def all_hubs(
-        self, player_id: PlayerID, max_items: MaxItemsType = MaxItems.SAFE
+        self, player_id: PlayerID, max_items: MaxItemsType = "safe"
     ) -> list[RawAPIItem] | ItemPage[Hub]:
         iterator = AsyncPageIterator(self.hubs, player_id, max_items=max_items)
         return await iterator.collect()
@@ -1033,18 +1032,18 @@ class AsyncPlayers(BasePlayers[AsyncClient], Generic[APIResponseFormatT]):
     async def all_teams(
         self: AsyncPlayers[Raw],
         player_id: PlayerID,
-        max_items: MaxItemsType = MaxItems.SAFE,
+        max_items: MaxItemsType = "safe",
     ) -> list[RawAPIItem]: ...
 
     @overload
     async def all_teams(
         self: AsyncPlayers[Model],
         player_id: PlayerID,
-        max_items: MaxItemsType = MaxItems.SAFE,
+        max_items: MaxItemsType = "safe",
     ) -> ItemPage[GeneralTeam]: ...
 
     async def all_teams(
-        self, player_id: PlayerID, max_items: MaxItemsType = MaxItems.SAFE
+        self, player_id: PlayerID, max_items: MaxItemsType = "safe"
     ) -> list[RawAPIItem] | ItemPage[GeneralTeam]:
         iterator = AsyncPageIterator(self.teams, player_id, max_items=max_items)
         return await iterator.collect()
@@ -1088,18 +1087,18 @@ class AsyncPlayers(BasePlayers[AsyncClient], Generic[APIResponseFormatT]):
     async def all_tournaments(
         self: AsyncPlayers[Raw],
         player_id: PlayerID,
-        max_items: MaxItemsType = MaxItems.SAFE,
+        max_items: MaxItemsType = "safe",
     ) -> list[RawAPIItem]: ...
 
     @overload
     async def all_tournaments(
         self: AsyncPlayers[Model],
         player_id: PlayerID,
-        max_items: MaxItemsType = MaxItems.SAFE,
+        max_items: MaxItemsType = "safe",
     ) -> ItemPage[Tournament]: ...
 
     async def all_tournaments(
-        self, player_id: PlayerID, max_items: MaxItemsType = MaxItems.SAFE
+        self, player_id: PlayerID, max_items: MaxItemsType = "safe"
     ) -> list[RawAPIItem] | ItemPage[Tournament]:
         iterator = AsyncPageIterator(self.tournaments, player_id, max_items=max_items)
         return await iterator.collect()

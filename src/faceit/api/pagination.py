@@ -41,7 +41,6 @@ from faceit.types import (
     SyncResourceMethodProtocol,
 )
 from faceit.utils import (
-    StrEnum,
     deduplicate_unhashable,
     deep_get,
     extends,
@@ -50,6 +49,8 @@ from faceit.utils import (
     validate_positive_int,
 )
 
+CollectReturnFormat: TypeAlias = Literal["first", "raw", "model"]
+MaxItemsType: TypeAlias = Literal["safe"] | int
 _PageType: TypeAlias = RawAPIPageResponse | ItemPage[Any]
 _PageList: TypeAlias = list[_PageType]
 _PageT = TypeVar("_PageT", bound=_PageType)
@@ -57,25 +58,12 @@ _PageT = TypeVar("_PageT", bound=_PageType)
 
 if TYPE_CHECKING:
     _PageFactoryMap: TypeAlias = Mapping[
-        "CollectReturnFormat",
+        CollectReturnFormat,
         Callable[[_PageList], type[RawAPIPageResponse | ItemPage[Any]]],
     ]
     _OptionalTimestampPaginationConfig: TypeAlias = (
         "TimestampPaginationConfig | Literal[False]"
     )
-
-
-class MaxItems(StrEnum):
-    SAFE = "safe"
-
-
-MaxItemsType: TypeAlias = MaxItems | int
-
-
-class CollectReturnFormat(StrEnum):
-    FIRST = "first"
-    RAW = "raw"
-    MODEL = "model"
 
 
 @final
@@ -211,9 +199,9 @@ class BasePageIterator(ABC, Generic[PaginationMethodT, _PageT]):
         _STOP_ITERATION_EXC: ClassVar[type[Exception]]
 
     _COLLECT_RETURN_FORMATS: ClassVar[_PageFactoryMap] = MappingProxyType({
-        CollectReturnFormat.FIRST: lambda c: type(c[0]) if c else RawAPIPageResponse,
-        CollectReturnFormat.RAW: lambda _: RawAPIPageResponse,
-        CollectReturnFormat.MODEL: lambda _: ItemPage,
+        "first": lambda c: type(c[0]) if c else RawAPIPageResponse,
+        "raw": lambda _: RawAPIPageResponse,
+        "model": lambda _: ItemPage,
     })
 
     SAFE_MAX_PAGES: ClassVar = 100
@@ -339,7 +327,7 @@ class BasePageIterator(ABC, Generic[PaginationMethodT, _PageT]):
                 )
             return max_pages
 
-        if max_items == MaxItems.SAFE:
+        if max_items == "safe":
             set_max_pages(self.__class__.SAFE_MAX_PAGES)
             return
 
@@ -645,7 +633,7 @@ class SyncPageIterator(_BaseSyncPageIterator[_PageT]):
         cls,
         iterator: Iterator[RawAPIPageResponse] | Iterator[ItemPage[_T]],
         /,
-        return_format: CollectReturnFormat = CollectReturnFormat.FIRST,
+        return_format: CollectReturnFormat = "first",
         *,
         deduplicate: bool = True,
     ) -> list[RawAPIItem] | ItemPage[_T]:
@@ -737,7 +725,7 @@ class AsyncPageIterator(_BaseAsyncPageIterator[_PageT]):
         cls,
         iterator: AsyncIterator[RawAPIPageResponse] | AsyncIterator[ItemPage[_T]],
         /,
-        return_format: CollectReturnFormat = CollectReturnFormat.FIRST,
+        return_format: CollectReturnFormat = "first",
         *,
         deduplicate: bool = True,
     ) -> list[RawAPIItem] | ItemPage[_T]:

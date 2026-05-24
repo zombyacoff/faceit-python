@@ -73,7 +73,7 @@ def test_sync_request_flow(mock_api_key: str) -> None:
         assert player_raw["nickname"] == "test-user"
         mock_instance.request.assert_called_once()
         args, kwargs = mock_instance.request.call_args
-        assert args[0] == "GET"
+        assert args[0] == "get"
         assert "players" in str(args[1])
         assert kwargs["params"] == {"nickname": "test-user"}
 

@@ -13,7 +13,6 @@ from pydantic import (
     computed_field,
     field_validator,
 )
-from typing_extensions import Self
 
 from faceit.constants import RAW_RESPONSE_ITEMS_KEY
 from faceit.models.custom_types import TimestampMs  # noqa: TC001
@@ -163,7 +162,7 @@ class ItemPage(
     def __getitem__(self, index: SupportsIndex) -> _T: ...
 
     @overload
-    def __getitem__(self, index: slice) -> Self: ...
+    def __getitem__(self, index: slice) -> ItemPage[_T]: ...
 
     def __getitem__(self, index: SupportsIndex | slice) -> _T | ItemPage[_T]:
         if isinstance(index, slice):

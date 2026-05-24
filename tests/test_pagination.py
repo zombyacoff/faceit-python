@@ -11,8 +11,6 @@ from faceit.api.base import BaseResource
 from faceit.api.pagination import (
     AsyncPageIterator,
     BasePageIterator,
-    CollectReturnFormat,
-    MaxItems,
     SyncPageIterator,
     TimestampPaginationConfig,
     check_pagination_support,
@@ -193,9 +191,7 @@ def test_extract_unix_timestamp_from_model_page() -> None:
 def test_sync_gather_from_iterator_raw_deduplicates(
     raw_pages: tuple[RawAPIPageResponse, RawAPIPageResponse],
 ) -> None:
-    result = SyncPageIterator.gather_from_iterator(
-        iter(raw_pages), CollectReturnFormat.FIRST, deduplicate=True
-    )
+    result = SyncPageIterator.gather_from_iterator(iter(raw_pages), deduplicate=True)
     assert result == [{"id": "a"}, {"id": "b"}, {"id": "c"}]
 
 
@@ -203,7 +199,7 @@ def test_sync_gather_from_iterator_model_merges_pages(
     model_pages: tuple[ItemPage[dict[str, int]], ItemPage[dict[str, int]]],
 ) -> None:
     result = SyncPageIterator.gather_from_iterator(
-        iter(model_pages), CollectReturnFormat.MODEL, deduplicate=True
+        iter(model_pages), "model", deduplicate=True
     )
     assert isinstance(result, ItemPage)
     assert tuple(result) == ({"id": 1}, {"id": 2}, {"id": 3})
@@ -253,7 +249,7 @@ def test_sync_iterator_collect_respects_safe_max_items(
     dummy_resource: _DummyResource,
 ) -> None:
     with patch.object(SyncPageIterator, "SAFE_MAX_PAGES", 1):
-        iterator = SyncPageIterator(dummy_resource.raw_method, max_items=MaxItems.SAFE)
+        iterator = SyncPageIterator(dummy_resource.raw_method, max_items="safe")
         result = iterator.collect(deduplicate=False)
     assert len(result) == 2
 
@@ -263,11 +259,7 @@ async def test_async_gather_from_iterator_raw() -> None:
         yield {"items": [{"id": 1}], "start": 0, "end": 1}
         yield {"items": [{"id": 2}], "start": 1, "end": 2}
 
-    result = await AsyncPageIterator.gather_from_iterator(
-        source(),
-        CollectReturnFormat.FIRST,
-        deduplicate=True,
-    )
+    result = await AsyncPageIterator.gather_from_iterator(source(), deduplicate=True)
     assert result == [{"id": 1}, {"id": 2}]
 
 

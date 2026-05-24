@@ -51,7 +51,7 @@ def test_sync_player_flow(data: SyncDataResource, test_player: str) -> None:
     assert player.nickname == test_player
     assert player.id is not None
 
-    if player.games.get(player.id, faceit.GameID.CS2) is None:
+    if player.games.get(faceit.GameID.CS2) is None:
         pytest.skip("Choose a different player: no CS2 game found for this account")
 
     matches = data.raw_players.matches_stats(player.id, faceit.GameID.CS2, limit=2)
@@ -73,7 +73,6 @@ def test_sync_player_flow(data: SyncDataResource, test_player: str) -> None:
 
 def test_sync_games_list(data: SyncDataResource) -> None:
     games_page = data.raw_games.items(limit=10)
-
     assert "items" in games_page
     assert len(games_page["items"]) > 0
 
@@ -85,11 +84,9 @@ async def test_async_player_flow(
     async_data: AsyncDataResource, test_player: str
 ) -> None:
     player = await async_data.players.get(test_player)
-
     assert player.nickname == test_player
     assert player.id is not None
 
 
 def test_pagination_loop_e2e(data: SyncDataResource) -> None:
-    games = data.raw_games.all_items(max_items=3)
-    assert len(games) >= 3
+    assert len(data.raw_games.all_items(max_items=3)) >= 3

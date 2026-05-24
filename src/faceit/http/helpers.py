@@ -14,14 +14,14 @@ from typing import (
 import httpx
 from typing_extensions import Self
 
-from faceit.utils import StrEnum, representation
+from faceit.utils import representation
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
 
     import tenacity
 
-    from faceit.types import EndpointParam
+    from faceit.types import EndpointLike
 
     _RetryHook: TypeAlias = Callable[[tenacity.RetryCallState], Awaitable[None] | None]
 
@@ -48,11 +48,6 @@ class SupportsExceptionPredicate(Protocol):
     predicate: Callable[[BaseException], Awaitable[bool] | bool]
 
 
-class SupportedMethod(StrEnum):
-    GET = "GET"
-    POST = "POST"
-
-
 @final
 @representation(use_str=True)
 class Endpoint:
@@ -73,12 +68,12 @@ class Endpoint:
             part.strip("/") for part in [self.base, *self.path_parts] if part
         )
 
-    def __truediv__(self, other: EndpointParam) -> Self:
+    def __truediv__(self, other: EndpointLike) -> Self:
         if not isinstance(other, self.__class__):
             return self.add(str(other))
         return self.__class__(*self.path_parts, *other.path_parts, base=self.base)
 
-    def __itruediv__(self, other: EndpointParam) -> Self:
+    def __itruediv__(self, other: EndpointLike) -> Self:
         if isinstance(other, self.__class__):
             self.path_parts.extend(other.path_parts)
             return self

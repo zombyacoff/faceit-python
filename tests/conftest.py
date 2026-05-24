@@ -28,9 +28,9 @@ def mock_async_client() -> Mock:
 
 @pytest.fixture(scope="module")
 def sync_players_raw(mock_sync_client: Mock) -> SyncPlayers[Any]:
-    return SyncPlayers(client=mock_sync_client, raw=True)
+    return SyncPlayers(mock_sync_client, raw=True)
 
 
 @pytest.fixture(scope="module")
 def async_players_raw(mock_async_client: Mock) -> AsyncPlayers[Any]:
-    return AsyncPlayers(client=mock_async_client, raw=True)
+    return AsyncPlayers(mock_async_client, raw=True)

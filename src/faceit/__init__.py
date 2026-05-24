@@ -10,7 +10,6 @@ from importlib.metadata import PackageNotFoundError, version
 from .api import (
     AsyncDataResource as AsyncDataResource,
     AsyncPageIterator as AsyncPageIterator,
-    MaxItems as MaxItems,
     SyncDataResource as SyncDataResource,
     SyncPageIterator as SyncPageIterator,
     TimestampPaginationConfig as TimestampPaginationConfig,

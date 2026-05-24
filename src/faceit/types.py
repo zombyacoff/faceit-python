@@ -39,7 +39,7 @@ PaginationMethodT = TypeVar(
 EmptyString: TypeAlias = Literal[""]
 UrlOrEmpty: TypeAlias = AnyHttpUrl | EmptyString
 UUIDOrEmpty: TypeAlias = UUID | EmptyString
-EndpointParam: TypeAlias = "str | Endpoint"
+EndpointLike: TypeAlias = "str | Endpoint"
 ValidUUID: TypeAlias = UUID | str | bytes
 
 AnyCSID: TypeAlias = Literal[GameID.CS2, GameID.CSGO]
