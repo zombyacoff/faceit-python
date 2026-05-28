@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -31,26 +33,18 @@ async def test_async_data_resource_init(mock_api_key: str) -> None:
 def test_sync_resources_accessibility(mock_api_key: str) -> None:
     with patch("httpx.Client"):
         data = SyncDataResource(mock_api_key)
-
         assert isinstance(data.players, SyncPlayers)
         assert isinstance(data.raw_players, SyncPlayers)
         assert isinstance(data.games, SyncGames)
         assert isinstance(data.raw_games, SyncGames)
 
-        assert data.players.is_raw is False
-        assert data.raw_players.is_raw is True
-
 
 async def test_async_resources_accessibility(mock_api_key: str) -> None:
     with patch("httpx.AsyncClient"):
         data = AsyncDataResource(mock_api_key)
-
         assert isinstance(data.players, AsyncPlayers)
         assert isinstance(data.raw_players, AsyncPlayers)
         assert isinstance(data.games, AsyncGames)
-
-        assert data.players.is_raw is False
-        assert data.raw_players.is_raw is True
         await data.client.aclose()
 
 

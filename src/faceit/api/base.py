@@ -28,7 +28,7 @@ from faceit.types import (
     RawAPIPageResponse,
     RawAPIResponse,
 )
-from faceit.utils import find_user_stacklevel
+from faceit.utils import find_user_stacklevel, representation
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -50,7 +50,7 @@ class RequestPayload(TypedDict):
 
 
 @final
-@dataclass(eq=False, frozen=True)
+@dataclass(eq=False, frozen=True, kw_only=True)
 class MappedValidatorConfig(Generic[_T, ModelT]):
     validator_map: Mapping[_T, type[ModelT]]
     key_name: str = "key"
@@ -60,12 +60,9 @@ class MappedValidatorConfig(Generic[_T, ModelT]):
 # TODO: Refactor the base resource class if/when support for resources
 # other than Data is required, since the current implementation is
 # too Data-centric.
+@representation("_raw", "_strict_validation")
 class BaseResource(ABC, Generic[ClientT]):
-    __slots__ = (
-        "_client",
-        "_raw",
-        "_strict_validation",
-    )
+    __slots__ = ("_client", "_raw", "_strict_validation")
 
     if TYPE_CHECKING:
         PATH: ClassVar[Endpoint]
@@ -101,10 +98,6 @@ class BaseResource(ABC, Generic[ClientT]):
             raise TypeError(msg)
         cls.PATH = Endpoint(resource_path)
         super().__init_subclass__(**kwargs)
-
-    @property
-    def is_raw(self) -> bool:
-        return self._raw
 
     @property
     def strict_validation_enabled(self) -> bool:
@@ -178,7 +171,7 @@ class BaseResource(ABC, Generic[ClientT]):
             return validator.model_validate(response)
         except ValidationError:
             _logger.exception("Validation failed for %s", validator.__name__)
-            if self.strict_validation_enabled:
+            if self._strict_validation:
                 raise
             warnings.warn(
                 "Validation failed but strict mode disabled. Raw response returned.",

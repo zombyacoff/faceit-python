@@ -12,13 +12,13 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, TypeVar, cast, overload
 from uuid import UUID
 
-from typing_extensions import Self, TypeIs
-
 if TYPE_CHECKING:
     from asyncio import Lock as AsyncLock  # noqa: ICN003
     from collections.abc import Awaitable, Callable, Iterable, Mapping
     from threading import Lock as SyncLock
     from types import FrameType
+
+    from typing_extensions import Self, TypeIs
 
     from .types import _P, _T, ValidUUID
 

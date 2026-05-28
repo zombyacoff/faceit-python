@@ -1,9 +1,14 @@
-from collections.abc import AsyncGenerator, Generator
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
 from faceit.api import AsyncDataResource, SyncDataResource
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator, Generator
 
 
 @pytest.fixture

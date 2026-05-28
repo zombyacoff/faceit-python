@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, ClassVar, final
 
 import httpx
@@ -31,7 +33,7 @@ class APIError(FaceitError):
     _DEFAULT_MESSAGE: ClassVar = "API request failed"
     _EXPECTED_STATUS_CODE: ClassVar = 0
     _MESSAGE_FORMAT: ClassVar = "[{status_code}] {message}"
-    _STATUS_ERRORS: ClassVar[dict[int, type["APIError"]]] = {}
+    _STATUS_ERRORS: ClassVar[dict[int, type[APIError]]] = {}
 
     def __init_subclass__(
         cls,
@@ -52,11 +54,10 @@ class APIError(FaceitError):
         message: str | None = None,
     ) -> None:
         self.response = response
-        self.status_code = (
-            self.__class__._EXPECTED_STATUS_CODE
-            if response is None
-            else response.status_code
-        )
+        if response is None:
+            self.status_code = self.__class__._EXPECTED_STATUS_CODE
+        else:
+            self.status_code = response.status_code
 
         if message is not None:
             self.message = message
@@ -73,7 +74,7 @@ class APIError(FaceitError):
         )
 
     @classmethod
-    def from_response(cls, response: httpx.Response, /) -> "APIError":
+    def from_response(cls, response: httpx.Response, /) -> APIError:
         return cls._STATUS_ERRORS.get(response.status_code, APIError)(response)
 
 

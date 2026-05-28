@@ -4,12 +4,13 @@ from abc import ABC
 from functools import cached_property
 from typing import TYPE_CHECKING, Any, Generic, TypeVar, get_args
 
-from typing_extensions import Never, Self
-
 from faceit.http import AsyncClient, FromEnv, SyncClient
 from faceit.types import ClientT, Raw, ValidUUID
+from faceit.utils import representation
 
 if TYPE_CHECKING:
+    from typing_extensions import Never, Self
+
     from faceit.api.base import BaseResource
     from faceit.http.client import BaseAPIClient
 
@@ -17,6 +18,7 @@ if TYPE_CHECKING:
     _AggregatorT = TypeVar("_AggregatorT", bound="BaseResources[Any]")
 
 
+@representation("client")
 class BaseResources(ABC, Generic[ClientT]):
     __slots__ = ("_client",)
 
@@ -35,12 +37,8 @@ class BaseResources(ABC, Generic[ClientT]):
         if auth is not None and client is not None:
             msg = f"Provide either {secret_type!r} or 'client', not both"
             raise ValueError(msg)
-        self._client = (
-            self._client_cls(
-                FromEnv(f"FACEIT_{secret_type.upper()}") if auth is None else auth
-            )
-            if client is None
-            else client
+        self._client = client or self._client_cls(
+            FromEnv(f"FACEIT_{secret_type.upper()}") if auth is None else auth
         )
 
     @property

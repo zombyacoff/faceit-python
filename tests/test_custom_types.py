@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import pytest
 from pydantic import AnyHttpUrl, BaseModel, TypeAdapter, ValidationError
 
@@ -30,7 +32,9 @@ def lang_adapter() -> TypeAdapter[LangFormattedAnyHttpUrl]:
     ],
 )
 def test_validate_success(
-    input_value: str, expected: str, lang_adapter: TypeAdapter[LangFormattedAnyHttpUrl]
+    input_value: str,
+    expected: str,
+    lang_adapter: TypeAdapter[LangFormattedAnyHttpUrl],
 ) -> None:
     if expected == "" or expected.startswith("http"):
         assert (

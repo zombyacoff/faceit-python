@@ -9,13 +9,13 @@ repos:
     hooks:
       - id: mypy
         name: mypy
-        entry: mypy src --pretty
+        entry: uv run mypy src
         language: system
         pass_filenames: false
 
       - id: pytest-check
         name: pytest-check
-        entry: pytest tests
+        entry: uv run pytest -q
         language: system
         pass_filenames: false
         always_run: true

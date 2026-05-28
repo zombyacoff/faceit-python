@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from collections.abc import Awaitable, Callable
 from typing import (
     TYPE_CHECKING,
@@ -16,15 +18,15 @@ from pydantic import AnyHttpUrl, BaseModel
 from typing_extensions import NotRequired
 
 from .constants import GameID, Region
+from .http import Endpoint
 
 if TYPE_CHECKING:
     from .api import AsyncDataResource, SyncDataResource
-    from .http import Endpoint
     from .http.client import BaseAPIClient
 
 _T = TypeVar("_T")
+_TT = TypeVar("_TT")
 _T_co = TypeVar("_T_co", covariant=True)
-_R = TypeVar("_R")
 _P = ParamSpec("_P")
 
 ModelT = TypeVar("ModelT", bound="BaseModel")
@@ -39,7 +41,7 @@ PaginationMethodT = TypeVar(
 EmptyString: TypeAlias = Literal[""]
 UrlOrEmpty: TypeAlias = AnyHttpUrl | EmptyString
 UUIDOrEmpty: TypeAlias = UUID | EmptyString
-EndpointLike: TypeAlias = "str | Endpoint"
+EndpointLike: TypeAlias = str | Endpoint
 ValidUUID: TypeAlias = UUID | str | bytes
 
 AnyCSID: TypeAlias = Literal[GameID.CS2, GameID.CSGO]

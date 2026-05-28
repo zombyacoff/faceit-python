@@ -12,9 +12,9 @@ from faceit.api.pagination import (
     SyncPageIterator,
     pages,
 )
-from faceit.constants import GameID  # noqa: TC001
+from faceit.constants import GameID
 from faceit.http import AsyncClient, SyncClient
-from faceit.models import ItemPage  # noqa: TC001
+from faceit.models import ItemPage
 from faceit.types import (
     APIResponseFormatT,
     ClientT,
@@ -27,7 +27,7 @@ from faceit.types import (
 
 _TeamID: TypeAlias = str
 _TeamIDValidated: TypeAlias = Annotated[
-    _TeamID, AfterValidator(str)  # TODO: Validation function
+    _TeamID, AfterValidator(str)  # TODO: Validation function (maybe `FaceitID`?)
 ]
 
 

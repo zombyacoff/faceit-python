@@ -18,7 +18,7 @@ from faceit.types import (
 )
 from faceit.utils import create_uuid_validator
 
-from .players import PlayerID, PlayerIDValidated  # noqa: TC001
+from .players import PlayerID, PlayerIDValidated
 
 _LeagueID: TypeAlias = ValidUUID
 _LeagueIDValidated: TypeAlias = Annotated[

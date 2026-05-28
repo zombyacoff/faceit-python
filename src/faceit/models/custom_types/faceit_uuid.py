@@ -5,13 +5,13 @@ from typing import TYPE_CHECKING, Any, ClassVar, TypeAlias, final
 from uuid import UUID
 
 from pydantic_core import core_schema
-from typing_extensions import Self
 
 from faceit.types import EmptyString
 from faceit.utils import is_valid_uuid, representation
 
 if TYPE_CHECKING:
     from pydantic import GetCoreSchemaHandler
+    from typing_extensions import Self
 
 
 class _BaseFaceitUUIDValidator(ABC):

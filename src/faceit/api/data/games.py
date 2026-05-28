@@ -12,7 +12,7 @@ from faceit.api.pagination import (
     SyncPageIterator,
 )
 from faceit.http import AsyncClient, SyncClient
-from faceit.models import ItemPage  # noqa: TC001
+from faceit.models import ItemPage
 from faceit.types import (
     APIResponseFormatT,
     ClientT,

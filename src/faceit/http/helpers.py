@@ -12,7 +12,6 @@ from typing import (
 )
 
 import httpx
-from typing_extensions import Self
 
 from faceit.utils import representation
 
@@ -20,6 +19,7 @@ if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
 
     import tenacity
+    from typing_extensions import Self
 
     from faceit.types import EndpointLike
 

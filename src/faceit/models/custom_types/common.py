@@ -21,12 +21,13 @@ from pydantic import (
     model_validator,
 )
 from pydantic_core import core_schema
-from typing_extensions import Self
 
-from faceit.types import _R, _T, UrlOrEmpty
+from faceit.types import _T, _TT, UrlOrEmpty
 
 if TYPE_CHECKING:
     from collections.abc import ItemsView, Iterator, KeysView, ValuesView
+
+    from typing_extensions import Self
 
 _LANG_PLACEHOLDER: Final = "{lang}"
 _LANG_PATTERN: Final = re.compile(rf"/?{re.escape(_LANG_PLACEHOLDER)}/?")
@@ -115,9 +116,9 @@ class ResponseContainer(RootModel[dict[str, _T]]):
     def get(self, key: str, /) -> _T | None: ...
 
     @overload
-    def get(self, key: str, /, default: _R) -> _T | _R: ...
+    def get(self, key: str, /, default: _TT) -> _T | _TT: ...
 
-    def get(self, key: str, /, default: _R | None = None) -> _T | _R | None:
+    def get(self, key: str, /, default: _TT | None = None) -> _T | _TT | None:
         return self.root.get(key, default)
 
     def __getattr__(self, name: str) -> _T:

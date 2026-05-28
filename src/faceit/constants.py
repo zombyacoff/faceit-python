@@ -32,8 +32,8 @@ _logger = logging.getLogger(__name__)
 BASE_WIKI_URL: Final = "https://docs.faceit.com"
 """Base URL for FACEIT's documentation."""
 RAW_RESPONSE_ITEMS_KEY: Final = "items"
-FACEIT_COLOR: Final = 0xFF5500
-"""Hex color code for FACEIT branding."""
+FACEIT_PRIMARY_COLOR: Final = 0xFF5500
+"""FACEIT's primary brand color in hex (orange)."""
 FACEIT_USERNAME_REGEX: Final = re.compile(r"^[a-zA-Z0-9_-]{1,24}$")
 """
 Regex pattern for validating FACEIT usernames.
@@ -214,7 +214,7 @@ class EloRange(NamedTuple):
 
     @property
     def is_open_ended(self) -> bool:
-        return self.upper in HighTierLevel
+        return isinstance(self.upper, HighTierLevel)
 
     @property
     def size(self) -> int | None:
@@ -224,7 +224,7 @@ class EloRange(NamedTuple):
         return self.upper - self.lower + 1
 
     def contains(self, elo: int) -> bool:
-        if self.upper in HighTierLevel:
+        if isinstance(self.upper, HighTierLevel):
             return elo >= self.lower
         assert isinstance(self.upper, int)
         return self.lower <= elo <= self.upper

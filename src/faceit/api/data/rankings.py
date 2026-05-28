@@ -12,10 +12,10 @@ from faceit.api.pagination import (
     SyncPageIterator,
     pages,
 )
-from faceit.constants import GameID  # noqa: TC001
+from faceit.constants import GameID
 from faceit.http import AsyncClient, SyncClient
-from faceit.models import ItemPage  # noqa: TC001
-from faceit.models.custom_types import CountryCode  # noqa: TC001
+from faceit.models import ItemPage
+from faceit.models.custom_types import CountryCode
 from faceit.types import (
     APIResponseFormatT,
     ClientT,
@@ -27,7 +27,7 @@ from faceit.types import (
     RegionIdentifier,
 )
 
-from .players import PlayerID, PlayerIDValidated  # noqa: TC001
+from .players import PlayerID, PlayerIDValidated
 
 
 class BaseRankings(

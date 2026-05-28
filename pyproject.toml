@@ -34,9 +34,12 @@ env = ["python-decouple>=3.8"]
 [dependency-groups]
 dev = [
     "mypy>=2.0.0",
-    "pre-commit>=3.5",
+    "pre-commit>=4.6.0",
     "pytest>=9.0.0",
     "pytest-asyncio>=1.3.0",
+    # TODO
+    #   Achieve 100% test coverage !!!
+    # "pytest-cov>=7.1.0",
     "ruff>=0.15.14",
 ]
 examples = [

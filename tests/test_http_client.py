@@ -1,8 +1,9 @@
+from __future__ import annotations
+
 import asyncio
 import ssl
-from collections.abc import Callable, Iterator
 from time import time
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from unittest.mock import AsyncMock, Mock, patch
 
 import httpx
@@ -18,6 +19,9 @@ from faceit.http.client import (
     _BaseSyncClient,
     is_ssl_error,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Iterator
 
 
 def _create_response_mock(

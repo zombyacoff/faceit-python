@@ -1,14 +1,14 @@
+from __future__ import annotations
+
 from datetime import datetime
 from enum import IntEnum
 from typing import (
     Annotated,
     Any,
-    ClassVar,
     Final,
     Generic,
     TypeAlias,
     TypeVar,
-    cast,
     final,
 )
 
@@ -37,11 +37,9 @@ class MatchResult(IntEnum):
 
 @final
 class GameInfo(BaseModel):
-    _SKILL_LVL: ClassVar = "skill_level"
-
     region: RegionIdentifier
     game_player_id: str
-    level: Annotated[int | SkillLevel, Field(alias=_SKILL_LVL)]
+    level: Annotated[int | SkillLevel, Field(alias="skill_level")]
     elo: Annotated[int, Field(alias="faceit_elo")]
     game_player_name: str
     level_label: Annotated[str, Field("", alias="skill_level_label")]  # Maybe outdated
@@ -55,7 +53,7 @@ class GameInfo(BaseModel):
             return data
 
         game_id = data.get(_INJECTED_KEY)
-        skill_lvl = data.get(cls._SKILL_LVL)
+        skill_lvl = data.get("skill_level")
 
         if isinstance(skill_lvl, SkillLevel) or game_id is None or skill_lvl is None:
             return data
@@ -74,7 +72,7 @@ class GameInfo(BaseModel):
         # `resolved` cannot be None because `game_id` was already validated
         # to be present in `ELO_THRESHOLDS`
         assert resolved is not None
-        data[cls._SKILL_LVL] = resolved
+        data["skill_level"] = resolved
         return data
 
 
@@ -343,8 +341,8 @@ class PlayerStats(
             data["segments"] = {
                 # NOTE: Anubis --> anubis, Ancient --> ancient, ...
                 # (lowercase and replace spaces with underscores)
-                seg[_SEGMENT_NAME].lower().replace(" ", "_"): seg
-                for seg in cast("list[dict[str, str]]", raw_segments)
+                str(seg[_SEGMENT_NAME]).lower().replace(" ", "_"): seg
+                for seg in raw_segments
                 if _SEGMENT_NAME in seg
             }
 

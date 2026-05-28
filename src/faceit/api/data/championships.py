@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC
-from collections.abc import Sequence  # noqa: TC003
+from collections.abc import Sequence
 from typing import Annotated, Generic, TypeAlias, final, overload
 
 from pydantic import AfterValidator, Field, validate_call

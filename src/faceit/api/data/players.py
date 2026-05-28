@@ -42,7 +42,7 @@ from faceit.models import (
     Player,
     Tournament,
 )
-from faceit.models.custom_types import NotStrictTimestampMs  # noqa: TC001
+from faceit.models.custom_types import NotStrictTimestampMs
 from faceit.models.players.general import AnyPlayerStats
 from faceit.models.players.match import AbstractMatchPlayerStats
 from faceit.types import (

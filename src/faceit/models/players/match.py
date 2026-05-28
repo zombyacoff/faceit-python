@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from abc import ABC
 from datetime import datetime
 from typing import Annotated, Any, Final, Literal, final
@@ -12,6 +14,7 @@ from faceit.models.custom_types import (
     TimestampMs,
     TimestampSec,
 )
+from faceit.models.players.general import MatchResult
 from faceit.types import RegionIdentifier, UrlOrEmpty
 from faceit.utils import StrEnum
 
@@ -138,7 +141,7 @@ class CS2MatchPlayerStats(AbstractMatchPlayerStats):
     mvps: Annotated[int, Field(alias="MVPs")]
     headshots: Annotated[int, Field(alias="Headshots")]
     kills: Annotated[int, Field(alias="Kills")]
-    result: Annotated[int, Field(alias="Result")]
+    result: Annotated[MatchResult, Field(alias="Result")]
     rounds: Annotated[int, Field(alias="Rounds")]
     match_round: Annotated[int, Field(alias="Match Round")]
     created_at: Annotated[datetime, Field(alias="Created At")]

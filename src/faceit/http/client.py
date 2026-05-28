@@ -26,7 +26,6 @@ import httpx
 import tenacity
 import tenacity.asyncio
 from pydantic import PositiveInt, validate_call
-from typing_extensions import Never, Self
 
 from faceit.constants import BASE_WIKI_URL
 from faceit.exceptions import APIError, DecoupleNotFoundError, MissingAuthTokenError
@@ -47,6 +46,8 @@ from .helpers import (
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
+
+    from typing_extensions import Never, Self
 
     from faceit.types import (
         EndpointLike,

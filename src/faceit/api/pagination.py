@@ -26,7 +26,6 @@ from typing import (
 
 from annotated_types import Le
 from pydantic.fields import FieldInfo
-from typing_extensions import Self
 
 from faceit.constants import RAW_RESPONSE_ITEMS_KEY
 from faceit.models import ItemPage
@@ -57,6 +56,8 @@ _PageT = TypeVar("_PageT", bound=_PageType)
 
 
 if TYPE_CHECKING:
+    from typing_extensions import Self
+
     _PageFactoryMap: TypeAlias = Mapping[
         CollectReturnFormat,
         Callable[[_PageList], type[RawAPIPageResponse | ItemPage[Any]]],
@@ -180,7 +181,7 @@ def check_pagination_support(
     )
 
 
-_ITERATOR_SLOTS = (
+_ITERATOR_SLOTS: Final = (
     "_exhausted",
     "_max_items_info",
     "_max_pages",
@@ -487,9 +488,6 @@ class BasePageIterator(ABC, Generic[PaginationMethodT, _PageT]):
             *args,
             **(kwargs | ({} if timestamp is None else {"to": timestamp + 1})),
         )
-
-
-del _ITERATOR_SLOTS
 
 
 class _BaseSyncPageIterator(

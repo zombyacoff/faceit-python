@@ -15,8 +15,8 @@ from pydantic import (
 )
 
 from faceit.constants import RAW_RESPONSE_ITEMS_KEY
-from faceit.models.custom_types import TimestampMs  # noqa: TC001
-from faceit.types import _R, _T
+from faceit.models.custom_types import TimestampMs
+from faceit.types import _T, _TT
 from faceit.utils import get_nested_property
 
 
@@ -81,11 +81,11 @@ class ItemPage(
     def find(self, attr: str, value: object) -> _T | None: ...
 
     @overload
-    def find(self, attr: str, value: object, default: _R) -> _T | _R: ...
+    def find(self, attr: str, value: object, default: _TT) -> _T | _TT: ...
 
     def find(
-        self, attr: str, value: object, default: _R | None = None
-    ) -> _T | _R | None:
+        self, attr: str, value: object, default: _TT | None = None
+    ) -> _T | _TT | None:
         return next(self._find_items(attr, value), default)
 
     def find_all(self, attr: str, value: object) -> ItemPage[_T]:
@@ -95,32 +95,32 @@ class ItemPage(
     def get_first(self) -> _T | None: ...
 
     @overload
-    def get_first(self, default: _R, /) -> _T | _R: ...
+    def get_first(self, default: _TT, /) -> _T | _TT: ...
 
-    def get_first(self, default: _R | None = None) -> _T | _R | None:
+    def get_first(self, default: _TT | None = None) -> _T | _TT | None:
         return self[0] if self else default
 
     @overload
     def get_last(self) -> _T | None: ...
 
     @overload
-    def get_last(self, default: _R, /) -> _T | _R: ...
+    def get_last(self, default: _TT, /) -> _T | _TT: ...
 
-    def get_last(self, default: _R | None = None) -> _T | _R | None:
+    def get_last(self, default: _TT | None = None) -> _T | _TT | None:
         return self[-1] if self else default
 
     @overload
     def get_random(self) -> _T | None: ...
 
     @overload
-    def get_random(self, default: _R, /) -> _T | _R: ...
+    def get_random(self, default: _TT, /) -> _T | _TT: ...
 
-    def get_random(self, default: _R | None = None) -> _T | _R | None:
+    def get_random(self, default: _TT | None = None) -> _T | _TT | None:
         # Intentionally using non-cryptographic RNG as this is for
         # convenience sampling rather than security-sensitive operations
         return random_choice(self) if self else default  # noqa: S311
 
-    def map(self, func: Callable[[_T], _R], /) -> ItemPage[_R]:
+    def map(self, func: Callable[[_T], _TT], /) -> ItemPage[_TT]:
         return self.__class__._construct_without_metadata(map(func, self))
 
     def filter(self, predicate: Callable[[_T], bool], /) -> ItemPage[_T]:
@@ -130,7 +130,7 @@ class ItemPage(
         return (item for item in self if get_nested_property(item, attr) == value)
 
     @classmethod
-    def merge(cls, pages: Iterable[ItemPage[_R]], /) -> ItemPage[_R]:
+    def merge(cls, pages: Iterable[ItemPage[_TT]], /) -> ItemPage[_TT]:
         return cls._construct_without_metadata(chain.from_iterable(pages))
 
     @classmethod
@@ -139,8 +139,8 @@ class ItemPage(
 
     @classmethod
     def _construct_without_metadata(
-        cls, items: Iterable[_R] | None = None, /
-    ) -> ItemPage[_R]:
+        cls, items: Iterable[_TT] | None = None, /
+    ) -> ItemPage[_TT]:
         # fmt: off
         return cls.model_construct(  # type: ignore[return-value]
             items=tuple(items or ()),

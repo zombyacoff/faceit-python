@@ -23,6 +23,7 @@ ignore = [
 
 [lint.isort]
 combine-as-imports = true
+required-imports = ["from __future__ import annotations"]
 
 [lint.flake8-bugbear]
 extend-immutable-calls = [
@@ -54,10 +55,12 @@ ignore-names = [
 
 [lint.per-file-ignores]
 "__init__.py" = [
+    "I002",    # Missing required import
     "RUF067",  # Code is present in `__init__.py`
 ]
 "docs/*" = ["ALL"]
 "examples/*" = [
+    "I002",    # Missing required import
     "ICN003",  # Import a member from the module instead of importing the member directly
     "INP001",  # Missing `__init__.py` file in a package directory
     "PLR0914", # Too many local variables
@@ -93,3 +96,7 @@ ignore-names = [
 allow-dunder-method-names = [
     "__get_pydantic_core_schema__",
 ]
+
+[lint.flake8-type-checking]
+runtime-evaluated-base-classes = ["pydantic.BaseModel"]
+runtime-evaluated-decorators = ["pydantic.validate_call"]
