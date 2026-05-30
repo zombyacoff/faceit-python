@@ -14,9 +14,10 @@ from faceit.models.custom_types import (
     TimestampMs,
     TimestampSec,
 )
-from faceit.models.players.general import MatchResult
 from faceit.types import RegionIdentifier, UrlOrEmpty
 from faceit.utils import StrEnum
+
+from .general import MatchResult
 
 _F1: Final = "faction1"
 _F2: Final = "faction2"

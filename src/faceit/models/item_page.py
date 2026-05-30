@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import random
 from collections.abc import Callable, Iterable, Iterator
 from itertools import chain, starmap
-from random import choice as random_choice
 from typing import Annotated, Any, Generic, SupportsIndex, final, overload
 
 from pydantic import (
@@ -118,7 +118,7 @@ class ItemPage(
     def get_random(self, default: _TT | None = None) -> _T | _TT | None:
         # Intentionally using non-cryptographic RNG as this is for
         # convenience sampling rather than security-sensitive operations
-        return random_choice(self) if self else default  # noqa: S311
+        return random.choice(self) if self else default  # noqa: S311
 
     def map(self, func: Callable[[_T], _TT], /) -> ItemPage[_TT]:
         return self.__class__._construct_without_metadata(map(func, self))

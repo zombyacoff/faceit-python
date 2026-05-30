@@ -30,10 +30,11 @@ class MissingAuthTokenError(FaceitError):
 
 
 class APIError(FaceitError):
-    _DEFAULT_MESSAGE: ClassVar = "API request failed"
-    _EXPECTED_STATUS_CODE: ClassVar = 0
     _MESSAGE_FORMAT: ClassVar = "[{status_code}] {message}"
-    _STATUS_ERRORS: ClassVar[dict[int, type[APIError]]] = {}
+
+    _default_message: ClassVar = "API request failed"
+    _expected_status_code: ClassVar = 0
+    _status_errors: ClassVar[dict[int, type[APIError]]] = {}
 
     def __init_subclass__(
         cls,
@@ -41,9 +42,9 @@ class APIError(FaceitError):
         default_message: str | None = None,
         **kwargs: Any,
     ) -> None:
-        cls._EXPECTED_STATUS_CODE = code.value
-        cls._DEFAULT_MESSAGE = default_message or code.get_reason_phrase(code.value)
-        cls._STATUS_ERRORS[code.value] = cls
+        cls._default_message = default_message or code.get_reason_phrase(code.value)
+        cls._expected_status_code = code.value
+        cls._status_errors[code.value] = cls
         super().__init_subclass__(**kwargs)
 
     def __init__(
@@ -55,7 +56,7 @@ class APIError(FaceitError):
     ) -> None:
         self.response = response
         if response is None:
-            self.status_code = self.__class__._EXPECTED_STATUS_CODE
+            self.status_code = self.__class__._expected_status_code
         else:
             self.status_code = response.status_code
 
@@ -65,7 +66,7 @@ class APIError(FaceitError):
             # TODO: Implement proper error parsing to extract the message in a sensible form
             self.message = response.text[:200]
         else:
-            self.message = self.__class__._DEFAULT_MESSAGE
+            self.message = self.__class__._default_message
 
         super().__init__(
             self.__class__._MESSAGE_FORMAT.format(
@@ -75,7 +76,7 @@ class APIError(FaceitError):
 
     @classmethod
     def from_response(cls, response: httpx.Response, /) -> APIError:
-        return cls._STATUS_ERRORS.get(response.status_code, APIError)(response)
+        return cls._status_errors.get(response.status_code, APIError)(response)
 
 
 # fmt: off

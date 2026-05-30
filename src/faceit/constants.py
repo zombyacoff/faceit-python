@@ -274,15 +274,9 @@ ELO_THRESHOLDS: Final[
     ]
 ] = MappingProxyType({
     GameID.CS2: {
-        1: EloRange(MIN_ELO, 500),
-        2: EloRange(501, 750),
-        3: EloRange(751, 900),
-        4: EloRange(901, 1050),
-        5: EloRange(1051, 1200),
-        6: EloRange(1201, 1350),
-        7: EloRange(1351, 1530),
-        8: EloRange(1531, 1750),
-        9: EloRange(1751, 2000),
+        1: EloRange(MIN_ELO, 500), 2: EloRange(501, 750), 3: EloRange(751, 900),
+        4: EloRange(901, 1050), 5: EloRange(1051, 1200), 6: EloRange(1201, 1350),
+        7: EloRange(1351, 1530), 8: EloRange(1531, 1750), 9: EloRange(1751, 2000),
         10: EloRange(_DEFAULT_TEN_LEVEL_LOWER, HighTierLevel.CHALLENGER),
     },
     # These default ELO ranges (level 1: up to 800, subsequent levels: +150) are
@@ -292,7 +286,7 @@ ELO_THRESHOLDS: Final[
     # variations in the platform's ranking system.
     GameID.CSGO: CHALLENGER_CAPPED_ELO_RANGES,
     # TODO: Add more games (e.g. Dota 2)
-})
+})  # fmt: skip
 
 
 @final

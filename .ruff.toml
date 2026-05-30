@@ -41,6 +41,7 @@ banned-from = [
     "logging",
     "math",
     "os",
+    "random",
     "re",
     "reprlib",
     "tenacity",
@@ -60,7 +61,6 @@ ignore-names = [
 ]
 "docs/*" = ["ALL"]
 "examples/*" = [
-    "I002",    # Missing required import
     "ICN003",  # Import a member from the module instead of importing the member directly
     "INP001",  # Missing `__init__.py` file in a package directory
     "PLR0914", # Too many local variables

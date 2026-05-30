@@ -209,10 +209,7 @@ _IGNORED_MODULES: Final = {
 
 
 @lru_cache(maxsize=1)
-def _get_ignored_paths() -> tuple[
-    tuple[Path, ...],
-    frozenset[Path],
-]:
+def _get_ignored_paths() -> tuple[tuple[Path, ...], frozenset[Path]]:
     prefixes: list[Path] = []
     files: set[Path] = set()
 
