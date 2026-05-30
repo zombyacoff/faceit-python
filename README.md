@@ -85,8 +85,8 @@ See additional usage examples in the [examples/](examples/) directory.
 
 You can provide your API key directly in the constructor or let the library automatically load it from your environment.
 
-- **Automatic:** Set the `FACEIT_API_KEY` environment variable.
-    > *Requires `faceit[env]` extra dependency or manual [python-decouple](https://github.com/HBNetwork/python-decouple) installation.*
+- **Automatic:** Set the `FACEIT_API_KEY` environment variable.  
+    Requires `faceit[env]` extra dependency or manual [python-decouple](https://github.com/HBNetwork/python-decouple) installation.
 - **Manual:** Pass the key string directly: `SyncDataResource("YOUR_API_KEY")`.
 - **Custom Variable:** To use a different environment variable name, pass an instance of `FromEnv`: `SyncDataResource(FromEnv("SECRET"))`
 

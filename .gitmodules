@@ -1,0 +1,3 @@
+[submodule "examples/disnake-faceit-bot"]
+	path = examples/disnake-faceit-bot
+	url = https://github.com/zombyacoff/disnake-faceit-bot
