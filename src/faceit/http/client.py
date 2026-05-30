@@ -200,10 +200,9 @@ class BaseAPIClient(ABC, Generic[_HttpxClientT, _RetryerT]):
             import decouple  # noqa: PLC0415  # pyright: ignore[reportMissingImports]
         except ModuleNotFoundError:
             raise DecoupleNotFoundError from None
-        try:
-            return cast("str", decouple.config(key))
-        except decouple.UndefinedValueError:
-            raise MissingAuthTokenError(key) from None
+        if (s := cast("str | None", decouple.config(key, default=None))) is not None:
+            return s
+        raise MissingAuthTokenError(key)
 
     @staticmethod
     def _handle_response(response: httpx.Response, /) -> RawAPIResponse:

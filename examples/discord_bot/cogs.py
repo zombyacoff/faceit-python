@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING, Any
 
 import disnake
@@ -16,6 +17,8 @@ if TYPE_CHECKING:
     from faceit.models import Player
 
     from .bot import FaceitBot
+
+logger = logging.getLogger(__name__)
 
 
 class FaceitCog(commands.Cog):
@@ -49,8 +52,16 @@ class StatsCommand(FaceitCog):
             case faceit.NotFoundError():
                 message = f"❌ Player `{player_name}` not found."
             case faceit.APIError():
+                logger.error(
+                    "FACEIT API Error (%s): %s", error.status_code, error.message
+                )
                 message = f"⚠️ API Error (`{error.status_code}`): {error.message}"
             case _:
+                logger.error(
+                    "Unexpected error in command %s: %s",
+                    inter.application_command.name,
+                    error,
+                )
                 message = "💥 An unexpected error occurred. Please try again later."
 
         if inter.response.is_done():
@@ -69,6 +80,9 @@ class StatsCommand(FaceitCog):
             description="FACEIT player nickname",
         ),
     ) -> disnake.Message | None:
+        await inter.response.defer()
+        logger.info("Executing /stats for player '%s'", player_name)
+
         context = await self._prepare_player_context(inter, player_name)
         if context is None:
             return None
@@ -91,6 +105,7 @@ class StatsCommand(FaceitCog):
             )
             embed.add_field("🕊️ Recent Results", results, inline=False)
 
+        logger.info("Successfully sent /stats for '%s'", player.nickname)
         return await inter.edit_original_response(embed=embed)
 
     @commands.slash_command(
@@ -110,6 +125,11 @@ class StatsCommand(FaceitCog):
             max_value=100,
         ),
     ) -> disnake.Message | None:
+        await inter.response.defer()
+        logger.info(
+            "Executing /recent for player '%s' (limit: %s)", player_name, matches
+        )
+
         context = await self._prepare_player_context(inter, player_name)
         if context is None:
             return None
@@ -122,6 +142,7 @@ class StatsCommand(FaceitCog):
             return await inter.edit_original_response(
                 f"📭 No matches found for `{player.nickname}`."
             )
+
         analysis = analyze_cs2_recent_matches(matches_stats)
 
         embed.title = f"{player.nickname} — Last {analysis.total} matches"
@@ -146,13 +167,13 @@ class StatsCommand(FaceitCog):
                 f"**{analysis.best_map}** ({analysis.best_map_win_rate:.0f}% WR)",
             )
 
+        logger.info("Successfully sent /recent for '%s'", player.nickname)
         return await inter.edit_original_response(embed=embed)
 
     async def _prepare_player_context(
         self, inter: disnake.CommandInteraction[Any], player_name: str
     ) -> tuple[Player, GameInfo, disnake.Embed] | None:
-        await inter.response.defer()
-
+        logger.debug("Fetching player data for '%s'", player_name)
         player = await self.faceit_data.players.get(player_name)
 
         cs2_stats = player.games.get(faceit.GameID.CS2)
