@@ -38,7 +38,7 @@ def mock_async_data(valid_uuid: str) -> AsyncGenerator[AsyncDataResource, None]:
             mock_response.json.return_value = {"data": "mocked"}
             mock_instance.request = AsyncMock(return_value=mock_response)
 
-            yield AsyncDataResource(valid_uuid)
+            yield AsyncDataResource(valid_uuid)  # noqa: ASYNC119
 
     return _mock_async()
 

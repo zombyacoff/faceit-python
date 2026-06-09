@@ -159,7 +159,7 @@ class GameID(StrEnum):
     WOW = "wow"
 
 
-class HighTierLevel(StrEnum):
+class HighTierLevel(StrEnum):  # Maybe `IntEnum`?
     ABSENT = "absent"
     """
     Indicates the absence of a defined top-tier rank in this discipline.

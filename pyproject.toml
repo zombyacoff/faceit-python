@@ -11,7 +11,6 @@ authors = [
 keywords = ["api", "faceit", "wrapper"]
 classifiers = [
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
@@ -40,10 +39,7 @@ dev = [
     # TODO
     #   Achieve 100% test coverage !!!
     # "pytest-cov>=7.1.0",
-    "ruff>=0.15.14",
-]
-examples = [
-    "disnake>=2.0.0",
+    "ruff>=0.15.16",
 ]
 
 [project.urls]
@@ -52,5 +48,5 @@ examples = [
 "Bug Tracker" = "https://github.com/zombyacoff/faceit-python/issues"
 
 [build-system]
-requires = ["uv_build>=0.11.14"]
+requires = ["uv_build>=0.11.14,<0.12.0"]
 build-backend = "uv_build"
