@@ -159,7 +159,7 @@ class GameID(StrEnum):
     WOW = "wow"
 
 
-class HighTierLevel(StrEnum):  # Maybe `IntEnum`?
+class HighTierLevel(StrEnum):
     ABSENT = "absent"
     """
     Indicates the absence of a defined top-tier rank in this discipline.
@@ -224,7 +224,7 @@ class EloRange(NamedTuple):
         return self.upper - self.lower + 1
 
     def contains(self, elo: int) -> bool:
-        if isinstance(self.upper, HighTierLevel):
+        if self.is_open_ended:
             return elo >= self.lower
         assert isinstance(self.upper, int)
         return self.lower <= elo <= self.upper

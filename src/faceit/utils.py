@@ -188,7 +188,7 @@ def create_uuid_validator(
     return validator
 
 
-def validate_positive_int(value: Any, /, param_name: str = "value") -> int:
+def validate_positive_int(value: Any, /, *, param_name: str = "value") -> int:
     """
     Utility for validating that a value is a positive integer.
     Use this when :class:`pydantic.PositiveInt` type or validation is

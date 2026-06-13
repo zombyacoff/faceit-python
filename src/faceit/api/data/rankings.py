@@ -148,7 +148,6 @@ class SyncRankings(BaseRankings[SyncClient], Generic[APIResponseFormatT]):
         *,
         limit: int = Field(20, ge=1, le=100),
     ) -> RawAPIPageResponse | ModelNotImplemented:
-        # fmt: off
         return self._validate_response(
             self._client.get(
                 self.__class__.PATH / "games" / game / "regions" / region / "players" / str(player_id),
@@ -158,8 +157,7 @@ class SyncRankings(BaseRankings[SyncClient], Generic[APIResponseFormatT]):
                 expect_page=True
             ),
             ModelPlaceholder,
-        )
-        # fmt: on
+        )  # fmt: skip
 
 
 @final
@@ -272,7 +270,6 @@ class AsyncRankings(BaseRankings[AsyncClient], Generic[APIResponseFormatT]):
         *,
         limit: int = Field(20, ge=1, le=100),
     ) -> RawAPIPageResponse | ModelNotImplemented:
-        # fmt: off
         return self._validate_response(
             await self._client.get(
                 self.__class__.PATH / "games" / game / "regions" / region / "players" / str(player_id),
@@ -282,5 +279,4 @@ class AsyncRankings(BaseRankings[AsyncClient], Generic[APIResponseFormatT]):
                 expect_page=True
             ),
             ModelPlaceholder,
-        )
-        # fmt: on
+        )  # fmt: skip

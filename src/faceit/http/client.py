@@ -211,19 +211,17 @@ class BaseAPIClient(ABC, Generic[_HttpxClientT, _RetryerT]):
             _logger.debug("Successful response from %s", response.url)
             return cast("RawAPIResponse", response.json())
         except httpx.HTTPStatusError as e:
-            # fmt: off
             if is_retryable_status(e.response.status_code):
                 _logger.warning(
                     "Retryable HTTP error %s at %s: %s",
                     e.response.status_code, e.response.url, e.response.text,
-                )
+                )  # fmt: skip
             else:
                 _logger.exception(
                     "HTTP error %s at %s: %s",
                     response.status_code, response.url, response.text,
-                )
+                )  # fmt: skip
             raise APIError.from_response(response) from e
-            # fmt: on
         except (ValueError, httpx.DecodingError):
             _logger.exception(
                 "Invalid JSON response from %s: %s", response.url, response.text
@@ -440,15 +438,13 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient, tenacity.AsyncRetrying])
             return True
 
         new_limit = max(cls._min_connections, current_limit // 2)
-        # fmt: off
         _logger.warning(
             "Adaptive rate limiting: "
             "reducing concurrent connections "
             "from %d to %d (SSL errors: %d/%d)",
             current_limit, new_limit,
             cls._ssl_error_count, cls._ssl_error_threshold,
-        )
-        # fmt: on
+        )  # fmt: skip
 
         cls.update_rate_limit(new_limit)
         cls._ssl_error_count = 0
@@ -474,13 +470,11 @@ class _BaseAsyncClient(BaseAPIClient[httpx.AsyncClient, tenacity.AsyncRetrying])
         if new_limit <= current:
             return
 
-        # fmt: off
         _logger.info(
             "Connection recovery: increasing concurrent "
             "connections from %d to %d after %.1f minutes of stability",
             current, new_limit, time_since_last_error / 60
-        )
-        # fmt: on
+        )  # fmt: skip
         cls.update_rate_limit(new_limit)
 
     @classmethod

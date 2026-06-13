@@ -21,7 +21,6 @@ from .constants import GameID, Region
 from .http import Endpoint
 
 if TYPE_CHECKING:
-    from .api import AsyncDataResource, SyncDataResource
     from .http.client import BaseAPIClient
 
 _T = TypeVar("_T")
@@ -29,10 +28,8 @@ _TT = TypeVar("_TT")
 _T_co = TypeVar("_T_co", covariant=True)
 _P = ParamSpec("_P")
 
-ModelT = TypeVar("ModelT", bound="BaseModel")
+ModelT = TypeVar("ModelT", bound=BaseModel)
 ClientT = TypeVar("ClientT", bound="BaseAPIClient[Any, Any]")
-DataResourceT = TypeVar("DataResourceT", bound="SyncDataResource | AsyncDataResource")
-
 APIResponseFormatT = TypeVar("APIResponseFormatT", "Raw", "Model")
 PaginationMethodT = TypeVar(
     "PaginationMethodT", bound="BaseResourceMethodProtocol[Any]"

@@ -1,6 +1,6 @@
 [project]
 name = "faceit"
-version = "0.3.1"
+version = "0.3.2"
 description = "The Python wrapper for the FACEIT API"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -30,6 +30,15 @@ dependencies = [
 [project.optional-dependencies]
 env = ["python-decouple>=3.8"]
 
+[project.urls]
+"Repository" = "https://github.com/zombyacoff/faceit-python"
+"Releases" = "https://github.com/zombyacoff/faceit-python/releases"
+"Bug Tracker" = "https://github.com/zombyacoff/faceit-python/issues"
+
+[build-system]
+requires = ["uv_build>=0.11.14,<0.12.0"]
+build-backend = "uv_build"
+
 [dependency-groups]
 dev = [
     "mypy>=2.0.0",
@@ -39,14 +48,121 @@ dev = [
     # TODO
     #   Achieve 100% test coverage !!!
     # "pytest-cov>=7.1.0",
-    "ruff>=0.15.16",
+    "ruff>=0.15.17",
 ]
 
-[project.urls]
-"Repository" = "https://github.com/zombyacoff/faceit-python"
-"Releases" = "https://github.com/zombyacoff/faceit-python/releases"
-"Bug Tracker" = "https://github.com/zombyacoff/faceit-python/issues"
+[tool.mypy]
+exclude = [
+    "^docs/",
+    "^local/",
+    "^tests/",
+]
+python_version = "3.10"
+strict = true
+warn_unreachable = true
 
-[build-system]
-requires = ["uv_build>=0.11.14,<0.12.0"]
-build-backend = "uv_build"
+[[tool.mypy.overrides]]
+module = "decouple.*"
+follow_untyped_imports = true
+ignore_missing_imports = true
+
+[tool.pytest]
+asyncio_mode = "auto"
+markers = [
+    "e2e: End-to-end tests that interact with the real FACEIT API"
+]
+
+[tool.ruff]
+line-length = 88
+preview = true
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "ANN401",  # Dynamically typed expressions (`Any`) are disallowed
+    "B024",    # Abstract base class without abstract methods
+    "COM812",  # Trailing comma formatting conflict
+    "CPY001",  # Missing copyright notice
+    "D",       # pydocstyle docstring violations
+    "DOC",     # pydoclint docstring validation violations
+    "E501",    # Line too long
+    "FIX002",  # TODO comment detected
+    "PLR0904", # Too many public methods
+    "PLR0913", # Too many function arguments
+    "RUF003",  # Ambiguous Unicode character in comment
+    "S101",    # Use of assert detected
+    "SLF001",  # Private member accessed outside class
+    "TD",      # flake8-todos violations
+]
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+required-imports = ["from __future__ import annotations"]
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = [
+    "faceit.http.client.env",
+    "faceit.api.pagination.pages",
+]
+
+[tool.ruff.lint.flake8-import-conventions]
+banned-from = [
+    "asyncio", "decouple", "httpx", "inspect", "json", "logging",
+    "math", "os", "random", "re", "reprlib", "tenacity", "warnings",
+]
+
+[tool.ruff.lint.pep8-naming]
+ignore-names = [
+    "env", "pages",
+]
+
+[tool.ruff.lint.pylint]
+allow-dunder-method-names = [
+    "__get_pydantic_core_schema__",
+]
+
+[tool.ruff.lint.flake8-type-checking]
+runtime-evaluated-base-classes = ["pydantic.BaseModel"]
+runtime-evaluated-decorators = ["pydantic.validate_call"]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = [
+    "I002",    # Missing required import
+    "RUF067",  # Code is present in `__init__.py`
+]
+"docs/*" = ["ALL"]
+"examples/*" = [
+    "ICN003",  # Import a member from the module instead of importing the member directly
+    "INP001",  # Missing `__init__.py` file in a package directory
+    "PLR0914", # Too many local variables
+    "PLR2004", # Magic value used in a comparison
+    "T201",    # `print()` statement detected
+]
+"exceptions.py" = [
+    "E302",    # Expected 2 blank lines before top-level definitions
+    "E305",    # Expected 2 blank lines after a class or function definition
+]
+"scripts/*" = [
+    "INP001",  # Missing `__init__.py` file in a package directory
+    "T201",    # `print()` statement detected
+]
+"!**/conftest.py" = [
+    "RUF076",  # Avoid using `autouse=True` in `pytest.fixture` decorators
+]
+"tests/*" = [
+    "PLC1901", # Compare to empty string (e.g., `x == ""` instead of `not x`)
+    "PLC2701", # Import of a private name from an external module
+    "PLR0917", # Too many positional arguments
+    "PLR2004", # Magic value used in a comparison
+    "PLR6301", # Method could be a function, class method, or static method (doesn't use `self`)
+    "PLW0717", # `try` contains too many statements
+    "PT011",   # `pytest.raises()` is too broad, set the `match` parameter
+    "PT030",   # `pytest.warns()` is too broad, set the `match` parameter
+]
+"types.py" = [
+    "E302",    # Expected 2 blank lines before top-level definitions
+    "F401",    # Imported but unused
+    "ICN003",  # Import a member from the module instead of importing the member directly
+    "PYI018",  # Unused private `TypeVar`, `ParamSpec`, or `TypeVarTuple` declaration
+]

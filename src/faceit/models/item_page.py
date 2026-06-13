@@ -141,13 +141,11 @@ class ItemPage(
     def _construct_without_metadata(
         cls, items: Iterable[_TT] | None = None, /
     ) -> ItemPage[_TT]:
-        # fmt: off
         return cls.model_construct(  # type: ignore[return-value]
             items=tuple(items or ()),
             offset=None, limit=None,
             time_from=None, time_to=None,
-        )
-        # fmt: on
+        )  # fmt: skip
 
     def __iter__(self) -> Iterator[_T]:  # type: ignore[override]
         yield from self.items

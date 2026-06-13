@@ -106,15 +106,13 @@ class SyncLeagues(BaseLeagues[SyncClient], Generic[APIResponseFormatT]):
         season_id: _SeasonID,
         player_id: PlayerIDValidated,
     ) -> RawAPIItem | ModelNotImplemented:
-        # fmt: off
         return self._validate_response(
             self._client.get(
                 self.__class__.PATH / str(matchmaking_id) / "seasons" / str(season_id) / "players" / str(player_id),
                 expect_item=True,
             ),
             ModelPlaceholder,
-        )
-        # fmt: on
+        )  # fmt: skip
 
 
 @final
@@ -187,12 +185,10 @@ class AsyncLeagues(BaseLeagues[AsyncClient], Generic[APIResponseFormatT]):
         season_id: _SeasonID,
         player_id: PlayerIDValidated,
     ) -> RawAPIItem | ModelNotImplemented:
-        # fmt: off
         return self._validate_response(
             await self._client.get(
                 self.__class__.PATH / str(matchmaking_id) / "seasons" / str(season_id) / "players" / str(player_id),
                 expect_item=True,
             ),
             ModelPlaceholder,
-        )
-        # fmt: on
+        )  # fmt: skip
