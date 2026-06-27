@@ -70,7 +70,9 @@ class _BaseTimestamp(int, ABC):
         return cls(round(dt.timestamp() * cls._UNITS_PER_SEC))
 
     @classmethod
-    def __get_pydantic_core_schema__(cls, *_: Any, **__: Any) -> core_schema.CoreSchema:
+    def __get_pydantic_core_schema__(
+        cls, *_: object, **__: object
+    ) -> core_schema.CoreSchema:
         return core_schema.chain_schema([
             core_schema.int_schema(ge=0),
             core_schema.no_info_after_validator_function(cls, core_schema.any_schema()),

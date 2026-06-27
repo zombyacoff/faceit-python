@@ -2,10 +2,9 @@ from __future__ import annotations
 
 from typing import Any, final
 
-from pydantic import BaseModel
-
 from faceit.types import RegionIdentifier, UrlOrEmpty, UUIDOrEmpty
 
+from .base import BaseModel
 from .custom_types import (
     FaceitID,
     LangFormattedAnyHttpUrl,

@@ -4,9 +4,10 @@ from abc import ABC
 from datetime import datetime
 from typing import Annotated, Any, Final, Literal, final
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import Field, field_validator
 
 from faceit.constants import GameID
+from faceit.models.base import BaseModel
 from faceit.models.custom_types import (
     FaceitID,
     FaceitMatchID,

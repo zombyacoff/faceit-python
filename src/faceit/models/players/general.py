@@ -12,9 +12,10 @@ from typing import (
     final,
 )
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import Field, model_validator
 
 from faceit.constants import ELO_THRESHOLDS, GameID, SkillLevel
+from faceit.models.base import BaseModel
 from faceit.models.custom_types import (
     FaceitID,
     LangFormattedAnyHttpUrl,

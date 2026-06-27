@@ -26,6 +26,12 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
           git add .
-          git diff --quiet && git diff --staged --quiet || git commit -m "chore: update submodules to latest"
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          git commit -m "chore: update submodules to latest"
           git push

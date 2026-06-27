@@ -6,7 +6,6 @@ from itertools import chain, starmap
 from typing import Annotated, Any, Generic, SupportsIndex, final, overload
 
 from pydantic import (
-    BaseModel,
     Field,
     NonNegativeInt,
     PositiveInt,
@@ -15,31 +14,30 @@ from pydantic import (
 )
 
 from faceit.constants import RAW_RESPONSE_ITEMS_KEY
-from faceit.models.custom_types import TimestampMs
 from faceit.types import _T, _TT
 from faceit.utils import get_nested_property
 
+from .base import BaseModel
+from .custom_types import TimestampMs
+
 
 @final
-class PaginationTimeRange(BaseModel, frozen=True):
+class PaginationTimeRange(BaseModel):
     start: TimestampMs
     to: TimestampMs
 
 
 @final
-class PaginationMetadata(BaseModel, frozen=True):
+class PaginationMetadata(BaseModel):
     offset: NonNegativeInt
     limit: PositiveInt
     time_range: PaginationTimeRange | None
 
 
 @final
-class ItemPage(
-    BaseModel,
-    Generic[_T],
-    frozen=True,
+class ItemPage(BaseModel, Generic[_T],
     populate_by_name=True,
-):
+):  # fmt: skip
     items: tuple[_T, ...]
 
     offset: Annotated[
